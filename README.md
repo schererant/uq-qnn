@@ -2,6 +2,7 @@
 ## TODOs:
 
 - initial study of QNNs with UQ in simulation, use 1-d regression function from photonic quantum memristor paper from Iris (ask Iris about simulations)
+
 - use existing QNNs works for regression and classification to check if "inherent Quantum"-UQ adds a benefit:
     - **classification task:** over multiple forward passes compute the mean of logits and then take the softmax, as e.g. in [Link](https://github.com/lightning-uq-box/lightning-uq-box/blob/acd1fc2bfc33860111c272be767e0ddcf1f5b34f/lightning_uq_box/uq_methods/utils.py#L166)
     - compute Entropy over softmax outputs as in [Link](https://github.com/lightning-uq-box/lightning-uq-box/blob/acd1fc2bfc33860111c272be767e0ddcf1f5b34f/lightning_uq_box/uq_methods/utils.py#L186)
