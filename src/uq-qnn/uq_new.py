@@ -31,18 +31,31 @@ def multiply_three_inputs(x1, x2, x3):
     """
     return x1 * x2 * x3
 
-def target_function(xt, xt1, xt2):
+def sinusoidal_target_function(xt, xt1, xt2):
     """
-    Computes the target output based on current and past inputs.
+    Computes the target output as a sinusoidal function based on current and past inputs.
 
     Interpretation:
-    - xt: Current input value (at time t).
-    - xt1: Previous input value (at time t-1).
-    - xt2: Input value before previous (at time t-2).
+    - xt: Current input value at time t.
+    - xt1: Previous input value at time t-1.
+    - xt2: Input value at time t-2.
 
-    This function defines the desired output for the model to learn.
+    This function defines a smooth, sinusoidal target for the model to learn.
     """
-    return 0.4 * xt1 + 0.4 * xt1 * xt2 + 0.6 * xt ** 3 + 0.1
+    return np.sin(2 * np.pi * (xt + xt1 + xt2))
+
+# def target_function(xt, xt1, xt2):
+#     """
+#     Computes the target output based on current and past inputs.
+
+#     Interpretation:
+#     - xt: Current input value (at time t).
+#     - xt1: Previous input value (at time t-1).
+#     - xt2: Input value before previous (at time t-2).
+
+#     This function defines the desired output for the model to learn.
+#     """
+#     return 0.4 * xt1 + 0.4 * xt1 * xt2 + 0.6 * xt ** 3 + 0.1
 
 def build_circuit(phi_1, phi_2, phi_3, phi_enc):
     """
