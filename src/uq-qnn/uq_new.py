@@ -9,7 +9,10 @@ import pickle
 import random as rd
 import matplotlib.pyplot as plt
 
-
+# Set random seeds for reproducibility
+np.random.seed(42)
+tf.random.set_seed(42)
+rd.seed(42)
 
 def memristor_update_function(x, y1, y2):
     """
@@ -47,7 +50,7 @@ def target_function(xt, xt1, xt2):
 
     This function defines a smooth, sinusoidal target for the model to learn.
     """
-    return np.sin(2 * np.pi * (xt + xt1 + xt2))
+    return np.sin(2 * np.pi * (xt + xt1 + xt2)) + 1
 
 # def target_function(xt, xt1, xt2):
 #     """
@@ -178,7 +181,7 @@ def predict_memristor(x_test, dip, phi1, phi3, x_2):
     Uses the trained memristor model to make predictions on test data.
     """
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
-    phienc = tf.constant(2 * np.arccos(x_test), dtype=tf.float32)
+    phienc = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
     predictions = []
     targets = []
