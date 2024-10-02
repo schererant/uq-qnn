@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
 import numpy as np
 import tensorflow as tf
 import strawberryfields as sf
@@ -5,6 +8,8 @@ from strawberryfields.ops import *
 import pickle
 import random as rd
 import matplotlib.pyplot as plt
+
+
 
 def memristor_update_function(x, y1, y2):
     """
@@ -31,7 +36,7 @@ def multiply_three_inputs(x1, x2, x3):
     """
     return x1 * x2 * x3
 
-def sinusoidal_target_function(xt, xt1, xt2):
+def target_function(xt, xt1, xt2):
     """
     Computes the target output as a sinusoidal function based on current and past inputs.
 
@@ -88,7 +93,7 @@ def build_circuit(phi_1, phi_2, phi_3, phi_enc):
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
-def train_memristor(x_train, dip, steps=50, learning_rate=0.003):
+def train_memristor(x_train, dip, steps=10, learning_rate=0.003):
     """
     Trains the memristor model using the provided training data.
     """
@@ -214,7 +219,7 @@ def predict_memristor(x_test, dip, phi1, phi3, x_2):
         if phi >= 2:
             # Compute the target function
             f2 = target_function(x_test[phi], x_test[phi - 1], x_test[phi - 2])
-            targets.append(f2.numpy())
+            targets.append(f2)
 
     return predictions, targets
 
@@ -232,6 +237,8 @@ def main():
     # Save training results
     with open("results_mem_t_lag_iris.pkl", "wb") as file:
         pickle.dump(res_mem, file)
+
+
 
     # Predict using the trained model
     x_test = x_train  # For simplicity, using the same data
