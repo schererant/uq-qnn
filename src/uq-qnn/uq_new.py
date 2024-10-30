@@ -52,6 +52,9 @@ def target_function(xt, xt1, xt2):
     """
     return np.sin(2 * np.pi * (xt + xt1 + xt2)) + 1
 
+def simple_target_function(xx):
+    return xx**4
+
 # def target_function(xt, xt1, xt2):
 #     """
 #     Computes the target output based on current and past inputs.
