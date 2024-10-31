@@ -80,6 +80,92 @@ def get_data(n_data: int =100, sigma_noise_1: float = 0.0, datafunction: Callabl
 
     return X_train, y_train, X_test, y_test, label_noise
 
+def plot_toy_data(X_train, y_train, X_test, y_test):
+    """Plot the toy data."""
+    fig, ax = plt.subplots(1)
+    ax.scatter(X_train, y_train, color="blue", label="train_data")
+    ax.scatter(X_test, y_test, color="orange", label="test_data")
+    plt.legend()
+    plt.show()
+
+def plot_predictions(
+    X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
+) -> None:
+    """Plot predictive uncertainty as well as epistemic and aleatoric separately.
+    
+    Args:
+      X_train:
+      y_train:
+      X_test:
+      y_test:
+      y_pred:
+      pred_std:
+      pred_quantiles:
+      epistemic: for us this is predictive_uncertainty
+      aleatoric:
+    """
+    # fig, ax = plt.subplots(ncols=2)
+    fig = plt.figure()
+    ax0 = fig.add_subplot(1, 2, 1)
+
+    # model predictive uncertainty bands on the left
+    ax0.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+    ax0.scatter(X_train, y_train, color="blue", label="train_data")
+    ax0.scatter(X_test, y_pred, color="orange", label="predictions")
+
+    if pred_std is not None:
+        ax0.fill_between(
+            X_test.squeeze(),
+            y_pred - pred_std,
+            y_pred + pred_std,
+            alpha=0.3,
+            color="tab:red",
+            label="$\sqrt{\mathbb{V}\,[y]}$",
+        )
+
+    if pred_quantiles is not None:
+        ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="quantiles")
+
+    if title is not None:
+        ax0.set_title(title + " showing mean +- std")
+
+    # epistemic and aleatoric uncertainty plots on right
+    # epistemic uncertainty figure
+    ax1 = fig.add_subplot(2, 2, 2)
+    if epistemic is not None:
+      ax1.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+      ax1.set_title("Epistemic Uncertainty")
+      ax1.fill_between(
+            X_test.squeeze(),
+            y_pred - epistemic,
+            y_pred + epistemic,
+            alpha=0.3,
+            color="tab:red",
+            label="Epistemic",
+        )
+      ax1.set_title("Epistemic Uncertainty")
+      ax1.legend()
+    else:
+      ax1.text(0.5, 0.5, "This Method does not quantify epistemic uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+
+    # aleatoric uncertainty figure
+    ax2 = fig.add_subplot(2, 2, 4)
+    if aleatoric is not None:
+      ax2.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+      ax2.fill_between(
+            X_test.squeeze(),
+            y_pred - aleatoric,
+            y_pred + aleatoric,
+            alpha=0.3,
+            color="tab:red",
+            label="Aleatoric",
+        )
+      ax2.set_title("Aleatoric Uncertainty")
+    else:
+      ax2.text(0.5, 0.5, "This Method does not quantify aleatoric uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+    
+    ax0.legend()
+    plt.show()
 
 def memristor_update_function(x, y1, y2):
     """
