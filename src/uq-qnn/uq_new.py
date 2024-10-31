@@ -240,6 +240,7 @@ def train_memristor(x_train, y_train, dip, steps=50, learning_rate=0.1):
                 #     # Compute loss
                 #     loss += tf.square(tf.abs(f2 - prob_001))
 
+
         # Compute gradients and update variables
         gradients = tape.gradient(loss, [phi1, phi3, x_2])
         opt.apply_gradients(zip(gradients, [phi1, phi3, x_2]))
@@ -251,10 +252,23 @@ def train_memristor(x_train, y_train, dip, steps=50, learning_rate=0.1):
     print(f"Optimal parameters: phi1={phi1.numpy()}, phi3={phi3.numpy()}, x_2={x_2.numpy()}")
     return res_mem, phi1, phi3, x_2
 
-def predict_memristor(x_test, y_test, dip, phi1, phi3, x_2):
+def predict_memristor(x_test, y_test, dip, phi1, phi3, x_2, stochastic: bool = True, samples: int = 20):
     """
     Uses the trained memristor model to make predictions on test data.
     """
+    # for UQ stuff we want to have the circuit below with the memristor parametrized by phi_2 and then we want to make the parameters
+    # for the MZIs phi_1 and phi_3 stochastic
+    # that means sample phi_1_sample in np.normal(phi_1, var)  and phi_3_sample in np.normal(phi_3, var)
+    # where we experiment with the var>0 and phi_1 and phi_3 are obtained from the training loop below   
+
+    # if clause with stochastic == True
+    # samples is number of phi_1_sample in np.normal(phi_1, var)
+    # also possible phi_1_sample, phi_3_sample in np.normal([phi_1,phi_3], [var,var])
+    # else blow as it is
+
+    # eval predictions: stack of predictions mean over samples for each phi in len(phienc)
+    # predictive_uncertainty: prediction std over samples for each phi in len(phienc)
+
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     phienc = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
@@ -289,7 +303,10 @@ def predict_memristor(x_test, y_test, dip, phi1, phi3, x_2):
 
         predictions.append(prob_001.numpy())
         targets.append(y_test[phi])
-    return predictions, targets
+    if stochastic == True:
+        return predictions, predictive_uncertainty, targets
+    else: 
+        return predictions, targets
 
 def main():
     print("Memristor time lag")
