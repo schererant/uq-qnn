@@ -80,6 +80,92 @@ def get_data(n_data: int =100, sigma_noise_1: float = 0.0, datafunction: Callabl
 
     return X_train, y_train, X_test, y_test, label_noise
 
+def plot_toy_data(X_train, y_train, X_test, y_test):
+    """Plot the toy data."""
+    fig, ax = plt.subplots(1)
+    ax.scatter(X_train, y_train, color="blue", label="train_data")
+    ax.scatter(X_test, y_test, color="orange", label="test_data")
+    plt.legend()
+    plt.show()
+
+def plot_predictions(
+    X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
+) -> None:
+    """Plot predictive uncertainty as well as epistemic and aleatoric separately.
+    
+    Args:
+      X_train:
+      y_train:
+      X_test:
+      y_test:
+      y_pred:
+      pred_std:
+      pred_quantiles:
+      epistemic: for us this is predictive_uncertainty
+      aleatoric:
+    """
+    # fig, ax = plt.subplots(ncols=2)
+    fig = plt.figure()
+    ax0 = fig.add_subplot(1, 2, 1)
+
+    # model predictive uncertainty bands on the left
+    ax0.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+    ax0.scatter(X_train, y_train, color="blue", label="train_data")
+    ax0.scatter(X_test, y_pred, color="orange", label="predictions")
+
+    if pred_std is not None:
+        ax0.fill_between(
+            X_test.squeeze(),
+            y_pred - pred_std,
+            y_pred + pred_std,
+            alpha=0.3,
+            color="tab:red",
+            label="$\sqrt{\mathbb{V}\,[y]}$",
+        )
+
+    if pred_quantiles is not None:
+        ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="quantiles")
+
+    if title is not None:
+        ax0.set_title(title + " showing mean +- std")
+
+    # epistemic and aleatoric uncertainty plots on right
+    # epistemic uncertainty figure
+    ax1 = fig.add_subplot(2, 2, 2)
+    if epistemic is not None:
+      ax1.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+      ax1.set_title("Epistemic Uncertainty")
+      ax1.fill_between(
+            X_test.squeeze(),
+            y_pred - epistemic,
+            y_pred + epistemic,
+            alpha=0.3,
+            color="tab:red",
+            label="Epistemic",
+        )
+      ax1.set_title("Epistemic Uncertainty")
+      ax1.legend()
+    else:
+      ax1.text(0.5, 0.5, "This Method does not quantify epistemic uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+
+    # aleatoric uncertainty figure
+    ax2 = fig.add_subplot(2, 2, 4)
+    if aleatoric is not None:
+      ax2.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+      ax2.fill_between(
+            X_test.squeeze(),
+            y_pred - aleatoric,
+            y_pred + aleatoric,
+            alpha=0.3,
+            color="tab:red",
+            label="Aleatoric",
+        )
+      ax2.set_title("Aleatoric Uncertainty")
+    else:
+      ax2.text(0.5, 0.5, "This Method does not quantify aleatoric uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+    
+    ax0.legend()
+    plt.show()
 
 def memristor_update_function(x, y1, y2):
     """
@@ -132,7 +218,7 @@ def target_function(xt, xt1, xt2):
 #     """
 #     return 0.4 * xt1 + 0.4 * xt1 * xt2 + 0.6 * xt ** 3 + 0.1
 
-def build_circuit(phi_1, phi_2, phi_3, phi_enc):
+def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
     """
     Constructs the quantum circuit with the given parameters.
     """
@@ -144,22 +230,22 @@ def build_circuit(phi_1, phi_2, phi_3, phi_enc):
         
         # Input encoding MZI
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phi_enc)           | q[1]
+        Rgate(encoded_phases)           | q[1]
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
         
         # First MZI
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phi_1)             | q[1]
+        Rgate(phase1)             | q[1]
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
         
         # Memristor (Second MZI)
         BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        Rgate(phi_2)             | q[1]
+        Rgate(memristor_weight)             | q[1]
         BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
         
         # Third MZI
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phi_3)             | q[1]
+        Rgate(phase3)             | q[1]
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
@@ -241,12 +327,23 @@ def train_memristor(x_train, y_train, memory_depth):
 
     return res_mem, phase1, phase3, memristor_weight
 
-def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight):
+def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic: bool = True, samples: int = 20):
     """
     Uses the trained memristor model to make predictions on test data.
     """
+    # for UQ stuff we want to have the circuit below with the memristor parametrized by memristor_weight and then we want to make the parameters
+    # for the MZIs phase1 and phase3 stochastic
+    # that means sample phase1_sample in np.normal(phase1, var)  and phase3_sample in np.normal(phase3, var)
+    # where we experiment with the var>0 and phase1 and phase3 are obtained from the training loop below   
 
-    # Initialize the quantum engine with TensorFlow backend
+    # if clause with stochastic == True
+    # samples is number of phase1_sample in np.normal(phase1, var)
+    # also possible phase1_sample, phase3_sample in np.normal([phase1,phase3], [var,var])
+    # else blow as it is
+
+    # eval predictions: stack of predictions mean over samples for each phi in len(phienc)
+    # predictive_uncertainty: prediction std over samples for each phi in len(phienc)
+
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     encoded_phases = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
@@ -285,10 +382,13 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
         memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
         memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
 
-        # Store predictions and targets
         predictions.append(prob_state_001.numpy())
         targets.append(y_test[i])
-    return predictions, targets
+
+    if stochastic == True:
+        return predictions, predictive_uncertainty, targets
+    else: 
+        return predictions, targets
 
 def main():
     print("Memristor time lag")
