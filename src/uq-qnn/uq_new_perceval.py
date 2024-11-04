@@ -5,8 +5,11 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import numpy as np
 import tensorflow as tf
-import strawberryfields as sf
-from strawberryfields.ops import *
+# Replace Strawberry Fields imports with Perceval
+# import strawberryfields as sf
+# from strawberryfields.ops import *
+import perceval as pcvl
+import perceval.components as pc
 import pickle
 import random as rd
 import matplotlib.pyplot as plt
@@ -119,64 +122,38 @@ def target_function(xt, xt1, xt2):
     """
     return np.sin(2 * np.pi * (xt + xt1 + xt2)) + 1
 
-# def target_function(xt, xt1, xt2):
-#     """
-#     Computes the target output based on current and past inputs.
-
-#     Interpretation:
-#     - xt: Current input value (at time t).
-#     - xt1: Previous input value (at time t-1).
-#     - xt2: Input value before previous (at time t-2).
-
-#     This function defines the desired output for the model to learn.
-#     """
-#     return 0.4 * xt1 + 0.4 * xt1 * xt2 + 0.6 * xt ** 3 + 0.1
-
 def build_circuit(phi_1, phi_2, phi_3, phi_enc):
     """
-    Constructs the quantum circuit with the given parameters.
+    Constructs the quantum circuit with the given parameters using Perceval.
     """
-    circuit = sf.Program(3)
-    with circuit.context as q:
-        Vac     | q[0]
-        Fock(1) | q[1]
-        Vac     | q[2]
-        
-        # Input encoding MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phi_enc)           | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        
-        # First MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phi_1)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        
-        # Memristor (Second MZI)
-        BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        Rgate(phi_2)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        
-        # Third MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phi_3)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
+    circuit = pcvl.Circuit(3)
+
+    # Input encoding MZI
+    bs = pc.BS()
+    circuit.add((0, 1), bs)
+    circuit.add(1, pc.PS(phi_enc))
+    circuit.add((0, 1), bs)
+
+    # First MZI
+    circuit.add((0, 1), bs)
+    circuit.add(1, pc.PS(phi_1))
+    circuit.add((0, 1), bs)
+
+    # Memristor (Second MZI)
+    circuit.add((1, 2), bs)
+    circuit.add(1, pc.PS(phi_2))
+    circuit.add((1, 2), bs)
+
+    # Third MZI
+    circuit.add((0, 1), bs)
+    circuit.add(1, pc.PS(phi_3))
+    circuit.add((0, 1), bs)
+
     return circuit
 
 def train_memristor(x_train, y_train, memory_depth):
     """
-    Trains the memristor model using the training data.
-
-    Args:
-        x_train: Training input data.
-        y_train: Training target data.
-        memory_depth: Memory depth of the memristor.
-
-    Returns:
-        res_mem: Dictionary containing the training loss and parameters over iterations.
-        phase1: Trained phase parameter 1.
-        phase3: Trained phase parameter 3.
-        memristor_weight: Trained weight parameter for the memristor update function.
+    Trains the memristor model using Perceval.
     """
     # Initialize variables and optimizer
     phase1 = tf.Variable(tf.random.uniform([], 0, 2 * np.pi, dtype=tf.float64))
@@ -190,15 +167,14 @@ def train_memristor(x_train, y_train, memory_depth):
     num_samples = len(encoded_phases)
 
     # Initialize memory variables
-    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
-    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float64)
+    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float64)
     cycle_index = 0
 
     # Training loop
     for step in range(50):
         with tf.GradientTape() as tape:
             loss = 0.0
-            eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
 
             for i in range(num_samples):
                 time_step = i - cycle_index * memory_depth
@@ -207,24 +183,29 @@ def train_memristor(x_train, y_train, memory_depth):
 
                 if i == 0:
                     memristor_phase = tf.acos(tf.sqrt(0.5))
-                    circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-                    results = eng.run(circuit)
                 else:
                     memristor_phase = tf.acos(tf.sqrt(
                         tf.reduce_sum(memory_p1) / memory_depth +
                         memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
                     ))
-                    circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-                    results = eng.run(circuit)
 
-                # Get probabilities from the circuit results
-                prob = results.state.all_fock_probs()
-                prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float64)
-                prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float64)
+                circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
+
+                # Simulate the circuit using Perceval
+                simulator = pcvl.BackendFactory().get_backend("SLOS")
+                # Create input state
+                input_state = pcvl.BasicState([0, 1, 0])
+                # Process the circuit
+                probs = simulator.probabilities(circuit, input_state)
+
+                # Get probabilities for specific states
+                prob_state_001 = tf.cast(probs.get(pcvl.BasicState([0, 0, 1]), 0.0), dtype=tf.float64)
+                prob_state_010 = tf.cast(probs.get(pcvl.BasicState([0, 1, 0]), 0.0), dtype=tf.float64)
 
                 # Update memory variables
-                memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
-                memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
+                index = [time_step % memory_depth]
+                memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [index], [prob_state_010])
+                memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [index], [prob_state_001])
 
                 # Compute the loss
                 loss += tf.square(tf.abs(y_train[i] - prob_state_001))
@@ -243,74 +224,73 @@ def train_memristor(x_train, y_train, memory_depth):
 
 def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight):
     """
-    Uses the trained memristor model to make predictions on test data.
+    Uses the trained memristor model to make predictions on test data using Perceval.
     """
-
-    # Initialize the quantum engine with TensorFlow backend
-    eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     encoded_phases = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
+    num_samples = len(encoded_phases)
 
-    # Initialize lists to store predictions and targets
     predictions = []
     targets = []
 
     # Initialize memory variables
-    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
-    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float64)
+    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float64)
     cycle_index = 0
 
-    for i in range(len(encoded_phases)):
+    for i in range(num_samples):
         time_step = i - cycle_index * memory_depth
         if time_step == memory_depth - 1:
             cycle_index += 1
 
         if i == 0:
             memristor_phase = tf.acos(tf.sqrt(0.5))
-            circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-            results = eng.run(circuit)
         else:
             memristor_phase = tf.acos(tf.sqrt(
                 tf.reduce_sum(memory_p1) / memory_depth +
                 memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
             ))
-            circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-            results = eng.run(circuit)
 
-        # Get probabilities from the circuit results
-        prob = results.state.all_fock_probs()
-        prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float32)
-        prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float32)
+        circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
+
+        # Simulate the circuit using Perceval
+        simulator = pcvl.BackendFactory().get_backend("SLOS")
+        # Create input state
+        input_state = pcvl.BasicState([0, 1, 0])
+        # Process the circuit
+        probs = simulator.probabilities(circuit, input_state)
+
+        # Get probabilities for specific states
+        prob_state_001 = tf.cast(probs.get(pcvl.BasicState([0, 0, 1]), 0.0), dtype=tf.float32)
+        prob_state_010 = tf.cast(probs.get(pcvl.BasicState([0, 1, 0]), 0.0), dtype=tf.float32)
 
         # Update memory variables
-        memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
-        memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
+        index = [time_step % memory_depth]
+        memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [index], [prob_state_010])
+        memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [index], [prob_state_001])
 
         # Store predictions and targets
         predictions.append(prob_state_001.numpy())
         targets.append(y_test[i])
+
     return predictions, targets
 
 def main():
-    print("Memristor time lag")
-    dip = 3  # Memory depth
-
-    # Generate data using get_data function
     X_train, y_train, X_test, y_test, _ = get_data(n_data=100, sigma_noise_1=0.0, datafunction=quartic_data)
 
     # Train the memristor model
-    res_mem, phi1, phi3, x_2 = train_memristor(X_train, y_train, dip)
+    res_mem, phi1, phi3, x_2 = train_memristor(X_train, y_train, memory_depth=3)
 
     # Save training results
     with open("results_mem_t_lag_iris.pkl", "wb") as file:
         pickle.dump(res_mem, file)
 
     # Predict using the trained model
-    predictions, targets = predict_memristor(X_test, y_test, dip, phi1, phi3, x_2)
+    predictions, targets = predict_memristor(X_test, y_test, memory_depth=3, phase1=phi1, phase3=phi3, memristor_weight=x_2)
 
     # Plotting the results
     plt.figure(figsize=(10, 6))
-    plt.plot(X_test, predictions, label='Predictions')
-    plt.plot(X_test, targets, label='Targets', linestyle='--')
+    plt.plot(X_test.numpy(), predictions, label='Predictions')
+    plt.plot(X_test.numpy(), targets, label='Targets', linestyle='--')
     plt.xlabel('Input Data')
     plt.ylabel('Output')
     plt.title('Memristor Model Predictions vs Targets')
