@@ -249,7 +249,7 @@ def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
-def train_memristor(x_train, y_train, memory_depth):
+def train_memristor(x_train, y_train, memory_depth, training_steps=10):
     """
     Trains the memristor model using the training data.
 
@@ -277,7 +277,7 @@ def train_memristor(x_train, y_train, memory_depth):
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     res_mem = {}
 
-    encoded_phases = tf.constant(2 * np.arccos(x_train), dtype=tf.float64)
+    encoded_phases = tf.constant(2 * np.arccos(x_train), dtype=tf.float32)
     num_samples = len(encoded_phases)
 
     # Initialize memory variables
@@ -286,7 +286,7 @@ def train_memristor(x_train, y_train, memory_depth):
     cycle_index = 0
 
     # Training loop
-    for step in range(50):
+    for step in range(training_steps):
         # Reset the engine if it has already been executed
         if eng.run_progs:
             eng.reset()
@@ -335,70 +335,146 @@ def train_memristor(x_train, y_train, memory_depth):
 
     return res_mem, phase1, phase3, memristor_weight
 
-def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic: bool = False, samples: int = 20):
+def predict_memristor(
+    x_test,
+    y_test,
+    memory_depth,
+    phase1,
+    phase3,
+    memristor_weight,
+    stochastic: bool = False,
+    samples: int = 20,
+    var: float = 0.1,
+):
     """
     Uses the trained memristor model to make predictions on test data.
+
+    Args:
+        x_test: Test input data.
+        y_test: Test target data.
+        memory_depth: Memory depth of the memristor.
+        phase1: Trained phase parameter 1.
+        phase3: Trained phase parameter 3.
+        memristor_weight: Trained weight parameter for the memristor update function.
+        stochastic: If True, samples `phase1` and `phase3` from normal distributions
+            to compute predictive uncertainty.
+        samples: Number of samples to draw if `stochastic` is True.
+        var: Variance for the normal distribution used when `stochastic` is True.
+
+    Returns:
+        If `stochastic` is True:
+            predictions_mean: Mean of predictions over samples.
+            predictive_uncertainty: Standard deviation of predictions over samples.
+            targets: Test target data.
+        Else:
+            predictions: Predictions on test data.
+            targets: Test target data.
     """
-    # for UQ stuff we want to have the circuit below with the memristor parametrized by memristor_weight and then we want to make the parameters
-    # for the MZIs phase1 and phase3 stochastic
-    # that means sample phase1_sample in np.normal(phase1, var)  and phase3_sample in np.normal(phase3, var)
-    # where we experiment with the var>0 and phase1 and phase3 are obtained from the training loop below   
-
-    # if clause with stochastic == True
-    # samples is number of phase1_sample in np.normal(phase1, var)
-    # also possible phase1_sample, phase3_sample in np.normal([phase1,phase3], [var,var])
-    # else blow as it is
-
-    # eval predictions: stack of predictions mean over samples for each phi in len(phienc)
-    # predictive_uncertainty: prediction std over samples for each phi in len(phienc)
-
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     encoded_phases = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
-    # Initialize lists to store predictions and targets
-    predictions = []
-    targets = []
+    if stochastic:
 
-    # Initialize memory variables
-    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
-    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
-    cycle_index = 0
+        
+        predictions = np.zeros((samples, len(encoded_phases)))
+        targets = y_test.numpy()
 
-    for i in range(len(encoded_phases)):
-        time_step = i - cycle_index * memory_depth
-        if time_step == memory_depth - 1:
-            cycle_index += 1
+        for s in range(samples):
+            # Sample phase1_sample and phase3_sample from normal distributions
+            phase1_sample = np.random.normal(phase1.numpy(), var)
+            phase3_sample = np.random.normal(phase3.numpy(), var)
 
-        if i == 0:
-            memristor_phase = tf.acos(tf.sqrt(0.5))
-            circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-            results = eng.run(circuit)
-        else:
-            memristor_phase = tf.acos(tf.sqrt(
-                tf.reduce_sum(memory_p1) / memory_depth +
-                memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
-            ))
-            circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-            results = eng.run(circuit)
+            # Initialize memory variables for each sample
+            memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+            memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+            cycle_index = 0
 
-        # Get probabilities from the circuit results
-        prob = results.state.all_fock_probs()
-        prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float32)
-        prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float32)
+            for i in range(len(encoded_phases)):
+                time_step = i - cycle_index * memory_depth
+                if time_step == memory_depth - 1:
+                    cycle_index += 1
 
-        # Update memory variables
-        memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
-        memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
+                if i == 0:
+                    memristor_phase = tf.acos(tf.sqrt(0.5))
+                else:
+                    memristor_phase = tf.acos(
+                        tf.sqrt(
+                            tf.reduce_sum(memory_p1) / memory_depth
+                            + memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
+                        )
+                    )
 
-        predictions.append(prob_state_001.numpy())
-        targets.append(y_test[i])
+                # Build and run the circuit with sampled phases
+                circuit = build_circuit(
+                    phase1_sample, memristor_phase, phase3_sample, encoded_phases[i]
+                )
+                results = eng.run(circuit)
 
-        predictive_uncertainty = 0.0
+                # Get probabilities from the circuit results
+                prob = results.state.all_fock_probs()
+                prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float32)
+                prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float32)
 
-    if stochastic == True:
-        return predictions, predictive_uncertainty, targets
-    else: 
-        return predictions, targets
+                # Update memory variables
+                memory_p1 = tf.tensor_scatter_nd_update(
+                    memory_p1, [[time_step % memory_depth]], [prob_state_010]
+                )
+                memory_p2 = tf.tensor_scatter_nd_update(
+                    memory_p2, [[time_step % memory_depth]], [prob_state_001]
+                )
+
+                predictions[s, i] = prob_state_001.numpy()
+
+                # Reset the engine for the next run
+                if eng.run_progs:
+                    eng.reset()
+
+        # Compute mean and standard deviation over samples for each test input
+        predictions_mean = np.mean(predictions, axis=0)
+        predictive_uncertainty = np.std(predictions, axis=0)
+
+        return predictions_mean, predictive_uncertainty, targets
+
+    else:
+        # Initialize lists to store predictions and targets
+        predictions = []
+        targets = []
+
+        # Initialize memory variables
+        memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+        memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+        cycle_index = 0
+
+        for i in range(len(encoded_phases)):
+            time_step = i - cycle_index * memory_depth
+            if time_step == memory_depth - 1:
+                cycle_index += 1
+
+            if i == 0:
+                memristor_phase = tf.acos(tf.sqrt(0.5))
+                circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
+                results = eng.run(circuit)
+            else:
+                memristor_phase = tf.acos(tf.sqrt(
+                    tf.reduce_sum(memory_p1) / memory_depth +
+                    memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
+                ))
+                circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
+                results = eng.run(circuit)
+
+            # Get probabilities from the circuit results
+            prob = results.state.all_fock_probs()
+            prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float32)
+            prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float32)
+
+            # Update memory variables
+            memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
+            memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
+
+            predictions.append(prob_state_001.numpy())
+            targets.append(y_test[i])
+            
+            return predictions, targets
 
 def main():
     print("Training the memristor model...")
