@@ -88,87 +88,6 @@ def plot_toy_data(X_train, y_train, X_test, y_test):
     plt.legend()
     plt.show()
 
-# def plot_predictions(
-#     X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
-# ) -> None:
-#     """Plot predictive uncertainty as well as epistemic and aleatoric separately.
-    
-#     Args:
-#       X_train:
-#       y_train:
-#       X_test:
-#       y_test:
-#       y_pred:
-#       pred_std:
-#       pred_quantiles:
-#       epistemic: for us this is predictive_uncertainty
-#       aleatoric:
-#     """
-#     # fig, ax = plt.subplots(ncols=2)
-#     fig = plt.figure()
-#     ax0 = fig.add_subplot(1, 2, 1)
-
-#     # model predictive uncertainty bands on the left
-#     ax0.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
-#     ax0.scatter(X_train, y_train, color="blue", label="train_data")
-#     ax0.scatter(X_test, y_pred, color="orange", label="predictions")
-
-#     if pred_std is not None:
-#         ax0.fill_between(
-#             X_test.squeeze(),
-#             y_pred - pred_std,
-#             y_pred + pred_std,
-#             alpha=0.3,
-#             color="tab:red",
-#             label="$\sqrt{\mathbb{V}\,[y]}$",
-#         )
-
-#     if pred_quantiles is not None:
-#         ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="quantiles")
-
-#     if title is not None:
-#         ax0.set_title(title + " showing mean +- std")
-
-#     # epistemic and aleatoric uncertainty plots on right
-#     # epistemic uncertainty figure
-#     ax1 = fig.add_subplot(2, 2, 2)
-#     if epistemic is not None:
-#       ax1.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
-#       ax1.set_title("Epistemic Uncertainty")
-#       ax1.fill_between(
-#             X_test.squeeze(),
-#             y_pred - epistemic,
-#             y_pred + epistemic,
-#             alpha=0.3,
-#             color="tab:red",
-#             label="Epistemic",
-#         )
-#       ax1.set_title("Epistemic Uncertainty")
-#       ax1.legend()
-#     else:
-#       ax1.text(0.5, 0.5, "This Method does not quantify epistemic uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
-
-#     # aleatoric uncertainty figure
-#     ax2 = fig.add_subplot(2, 2, 4)
-#     if aleatoric is not None:
-#       ax2.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
-#       ax2.fill_between(
-#             X_test.squeeze(),
-#             y_pred - aleatoric,
-#             y_pred + aleatoric,
-#             alpha=0.3,
-#             color="tab:red",
-#             label="Aleatoric",
-#         )
-#       ax2.set_title("Aleatoric Uncertainty")
-#     else:
-#       ax2.text(0.5, 0.5, "This Method does not quantify aleatoric uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
-    
-#     ax0.legend()
-#     plt.show()
-
-# import matplotlib.pyplot as plt
-
 def plot_predictions(
     X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
 ) -> None:
@@ -500,20 +419,20 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
 
 def main():
     print("Training the memristor model...")
-    dip = 3  # Memory depth
+    memory_depth = 3  # Memory depth
 
     # Generate data using get_data function
     X_train, y_train, X_test, y_test, _ = get_data(n_data=100, sigma_noise_1=0.0, datafunction=quartic_data)
 
     # Train the memristor model
-    res_mem, phi1, phi3, x_2 = train_memristor(X_train, y_train, dip)
+    res_mem, phase1, phase3, memristor_weight = train_memristor(X_train, y_train, memory_depth)
 
     # Save training results
     with open("results_mem_t_lag_iris.pkl", "wb") as file:
         pickle.dump(res_mem, file)
 
     # Predict using the trained model
-    predictions, targets, predictive_uncertainty = predict_memristor(X_test, y_test, dip, phi1, phi3, x_2)
+    predictions, targets, predictive_uncertainty = predict_memristor(X_test, y_test, memory_depth, phase1, phase3, memristor_weight)
 
     # print("Predictions:", predictions)
     # print("Targets:", targets)
