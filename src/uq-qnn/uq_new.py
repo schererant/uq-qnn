@@ -88,30 +88,111 @@ def plot_toy_data(X_train, y_train, X_test, y_test):
     plt.legend()
     plt.show()
 
+# def plot_predictions(
+#     X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
+# ) -> None:
+#     """Plot predictive uncertainty as well as epistemic and aleatoric separately.
+    
+#     Args:
+#       X_train:
+#       y_train:
+#       X_test:
+#       y_test:
+#       y_pred:
+#       pred_std:
+#       pred_quantiles:
+#       epistemic: for us this is predictive_uncertainty
+#       aleatoric:
+#     """
+#     # fig, ax = plt.subplots(ncols=2)
+#     fig = plt.figure()
+#     ax0 = fig.add_subplot(1, 2, 1)
+
+#     # model predictive uncertainty bands on the left
+#     ax0.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+#     ax0.scatter(X_train, y_train, color="blue", label="train_data")
+#     ax0.scatter(X_test, y_pred, color="orange", label="predictions")
+
+#     if pred_std is not None:
+#         ax0.fill_between(
+#             X_test.squeeze(),
+#             y_pred - pred_std,
+#             y_pred + pred_std,
+#             alpha=0.3,
+#             color="tab:red",
+#             label="$\sqrt{\mathbb{V}\,[y]}$",
+#         )
+
+#     if pred_quantiles is not None:
+#         ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="quantiles")
+
+#     if title is not None:
+#         ax0.set_title(title + " showing mean +- std")
+
+#     # epistemic and aleatoric uncertainty plots on right
+#     # epistemic uncertainty figure
+#     ax1 = fig.add_subplot(2, 2, 2)
+#     if epistemic is not None:
+#       ax1.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+#       ax1.set_title("Epistemic Uncertainty")
+#       ax1.fill_between(
+#             X_test.squeeze(),
+#             y_pred - epistemic,
+#             y_pred + epistemic,
+#             alpha=0.3,
+#             color="tab:red",
+#             label="Epistemic",
+#         )
+#       ax1.set_title("Epistemic Uncertainty")
+#       ax1.legend()
+#     else:
+#       ax1.text(0.5, 0.5, "This Method does not quantify epistemic uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+
+#     # aleatoric uncertainty figure
+#     ax2 = fig.add_subplot(2, 2, 4)
+#     if aleatoric is not None:
+#       ax2.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
+#       ax2.fill_between(
+#             X_test.squeeze(),
+#             y_pred - aleatoric,
+#             y_pred + aleatoric,
+#             alpha=0.3,
+#             color="tab:red",
+#             label="Aleatoric",
+#         )
+#       ax2.set_title("Aleatoric Uncertainty")
+#     else:
+#       ax2.text(0.5, 0.5, "This Method does not quantify aleatoric uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+    
+#     ax0.legend()
+#     plt.show()
+
+# import matplotlib.pyplot as plt
+
 def plot_predictions(
     X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
 ) -> None:
     """Plot predictive uncertainty as well as epistemic and aleatoric separately.
     
     Args:
-      X_train:
-      y_train:
-      X_test:
-      y_test:
-      y_pred:
-      pred_std:
-      pred_quantiles:
-      epistemic: for us this is predictive_uncertainty
-      aleatoric:
+      X_train: Training input data.
+      y_train: Training target data.
+      X_test: Test input data.
+      y_test: Test target data.
+      y_pred: Predicted values.
+      pred_std: Standard deviation of predictions (predictive uncertainty).
+      pred_quantiles: Quantiles of predictions.
+      epistemic: Epistemic uncertainty (for us this is predictive_uncertainty).
+      aleatoric: Aleatoric uncertainty.
+      title: Title for the plot.
     """
-    # fig, ax = plt.subplots(ncols=2)
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12, 6))
     ax0 = fig.add_subplot(1, 2, 1)
 
-    # model predictive uncertainty bands on the left
-    ax0.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
-    ax0.scatter(X_train, y_train, color="blue", label="train_data")
-    ax0.scatter(X_test, y_pred, color="orange", label="predictions")
+    # Model predictive uncertainty bands on the left
+    ax0.scatter(X_test, y_test, color="gray", label="Ground Truth", s=0.5)
+    ax0.scatter(X_train, y_train, color="blue", label="Train Data")
+    ax0.scatter(X_test, y_pred, color="orange", label="Predictions")
 
     if pred_std is not None:
         ax0.fill_between(
@@ -124,47 +205,41 @@ def plot_predictions(
         )
 
     if pred_quantiles is not None:
-        ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="quantiles")
+        ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="Quantiles")
 
     if title is not None:
-        ax0.set_title(title + " showing mean +- std")
+        ax0.set_title(title + " showing mean ± std")
 
-    # epistemic and aleatoric uncertainty plots on right
-    # epistemic uncertainty figure
+    ax0.legend()
+
+    # Epistemic and aleatoric uncertainty plots on the right
     ax1 = fig.add_subplot(2, 2, 2)
     if epistemic is not None:
-      ax1.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
-      ax1.set_title("Epistemic Uncertainty")
-      ax1.fill_between(
+        ax1.plot(X_test, epistemic, color="tab:blue", label="Epistemic Uncertainty")
+        ax1.fill_between(
             X_test.squeeze(),
-            y_pred - epistemic,
-            y_pred + epistemic,
+            epistemic - pred_std,
+            epistemic + pred_std,
             alpha=0.3,
-            color="tab:red",
-            label="Epistemic",
+            color="tab:blue",
         )
-      ax1.set_title("Epistemic Uncertainty")
-      ax1.legend()
-    else:
-      ax1.text(0.5, 0.5, "This Method does not quantify epistemic uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
+        ax1.set_title("Epistemic Uncertainty")
+        ax1.legend()
 
-    # aleatoric uncertainty figure
     ax2 = fig.add_subplot(2, 2, 4)
     if aleatoric is not None:
-      ax2.scatter(X_test, y_test, color="gray", label="ground truth", s=0.5)
-      ax2.fill_between(
+        ax2.plot(X_test, aleatoric, color="tab:green", label="Aleatoric Uncertainty")
+        ax2.fill_between(
             X_test.squeeze(),
-            y_pred - aleatoric,
-            y_pred + aleatoric,
+            aleatoric - pred_std,
+            aleatoric + pred_std,
             alpha=0.3,
-            color="tab:red",
-            label="Aleatoric",
+            color="tab:green",
         )
-      ax2.set_title("Aleatoric Uncertainty")
-    else:
-      ax2.text(0.5, 0.5, "This Method does not quantify aleatoric uncertainty.", horizontalalignment='center', verticalalignment='center', fontsize=15)
-    
-    ax0.legend()
+        ax2.set_title("Aleatoric Uncertainty")
+        ax2.legend()
+
+    plt.tight_layout()
     plt.show()
 
 def memristor_update_function(x, y1, y2):
@@ -249,7 +324,7 @@ def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
-def train_memristor(x_train, y_train, memory_depth):
+def train_memristor(x_train, y_train, memory_depth, training_steps=50):
     """
     Trains the memristor model using the training data.
 
@@ -286,7 +361,7 @@ def train_memristor(x_train, y_train, memory_depth):
     cycle_index = 0
 
     # Training loop
-    for step in range(50):
+    for step in range(training_steps):
         # Reset the engine if it has already been executed
         if eng.run_progs:
             eng.reset()
@@ -335,7 +410,7 @@ def train_memristor(x_train, y_train, memory_depth):
 
     return res_mem, phase1, phase3, memristor_weight
 
-def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic: bool = False, samples: int = 20):
+def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic: bool = True, samples: int = 20, var: float = 0.1):
     """
     Uses the trained memristor model to make predictions on test data.
     """
@@ -356,7 +431,7 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
     encoded_phases = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
     # Initialize lists to store predictions and targets
-    predictions = []
+    all_predictions = []
     targets = []
 
     # Initialize memory variables
@@ -364,41 +439,64 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
     memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
     cycle_index = 0
 
-    for i in range(len(encoded_phases)):
-        time_step = i - cycle_index * memory_depth
-        if time_step == memory_depth - 1:
-            cycle_index += 1
+    print("Predicting on test data...")
 
-        if i == 0:
-            memristor_phase = tf.acos(tf.sqrt(0.5))
-            circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
+    for sample in range(samples):
+        print(f"Sample {sample + 1}/{samples}")
+        sample_predictions = []
+
+        for i in range(len(encoded_phases)):
+            time_step = i - cycle_index * memory_depth
+            if time_step == memory_depth - 1:
+                cycle_index += 1
+
+            if stochastic:
+                phase1_sample = np.random.normal(phase1.numpy(), var)
+                phase3_sample = np.random.normal(phase3.numpy(), var)
+            else:
+                phase1_sample = phase1.numpy()
+                phase3_sample = phase3.numpy()
+
+
+            if i == 0:
+                memristor_phase = tf.acos(tf.sqrt(0.5))
+            else:
+                memristor_phase = tf.acos(tf.sqrt(
+                    tf.reduce_sum(memory_p1) / memory_depth +
+                    memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
+                ))
+
+            circuit = build_circuit(phase1_sample, memristor_phase, phase3_sample, encoded_phases[i])
             results = eng.run(circuit)
-        else:
-            memristor_phase = tf.acos(tf.sqrt(
-                tf.reduce_sum(memory_p1) / memory_depth +
-                memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
-            ))
-            circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-            results = eng.run(circuit)
 
-        # Get probabilities from the circuit results
-        prob = results.state.all_fock_probs()
-        prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float32)
-        prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float32)
+            # Get probabilities from the circuit results
+            prob = results.state.all_fock_probs()
+            prob_state_001 = tf.cast(tf.math.real(prob[0, 0, 1]), dtype=tf.float32)
+            prob_state_010 = tf.cast(tf.math.real(prob[0, 1, 0]), dtype=tf.float32)
 
-        # Update memory variables
-        memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
-        memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
+            # Update memory variables
+            memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
+            memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
 
-        predictions.append(prob_state_001.numpy())
-        targets.append(y_test[i])
+            sample_predictions.append(prob_state_001.numpy())
+            if sample == 0:
+                targets.append(y_test[i])
 
-        predictive_uncertainty = 0.0
+        all_predictions.append(sample_predictions)
 
-    if stochastic == True:
-        return predictions, predictive_uncertainty, targets
-    else: 
-        return predictions, targets
+    # Convert all_predictions to a NumPy array for easier manipulation
+    all_predictions = np.array(all_predictions)
+
+    if stochastic:
+        # Calculate mean and standard deviation along the column axis
+        final_predictions = np.mean(all_predictions, axis=0)
+        predictive_uncertainty = np.std(all_predictions, axis=0)
+    else:
+        final_predictions = all_predictions[0]
+        predictive_uncertainty = np.zeros_like(final_predictions)
+
+
+    return final_predictions, targets, predictive_uncertainty
 
 def main():
     print("Training the memristor model...")
@@ -415,17 +513,30 @@ def main():
         pickle.dump(res_mem, file)
 
     # Predict using the trained model
-    predictions, targets = predict_memristor(X_test, y_test, dip, phi1, phi3, x_2)
+    predictions, targets, predictive_uncertainty = predict_memristor(X_test, y_test, dip, phi1, phi3, x_2)
+
+    # print("Predictions:", predictions)
+    # print("Targets:", targets)
+
+    # # Plotting the results
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(X_test, predictions, label='Predictions')
+    # plt.plot(X_test, targets, label='Targets', linestyle='--')
+    # plt.xlabel('Input Data')
+    # plt.ylabel('Output')
+    # plt.title('Memristor Model Predictions vs Targets')
+    # plt.legend()
+    # plt.show()
+
+    # Ensure predictions and X_test have the same length
+    assert len(predictions) == len(X_test), "Predictions and X_test must have the same length"
 
     # Plotting the results
-    plt.figure(figsize=(10, 6))
-    plt.plot(X_test, predictions, label='Predictions')
-    plt.plot(X_test, targets, label='Targets', linestyle='--')
-    plt.xlabel('Input Data')
-    plt.ylabel('Output')
-    plt.title('Memristor Model Predictions vs Targets')
-    plt.legend()
-    plt.show()
+    plot_predictions(
+        X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
+        predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
+        title="Memristor Model Predictions vs Targets"
+    )
 
 if __name__ == "__main__":
     main()

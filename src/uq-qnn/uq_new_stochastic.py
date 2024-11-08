@@ -249,7 +249,7 @@ def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
-def train_memristor(x_train, y_train, memory_depth, training_steps=10):
+def train_memristor(x_train, y_train, memory_depth, training_steps=1):
     """
     Trains the memristor model using the training data.
 
@@ -373,9 +373,11 @@ def predict_memristor(
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     encoded_phases = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
-    if stochastic:
+    # Initialize memory variables for each sample
+    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
 
-        
+    if stochastic:
         predictions = np.zeros((samples, len(encoded_phases)))
         targets = y_test.numpy()
 
@@ -384,9 +386,7 @@ def predict_memristor(
             phase1_sample = np.random.normal(phase1.numpy(), var)
             phase3_sample = np.random.normal(phase3.numpy(), var)
 
-            # Initialize memory variables for each sample
-            memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
-            memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+            
             cycle_index = 0
 
             for i in range(len(encoded_phases)):
@@ -437,8 +437,8 @@ def predict_memristor(
 
     else:
         # Initialize lists to store predictions and targets
-        predictions = []
-        targets = []
+        predictions = np.zeros((samples, len(encoded_phases)))
+        targets = y_test.numpy()
 
         # Initialize memory variables
         memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
@@ -495,8 +495,8 @@ def main():
 
     # Plotting the results
     plt.figure(figsize=(10, 6))
-    plt.plot(X_test, predictions, label='Predictions')
-    plt.plot(X_test, targets, label='Targets', linestyle='--')
+    plt.plot(X_test.numpy() , predictions, label='Predictions')
+    plt.plot(X_test.numpy() , targets, label='Targets', linestyle='--')
     plt.xlabel('Input Data')
     plt.ylabel('Output')
     plt.title('Memristor Model Predictions vs Targets')
@@ -505,3 +505,22 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+# Trainings + Test Daten plotten
+# Visuelle auswertung
+# Quantitative Auswertung
+
+# Selective prediction @Nina
+
+
+# Perceval benutzen
+
+# Pro run 
