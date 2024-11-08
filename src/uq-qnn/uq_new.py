@@ -451,6 +451,7 @@ def main():
     assert len(predictions) == len(X_test), "Predictions and X_test must have the same length"
 
     # Plotting the results
+    #TODO: Add epistemic and aleatoric uncertainty
     plot_predictions(
         X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
         predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
