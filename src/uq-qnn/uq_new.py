@@ -114,15 +114,22 @@ def train_memristor(x_train, dip, steps=10, learning_rate=0.003):
     x_2 = tf.Variable(rd.uniform(0.01, 1), dtype=tf.float32,
                       constraint=lambda z: tf.clip_by_value(z, 0.01, 1))  # Memristor parameter
 
-    phienc = tf.constant(2 * np.arccos(x_train), dtype=tf.float32)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+    eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
+    res_mem = {}
 
-    print("Training memristor model")
-    print(f"Initial parameters: phi1={phi1.numpy()}, phi3={phi3.numpy()}, x_2={x_2.numpy()}")
+    encoded_phases = tf.constant(2 * np.arccos(x_train), dtype=tf.float64)
+    num_samples = len(encoded_phases)
 
-    # Optimizer
-    opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    # Initialize memory variables
+    memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+    memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
+    cycle_index = 0
 
-    for step in range(steps):
+    loss_list = []
+
+    # Training loop
+    for step in range(training_steps):
         # Reset the engine if it has already been executed
         if eng.run_progs:
             eng.reset()
@@ -160,24 +167,27 @@ def train_memristor(x_train, dip, steps=10, learning_rate=0.003):
                 p1 = tf.tensor_scatter_nd_update(p1, [[t % dip]], [prob_010])
                 p2 = tf.tensor_scatter_nd_update(p2, [[t % dip]], [prob_001])
 
-                if phi >= 2:
-                    # Compute the target function
-                    f2 = target_function(x_train[phi], x_train[phi - 1], x_train[phi - 2])
-                    f2 = tf.cast(f2, dtype=tf.float32)
-
-                    # Compute loss
-                    loss += tf.square(tf.abs(f2 - prob_001))
+                # Compute the loss
+                loss += tf.square(tf.abs(y_train[i] - prob_state_001))
+                
 
         # Compute gradients and update variables
         gradients = tape.gradient(loss, [phi1, phi3, x_2])
         opt.apply_gradients(zip(gradients, [phi1, phi3, x_2]))
 
-        res_mem[('loss', 'tr', step)] = [loss.numpy(), phi1.numpy(), phi3.numpy(), x_2.numpy()]
-        print(f"Loss at step {step + 1}: {loss.numpy()}")
+            loss_list.append(loss.numpy())
+            res_mem[('loss', 'tr', step)] = [loss.numpy(), phase1.numpy(), phase3.numpy(), memristor_weight.numpy()]
+            print(f"Loss at step {step + 1}: {loss.numpy()}")
 
     print(f"Final loss: {loss.numpy()}")
-    print(f"Optimal parameters: phi1={phi1.numpy()}, phi3={phi3.numpy()}, x_2={x_2.numpy()}")
-    return res_mem, phi1, phi3, x_2
+    print(f"Optimal parameters: phase1={phase1.numpy()}, phase3={phase3.numpy()}, memristor_weight={memristor_weight.numpy()}")
+
+    # Plotting the results
+    print("Plotting loss over steps")
+    print(range(training_steps))
+    print(loss_list)
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(training_steps), loss_list, label='Loss')
 
 def predict_memristor(x_test, dip, phi1, phi3, x_2):
     """
