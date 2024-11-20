@@ -23,6 +23,12 @@ np.random.seed(42)
 tf.random.set_seed(42)
 rd.seed(42)
 
+#TODO: create baseline with MLP or fit polynomial
+#TODO: try different functions
+#TODO: store hyperparameter, variance, outputs etc. to show difference
+#TODO: save outputs etc.  
+#TODO: 010 pol , ause neg loglike as loss 
+
 def quartic_data(input_data):
     """ Create labels with quartic function.
     
@@ -75,7 +81,7 @@ def get_data(n_data: int =100, sigma_noise_1: float = 0.0, datafunction: Callabl
     y_train = y_train[~train_idx]
 
     # test over the whole line
-    X_test = tf.linspace(x_min + x_min * 0.1, x_max - x_max * 0.1, 500)
+    X_test = tf.linspace(x_min, x_max, 500) #TODO: deleted 
     y_test = datafunction(X_test)
 
 
