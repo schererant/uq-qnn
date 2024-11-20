@@ -319,7 +319,7 @@ def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
-def train_memristor(x_train, y_train, memory_depth, training_steps=100):
+def train_memristor(x_train, y_train, memory_depth, training_steps=40):
     """
     Trains the memristor model using the training data.
 
