@@ -319,7 +319,7 @@ def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
         BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
     return circuit
 
-def train_memristor(x_train, y_train, memory_depth, training_steps=50):
+def train_memristor(x_train, y_train, memory_depth, training_steps=100):
     """
     Trains the memristor model using the training data.
 
@@ -494,44 +494,51 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
     return final_predictions, targets, predictive_uncertainty
 
 def main():
-    print("Training the memristor model...")
-    memory_depth = 3  # Memory depth
-
-    # Generate data using get_data function
-    X_train, y_train, X_test, y_test, _ = get_data(n_data=100, sigma_noise_1=0.0, datafunction=quartic_data)
+    X_train, y_train, X_test, y_test, _ = get_data(n_data=100, sigma_noise_1=0.1, datafunction=quartic_data)
 
     # Train the memristor model
-    res_mem, phase1, phase3, memristor_weight = train_memristor(X_train, y_train, memory_depth)
+    res_mem, phase1, phase3, memristor_weight = train_memristor(X_train, y_train, memory_depth=3)
 
     # Save training results
     with open("results_mem_t_lag_iris.pkl", "wb") as file:
         pickle.dump(res_mem, file)
 
     # Predict using the trained model
-    predictions, targets, predictive_uncertainty = predict_memristor(X_test, y_test, memory_depth, phase1, phase3, memristor_weight)
-
-    # print("Predictions:", predictions)
-    # print("Targets:", targets)
-
-    # # Plotting the results
-    # plt.figure(figsize=(10, 6))
-    # plt.plot(X_test, predictions, label='Predictions')
-    # plt.plot(X_test, targets, label='Targets', linestyle='--')
-    # plt.xlabel('Input Data')
-    # plt.ylabel('Output')
-    # plt.title('Memristor Model Predictions vs Targets')
-    # plt.legend()
-    # plt.show()
+    predictions, targets, predictive_uncertainty = predict_memristor(
+        X_test, y_test, memory_depth=3, phase1=phase1, phase3=phase3, memristor_weight=memristor_weight,
+        stochastic=True, var=0.1, samples=20
+    )
 
     # Ensure predictions and X_test have the same length
     assert len(predictions) == len(X_test), "Predictions and X_test must have the same length"
 
+    # Convert predictions, targets, and predictive_uncertainty to NumPy arrays
+    predictions = np.array(predictions)
+    targets = np.array(targets)
+    predictive_uncertainty = np.array(predictive_uncertainty)
+
+    # Compute evaluation metrics for full predictions
+    full_metrics, full_metric_categories = compute_eval_metrics(predictions, targets, predictive_uncertainty)
+    print("Full Prediction Metrics:")
+    for category in full_metric_categories:
+        print(f"{category}: {full_metrics[category]}")
+
+    # Apply selective prediction
+    threshold = 0.8  # Example threshold
+    sel_predictions, sel_targets, sel_uncertainty, remaining_fraction = selective_prediction(predictions, targets, predictive_uncertainty, threshold)
+    print(f"Remaining Fraction after Selective Prediction: {remaining_fraction}")
+
+    # Compute evaluation metrics for selective predictions
+    sel_metrics, sel_metric_categories = compute_eval_metrics(sel_predictions, sel_targets, sel_uncertainty)
+    print("Selective Prediction Metrics:")
+    for category in sel_metric_categories:
+        print(f"{category}: {sel_metrics[category]}")
+
     # Plotting the results
-    #TODO: Add epistemic and aleatoric uncertainty
     plot_predictions(
         X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
         predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
-        title="Memristor Model Predictions vs Targets"
+        aleatoric=predictive_uncertainty, title="Memristor Model Predictions vs Targets"
     )
 
 if __name__ == "__main__":
