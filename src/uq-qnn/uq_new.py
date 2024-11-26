@@ -25,11 +25,45 @@ np.random.seed(42)
 tf.random.set_seed(42)
 rd.seed(42)
 
-#TODO: create baseline with MLP or fit polynomial
+
 #TODO: try different functions
 #TODO: store hyperparameter, variance, outputs etc. to show difference
 #TODO: save outputs etc.  
 #TODO: 010 pol , ause neg loglike as loss 
+
+
+###### MLP BASELINE ######
+
+#TODO: adapt hidden layer,  epochs, learning rate
+def train_mlp_baseline(X_train, y_train, hidden_layers=[64, 64], epochs=100, learning_rate=0.01):
+    """Train a simple MLP baseline model."""
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.InputLayer(input_shape=(1,)))
+    for units in hidden_layers:
+        model.add(tf.keras.layers.Dense(units, activation='relu'))
+    model.add(tf.keras.layers.Dense(1))
+
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+                  loss='mse')
+
+    model.fit(X_train, y_train, epochs=epochs, verbose=0)
+    return model
+
+def predict_mlp_baseline(model, X_test):
+    """Predict using the trained MLP baseline model."""
+    return model.predict(X_test).flatten()
+
+###### POLYNOMIAL BASELINE ######
+
+def train_polynomial_baseline(X_train, y_train, degree=3):
+    """Fit a polynomial baseline model."""
+    coeffs = np.polyfit(X_train.numpy(), y_train.numpy(), degree)
+    return coeffs
+
+def predict_polynomial_baseline(coeffs, X_test):
+    """Predict using the fitted polynomial baseline model."""
+    poly = np.poly1d(coeffs)
+    return poly(X_test.numpy())
 
 
 def selective_prediction(final_predictions, targets, predictive_uncertainty, threshold: float = 0.8):
@@ -408,6 +442,25 @@ def main():
         predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
         aleatoric=None, title="Memristor Model Predictions vs Targets"
     )
+
+    # Train and predict with MLP baseline
+    mlp_model = train_mlp_baseline(X_train, y_train)
+    mlp_predictions = predict_mlp_baseline(mlp_model, X_test)
+    plot_predictions(
+        X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
+        mlp_predictions, title="MLP Baseline Predictions"
+    )
+
+    # Train and predict with Polynomial baseline
+    poly_coeffs = train_polynomial_baseline(X_train, y_train, degree=3)
+    poly_predictions = predict_polynomial_baseline(poly_coeffs, X_test)
+    plot_predictions(
+        X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
+        poly_predictions, title="Polynomial Baseline Predictions"
+    )
+
+    # # Plot all predictions together
+    # plot_all_predictions(X_train, y_train, X_test, y_test, predictions, mlp_predictions, poly_predictions, predictive_uncertainty)
 
 if __name__ == "__main__":
     main()
