@@ -9,11 +9,11 @@ import strawberryfields as sf
 from strawberryfields.ops import *
 import pickle
 import random as rd
-import matplotlib.pyplot as plt
 import warnings
 import uncertainty_toolbox as uct
 
 from dataloader import get_data, quartic_data
+from plotting import plot_predictions
 
 
 
@@ -31,88 +31,6 @@ rd.seed(42)
 #TODO: save outputs etc.  
 #TODO: 010 pol , ause neg loglike as loss 
 
-
-
-def plot_toy_data(X_train, y_train, X_test, y_test):
-    """Plot the toy data."""
-    fig, ax = plt.subplots(1)
-    ax.scatter(X_train, y_train, color="blue", label="train_data")
-    ax.scatter(X_test, y_test, color="orange", label="test_data")
-    plt.legend()
-    plt.show()
-
-def plot_predictions(
-    X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
-) -> None:
-    """Plot predictive uncertainty as well as epistemic and aleatoric separately.
-    
-    Args:
-      X_train: Training input data.
-      y_train: Training target data.
-      X_test: Test input data.
-      y_test: Test target data.
-      y_pred: Predicted values.
-      pred_std: Standard deviation of predictions (predictive uncertainty).
-      pred_quantiles: Quantiles of predictions.
-      epistemic: Epistemic uncertainty (for us this is predictive_uncertainty).
-      aleatoric: Aleatoric uncertainty.
-      title: Title for the plot.
-    """
-    fig = plt.figure(figsize=(12, 6))
-    ax0 = fig.add_subplot(1, 2, 1)
-
-    # Model predictive uncertainty bands on the left
-    ax0.scatter(X_test, y_test, color="gray", label="Ground Truth", s=0.5)
-    ax0.scatter(X_train, y_train, color="blue", label="Train Data")
-    ax0.scatter(X_test, y_pred, color="orange", label="Predictions")
-
-    if pred_std is not None:
-        ax0.fill_between(
-            X_test.squeeze(),
-            y_pred - pred_std,
-            y_pred + pred_std,
-            alpha=0.3,
-            color="tab:red",
-            label="$\sqrt{\mathbb{V}\,[y]}$",
-        )
-
-    if pred_quantiles is not None:
-        ax0.plot(X_test, pred_quantiles, color="tab:red", linestyle="--", label="Quantiles")
-
-    if title is not None:
-        ax0.set_title(title + " showing mean ± std")
-
-    ax0.legend()
-
-    # Epistemic and aleatoric uncertainty plots on the right
-    ax1 = fig.add_subplot(2, 2, 2)
-    if epistemic is not None:
-        ax1.plot(X_test, epistemic, color="tab:blue", label="Epistemic Uncertainty")
-        ax1.fill_between(
-            X_test.squeeze(),
-            epistemic - pred_std,
-            epistemic + pred_std,
-            alpha=0.3,
-            color="tab:blue",
-        )
-        ax1.set_title("Epistemic Uncertainty")
-        ax1.legend()
-
-    ax2 = fig.add_subplot(2, 2, 4)
-    if aleatoric is not None:
-        ax2.plot(X_test, aleatoric, color="tab:green", label="Aleatoric Uncertainty")
-        ax2.fill_between(
-            X_test.squeeze(),
-            aleatoric - pred_std,
-            aleatoric + pred_std,
-            alpha=0.3,
-            color="tab:green",
-        )
-        ax2.set_title("Aleatoric Uncertainty")
-        ax2.legend()
-
-    plt.tight_layout()
-    plt.show()
 
 def selective_prediction(final_predictions, targets, predictive_uncertainty, threshold: float = 0.8):
     """ Copmutes UQ metrics
@@ -142,8 +60,6 @@ def selective_prediction(final_predictions, targets, predictive_uncertainty, thr
 
     return final_predictions_sel, targets_sel, predictive_uncertainty_sel, remaining_fraction
 
-
-
 def compute_eval_metrics(final_predictions, targets, predictive_uncertainty):
     #idea compute eval metrics for selective prediction and full version
     """ Copmutes UQ metrics
@@ -159,7 +75,7 @@ def compute_eval_metrics(final_predictions, targets, predictive_uncertainty):
         relative percent difference ('marpd'), r^2 ('r2'), and Pearson's
         correlation coefficient ('corr').
     """
-    if len(predictive_uncertainty) >0:
+    if len(predictive_uncertainty) > 0:
     
         if len(final_predictions) > 0:
             uq_metrics = uct.metrics.get_all_metrics(
@@ -169,7 +85,7 @@ def compute_eval_metrics(final_predictions, targets, predictive_uncertainty):
                 verbose=False,
                 )
         else:
-            uq_metrics = empty_result # TODO: define empty result
+            uq_metrics = [] # TODO: define empty result
         # categories when predictive uncertainty is present
         uq_metric_categories = [
             "scoring_rule",
