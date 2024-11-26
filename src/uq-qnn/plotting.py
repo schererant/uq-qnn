@@ -82,3 +82,21 @@ def plot_predictions(
     plt.tight_layout()
     plt.show()
 
+
+def plot_all_predictions(X_train, y_train, X_test, y_test, memristor_predictions, mlp_predictions, poly_predictions, predictive_uncertainty):
+    """Plot all predictions together."""
+    plt.figure(figsize=(10, 6))
+    plt.scatter(X_train.numpy(), y_train.numpy(), label='Training Data', color='blue')
+    plt.scatter(X_test.numpy(), y_test.numpy(), label='Test Data', color='green')
+    plt.plot(X_test.numpy(), memristor_predictions, label='Memristor Predictions', color='red')
+    plt.plot(X_test.numpy(), mlp_predictions, label='MLP Predictions', color='orange')
+    plt.plot(X_test.numpy(), poly_predictions, label='Polynomial Predictions', color='purple')
+    plt.fill_between(X_test.numpy().flatten(), 
+                     (memristor_predictions - predictive_uncertainty).flatten(), 
+                     (memristor_predictions + predictive_uncertainty).flatten(), 
+                     color='red', alpha=0.2, label='Predictive Uncertainty')
+    plt.xlabel('X')
+    plt.ylabel('y')
+    plt.title('Model Predictions vs Targets')
+    plt.legend()
+    plt.show()
