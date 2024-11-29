@@ -1,0 +1,147 @@
+================================================================================
+Model Comparison Results
+Date: 2024-11-28 10:24:43
+================================================================================
+
+Parameters:
+Memory Depth: 3
+Cutoff Dimension: 4
+Training Steps: 10
+Learning Rate: 0.1
+
+----------------------------------------
+Model: mlp_1_layers
+----------------------------------------
+
+Metrics:
+  accuracy:
+    mae: 0.003335113637149334
+    rmse: 0.004760327283293009
+    mdae: 0.0024548587389290333
+    marpd: 58.365464210510254
+    r2: 0.9992652943392625
+    corr: 0.9997198936021678
+----------------------------------------
+Model: mlp_2_layers
+----------------------------------------
+
+Metrics:
+  accuracy:
+    mae: 0.0010173377813771367
+    rmse: 0.0012880817521363497
+    mdae: 0.0008221001480706036
+    marpd: 47.65329957008362
+    r2: 0.9999462069061575
+    corr: 0.999991599983108
+----------------------------------------
+Model: mlp_3_layers
+----------------------------------------
+
+Metrics:
+  accuracy:
+    mae: 0.022999290376901627
+    rmse: 0.03402598574757576
+    mdae: 0.011893847957253456
+    marpd: 64.4308090209961
+    r2: 0.9624628615112335
+    corr: 0.998702109011531
+----------------------------------------
+Model: qnn_uq_samples_5
+----------------------------------------
+
+Metrics:
+  accuracy:
+    mae: 0.23305867260431398
+    rmse: 0.2713887892633173
+    mdae: 0.23031670646741986
+    marpd: 159.8215486552593
+    r2: -1.3879405260602202
+    corr: -0.5651640097400865
+  avg_calibration:
+    rms_cal: 0.5273571023515977
+    ma_cal: 0.45538000000000006
+    miscal_area: 0.45997979797979804
+  adv_group_calibration:
+    ma_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.4674
+      adv_group_cali_stderr: 0.0032
+    rms_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.5417
+      adv_group_cali_stderr: 0.0039
+  sharpness:
+    sharp: 0.027134491130709648
+  scoring_rule:
+    nll: 2014.595900280527
+    crps: 0.220735717600676
+    check: 0.11061988966902593
+    interval: 2.0958184680394365
+----------------------------------------
+Model: qnn_selective_t0.8_s5
+----------------------------------------
+
+Metrics:
+  accuracy:
+    mae: 0.218767350720872
+    rmse: 0.26134778937009295
+    mdae: 0.20117606548592448
+    marpd: 152.82117009222264
+    r2: -1.1350796340266207
+    corr: -0.5167559888037715
+  avg_calibration:
+    rms_cal: 0.5201848239349054
+    ma_cal: 0.449775
+    miscal_area: 0.4543181818181818
+  adv_group_calibration:
+    ma_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.4643
+      adv_group_cali_stderr: 0.0033
+    rms_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.5378
+      adv_group_cali_stderr: 0.0037
+  sharpness:
+    sharp: 0.019827643409371376
+  scoring_rule:
+    nll: 2512.5750213355286
+    crps: 0.20965042581436932
+    check: 0.10500872649979798
+    interval: 2.0366420437495
+Remaining Fraction: 80.00%
+
+----------------------------------------
+Model: qnn_selective_t0.9_s5
+----------------------------------------
+
+Metrics:
+  accuracy:
+    mae: 0.22480440988770176
+    rmse: 0.2653298500065848
+    mdae: 0.21066860249266028
+    marpd: 156.20824303751328
+    r2: -1.2158217722176228
+    corr: -0.5418365057215362
+  avg_calibration:
+    rms_cal: 0.5233304938909439
+    ma_cal: 0.45197777777777787
+    miscal_area: 0.45654320987654323
+  adv_group_calibration:
+    ma_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.4658
+      adv_group_cali_stderr: 0.0034
+    rms_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.5391
+      adv_group_cali_stderr: 0.0040
+  sharpness:
+    sharp: 0.022739391773939133
+  scoring_rule:
+    nll: 2236.468289647766
+    crps: 0.21433789865035363
+    check: 0.10738191736730215
+    interval: 2.061477103272737
+Remaining Fraction: 90.00%
+

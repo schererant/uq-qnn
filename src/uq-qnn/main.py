@@ -41,7 +41,7 @@ print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 class Config:
 
-    HYPERPARAMETER_OPTIMIZATION = True
+    HYPERPARAMETER_OPTIMIZATION = False
     HYPER_STEPS_RANGE = [30, 50, 70]
     HYPER_LEARNING_RATE_RANGE = [0.01, 0.05, 0.1]
     HYPER_MEMORY_DEPTH_RANGE = [2, 3, 4, 5, 6]
@@ -56,11 +56,11 @@ class Config:
 
     SELECTIVE_PREDICTION_THRESHOLD = 0.8
 
-    MEMORY_DEPTH = 3
+    MEMORY_DEPTH = 5
     CUTOFF_DIM = 4
 
-    TRAINING_STEPS = 10
-    TRAINING_LEARNING_RATE = 0.1
+    TRAINING_STEPS = 100
+    TRAINING_LEARNING_RATE = 0.05
 
     PREDICT_STOCHASTIC = True
     PREDICT_SAMPLES = 3
@@ -419,10 +419,10 @@ def main():
         #     for steps, learning_rate, memory_depth, cutoff_dim, loss in results:
         #         file.write(f"steps={steps}, learning_rate={learning_rate}, memory_depth={memory_depth}, cutoff_dim={cutoff_dim}, loss={loss}\n")
 
-        TRAINING_STEPS = steps
-        TRAINING_LEARNING_RATE = learning_rate
-        MEMORY_DEPTH = memory_depth
-        CUTOFF_DIM = cutoff_dim
+        Config.TRAINING_STEPS = steps
+        Config.TRAINING_LEARNING_RATE = learning_rate
+        Config.MEMORY_DEPTH = memory_depth
+        Config.CUTOFF_DIM = cutoff_dim
 
 
         all_results = model_comparison(X_train, y_train, X_test, y_test)
@@ -433,10 +433,10 @@ def main():
     # Train the memristor model
     res_mem, phase1, phase3, memristor_weight = train_memristor(X_train, 
                                                                 y_train, 
-                                                                memory_depth=MEMORY_DEPTH, 
-                                                                training_steps=TRAINING_STEPS,
-                                                                learning_rate=TRAINING_LEARNING_RATE,
-                                                                cutoff_dim=CUTOFF_DIM
+                                                                memory_depth=Config.MEMORY_DEPTH, 
+                                                                training_steps=Config.TRAINING_STEPS,
+                                                                learning_rate=Config.TRAINING_LEARNING_RATE,
+                                                                cutoff_dim=Config.CUTOFF_DIM
                                                                 )
 
     # Save training results
@@ -446,14 +446,14 @@ def main():
     # Predict using the trained model
     predictions, targets, predictive_uncertainty = predict_memristor(X_test, 
                                                                     y_test, 
-                                                                    memory_depth=MEMORY_DEPTH, 
+                                                                    memory_depth=Config.MEMORY_DEPTH, 
                                                                     phase1=phase1, 
                                                                     phase3=phase3, 
                                                                     memristor_weight=memristor_weight,
                                                                     stochastic=Config.PREDICT_STOCHASTIC, 
                                                                     var=Config.PREDICT_VARIANCE, 
                                                                     samples=Config.PREDICT_SAMPLES,
-                                                                    cutoff_dim=CUTOFF_DIM
+                                                                    cutoff_dim=Config.CUTOFF_DIM
                                                                     )
 
     # Ensure predictions and X_test have the same length
@@ -495,10 +495,10 @@ def main():
 
     # Print all hyperparameters
     print("Hyperparameters:")
-    print(f"Memory Depth: {MEMORY_DEPTH}")
-    print(f"Cutoff Dimension: {CUTOFF_DIM}")
-    print(f"Training Steps: {TRAINING_STEPS}")
-    print(f"Learning Rate: {TRAINING_LEARNING_RATE}")
+    print(f"Memory Depth: {Config.MEMORY_DEPTH}")
+    print(f"Cutoff Dimension: {Config.CUTOFF_DIM}")
+    print(f"Training Steps: {Config.TRAINING_STEPS}")
+    print(f"Learning Rate: {Config.TRAINING_LEARNING_RATE}")
 
 
     # Plotting the results
