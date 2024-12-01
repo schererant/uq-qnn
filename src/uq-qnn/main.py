@@ -44,10 +44,10 @@ class Config:
 
     LOG_FILE_NAME = f"logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
 
-    HYPERPARAMETER_OPTIMIZATION = False
-    HYPER_STEPS_RANGE = [70]
-    HYPER_LEARNING_RATE_RANGE = [0.01, 0.05, 0.1]
-    HYPER_MEMORY_DEPTH_RANGE = [3, 4, 5]
+    HYPERPARAMETER_OPTIMIZATION = True
+    HYPER_STEPS_RANGE = [5]
+    HYPER_LEARNING_RATE_RANGE = [0.01]
+    HYPER_MEMORY_DEPTH_RANGE = [3]
     HYPER_CUTOFF_DIM_RANGE = [4, 5]
 
     #TODO: Check for which params we have the same loss
@@ -257,7 +257,8 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             memory_depth=memory_depth, 
             training_steps=steps, 
             learning_rate=learning_rate, 
-            cutoff_dim=cutoff_dim
+            cutoff_dim=cutoff_dim,
+            filename=Config.LOG_FILE_NAME
         )
 
         # Predict using the trained model
@@ -281,6 +282,7 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
         param_id = f"qnn_hp_s{steps}_lr{learning_rate}_md{memory_depth}_cd{cutoff_dim}"
         
         # Store results in the same format as model_comparison
+
         all_results[param_id] = {
             "metrics": metrics,
             "categories": metric_categories,

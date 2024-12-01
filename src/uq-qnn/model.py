@@ -160,11 +160,11 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
         f.write(f"Phase1: {float(phase1):.4f}\n")
         f.write(f"Phase3: {float(phase3):.4f}\n")
         f.write(f"Memristor Weight: {float(memristor_weight):.4f}\n")
-        f.write("\nTraining Summary:\n")
-        f.write("-" * 40 + "\n")
-        f.write(f"Initial Loss: {res_mem[0]['loss']:.4f}\n")
-        f.write(f"Final Loss: {res_mem[training_steps-1]['loss']:.4f}\n")
-        f.write(f"Loss Reduction: {res_mem[0]['loss'] - res_mem[training_steps-1]['loss']:.4f}\n")
+        # f.write("\nTraining Summary:\n")
+        # f.write("-" * 40 + "\n")
+        # f.write(f"Initial Loss: {res_mem[0]['loss']:.4f}\n")
+        # f.write(f"Final Loss: {res_mem[training_steps-1]['loss']:.4f}\n")
+        # f.write(f"Loss Reduction: {res_mem[0]['loss'] - res_mem[training_steps-1]['loss']:.4f}\n")
     
     return res_mem, phase1, phase3, memristor_weight
 

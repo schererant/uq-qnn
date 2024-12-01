@@ -4,7 +4,7 @@
       {
         "label": "Run main.py",
         "type": "shell",
-        "command": "/Users/anani/Code/uq-qnn/.venv/bin/python /Users/anani/Code/uq-qnn/src/uq-qnn/main.py > output.txt",
+        "command": "/Users/anani/Code/uq-qnn/.venv/bin/python /Users/anani/Code/uq-qnn/src/uq-qnn/main.py",
         "group": {
           "kind": "build",
           "isDefault": true
