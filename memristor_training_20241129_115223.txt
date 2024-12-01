@@ -1,0 +1,18 @@
+================================================================================
+Memristor Training Log
+Date: 2024-11-29 11:52:23
+================================================================================
+
+Parameters:
+Memory Depth: 5
+Training Steps: 30
+Learning Rate: 0.05
+Cutoff Dimension: 4
+
+Training Progress:
+--------------------------------------------------------------------------------
+Step    0: Loss = 20.3181, Phase1 = 4.0903, Phase3 = 0.1684, Weight = 0.2323
+Step    1: Loss = 20.1971, Phase1 = 4.1404, Phase3 = 0.1194, Weight = 0.1824
+Step    2: Loss = 19.3007, Phase1 = 4.1905, Phase3 = 0.0702, Weight = 0.1329
+Step    3: Loss = 18.4234, Phase1 = 4.2406, Phase3 = 0.0210, Weight = 0.0839
+Step    4: Loss = 17.5640, Phase1 = 4.2907, Phase3 = 0.0000, Weight = 0.0355

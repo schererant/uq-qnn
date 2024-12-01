@@ -1,48 +1,12 @@
 import numpy as np
 import tensorflow as tf
 import strawberryfields as sf
-from strawberryfields.ops import *
 import random as rd
-from datetime import datetime
-from utils import log_training_loss
+from model import build_circuit
 
-
-
-
-def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
+def train_memristor_aleatoric(x_train, y_train, memory_depth, training_steps=100):
     """
-    Constructs the quantum circuit with the given parameters.
-    """
-    circuit = sf.Program(3)
-    with circuit.context as q:
-        Vac     | q[0]
-        Fock(1) | q[1]
-        Vac     | q[2]
-        
-        # Input encoding MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(encoded_phases)           | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        
-        # First MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phase1)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        
-        # Memristor (Second MZI)
-        BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        Rgate(memristor_weight)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        
-        # Third MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phase3)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-    return circuit
-
-def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rate = 0.1, cutoff_dim = 4, filename = None):
-    """
-    Trains the memristor model using the training data.
+    Trains the aleatoric memristor model using the training data - ideally use training data with noise.
 
     Args:
         x_train: Training input data.
@@ -55,27 +19,12 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
         phase3: Trained phase parameter 3.
         memristor_weight: Trained weight parameter for the memristor update function.
     """
-    # Create log file with timestamp
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    # log_filepath = f"memristor_training_{timestamp}.txt"
-    log_filepath = filename
+    # epsilon for numerical stability of the NLL loss function
 
-    
-    # Write header
-    with open(log_filepath, 'w') as f:
-        f.write("=" * 80 + "\n")
-        f.write("Memristor Training Log\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write("=" * 80 + "\n\n")
-        f.write("Parameters:\n")
-        f.write(f"Memory Depth: {memory_depth}\n")
-        f.write(f"Training Steps: {training_steps}\n")
-        f.write(f"Learning Rate: {learning_rate}\n")
-        f.write(f"Cutoff Dimension: {cutoff_dim}\n")
-        f.write("\nTraining Progress:\n")
-        f.write("-" * 80 + "\n")
+    epsilon = 0.001
 
     # Initialize variables and optimizer
+
     phase1 = tf.Variable(rd.uniform(0.01, 1) * 2 * np.pi, dtype=tf.float32,
                        constraint=lambda z: tf.clip_by_value(z, 0, 2 * np.pi))
     phase3 = tf.Variable(rd.uniform(0.01, 1) * 2 * np.pi, dtype=tf.float32,
@@ -83,16 +32,8 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
     memristor_weight = tf.Variable(rd.uniform(0.01, 1), dtype=tf.float32,
                       constraint=lambda z: tf.clip_by_value(z, 0.01, 1))  # Memristor parameter
 
-    # Log initial parameters
-    with open(log_filepath, 'a') as f:
-        f.write("\nInitial Parameters:\n")
-        f.write("-" * 40 + "\n")
-        f.write(f"Phase1: {float(phase1):.4f}\n")
-        f.write(f"Phase3: {float(phase3):.4f}\n")
-        f.write(f"Memristor Weight: {float(memristor_weight):.4f}\n\n")
-        
-    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-    eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": cutoff_dim})
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+    eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     res_mem = {}
 
     encoded_phases = tf.constant(2 * np.arccos(x_train), dtype=tf.float64)
@@ -138,15 +79,12 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
                 memory_p1 = tf.tensor_scatter_nd_update(memory_p1, [[time_step % memory_depth]], [prob_state_010])
                 memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
 
-                # Compute the loss
-                loss += tf.square(tf.abs(y_train[i] - prob_state_001))
+                # Compute the NLL loss which is now the negative log-likelihood of a 1d Gaussian
+                loss += tf.square(tf.abs(y_train[i] - prob_state_001)) * tf.math.divide(1.0,tf.pow(prob_state_010,2)*2+epsilon) + tf.math.log(prob_state_010+epsilon)
 
             # Compute gradients and update variables
             gradients = tape.gradient(loss, [phase1, phase3, memristor_weight])
             optimizer.apply_gradients(zip(gradients, [phase1, phase3, memristor_weight]))
-
-            # Log results every step
-            log_training_loss(log_filepath, step, loss, phase1, phase3, memristor_weight)
 
             res_mem[('loss', 'tr', step)] = [loss.numpy(), phase1.numpy(), phase3.numpy(), memristor_weight.numpy()]
             print(f"Loss at step {step + 1}: {loss.numpy()}")
@@ -154,23 +92,11 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
     print(f"Final loss: {loss.numpy()}")
     print(f"Optimal parameters: phase1={phase1.numpy()}, phase3={phase3.numpy()}, memristor_weight={memristor_weight.numpy()}")
 
-    with open(log_filepath, 'a') as f:
-        f.write("\nFinal Parameters:\n") 
-        f.write("-" * 40 + "\n")
-        f.write(f"Phase1: {float(phase1):.4f}\n")
-        f.write(f"Phase3: {float(phase3):.4f}\n")
-        f.write(f"Memristor Weight: {float(memristor_weight):.4f}\n")
-        f.write("\nTraining Summary:\n")
-        f.write("-" * 40 + "\n")
-        f.write(f"Initial Loss: {res_mem[0]['loss']:.4f}\n")
-        f.write(f"Final Loss: {res_mem[training_steps-1]['loss']:.4f}\n")
-        f.write(f"Loss Reduction: {res_mem[0]['loss'] - res_mem[training_steps-1]['loss']:.4f}\n")
-    
     return res_mem, phase1, phase3, memristor_weight
 
-def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic: bool = True, samples: int = 1, var: float = 0.1, cutoff_dim = 4, filename = None):
+def predict_memristor_aleatoric(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic: bool = True, samples: int = 20, var: float = 0.1):
     """
-    Uses the trained memristor model to make predictions on test data.
+    Uses the trained aleatoric memristor model to make predictions on test data.
     """
     # for UQ stuff we want to have the circuit below with the memristor parametrized by memristor_weight and then we want to make the parameters
     # for the MZIs phase1 and phase3 stochastic
@@ -185,15 +111,13 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
     # eval predictions: stack of predictions mean over samples for each phi in len(phienc)
     # predictive_uncertainty: prediction std over samples for each phi in len(phienc)
 
-    # # Create log file
-    # log_filepath = log_prediction_results(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic, samples, var, cutoff_dim)
-    
-
-    eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": cutoff_dim})
+    eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": 4})
     encoded_phases = tf.constant(2 * np.arccos(x_test), dtype=tf.float64)
 
     # Initialize lists to store predictions and targets
     all_predictions = []
+    # second dimension of predictions with aleatoric uncertainty prediction
+    all_sigmas = []
     targets = []
 
     # Initialize memory variables
@@ -206,6 +130,7 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
     for sample in range(samples):
         print(f"Sample {sample + 1}/{samples}")
         sample_predictions = []
+        sample_sigmas = []
 
         for i in range(len(encoded_phases)):
             time_step = i - cycle_index * memory_depth
@@ -241,37 +166,26 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
             memory_p2 = tf.tensor_scatter_nd_update(memory_p2, [[time_step % memory_depth]], [prob_state_001])
 
             sample_predictions.append(prob_state_001.numpy())
+            sample_sigmas.append(prob_state_010.numpy())
             if sample == 0:
-                targets.append(float(y_test[i].numpy()))
-
-        # # Log each prediction
-        # if stochastic:
-        #     log_prediction_step(log_filepath, i, y_test[i], np.mean(sample_predictions), np.std(sample_predictions))
-        # else:
-        #     log_prediction_step(log_filepath, i, y_test[i], np.mean(sample_predictions))
+                targets.append(y_test[i])
 
         all_predictions.append(sample_predictions)
+        all_sigmas.append(sample_sigmas)
 
     # Convert all_predictions to a NumPy array for easier manipulation
     all_predictions = np.array(all_predictions)
+    all_sigmas = np.array(all_sigmas)
 
     if stochastic:
         # Calculate mean and standard deviation along the column axis
         final_predictions = np.mean(all_predictions, axis=0)
         predictive_uncertainty = np.std(all_predictions, axis=0)
+        aleatoric_uncertainty = np.mean(all_sigmas, axis =0)
     else:
         final_predictions = all_predictions[0]
-        predictive_uncertainty = np.array([])
-        targets = np.array(targets)
-
-    # # Log summary statistics at end
-    # with open(log_filepath, 'a') as f:
-    #     f.write("\nSummary Statistics:\n")
-    #     f.write("-" * 40 + "\n")
-    #     f.write(f"Mean Prediction: {np.mean(all_predictions):.4f}\n")
-    #     f.write(f"Mean Target: {np.mean(y_test):.4f}\n")
-    #     if stochastic:
-    #         f.write(f"Mean Uncertainty: {np.mean(predictive_uncertainty):.4f}\n")
+        predictive_uncertainty = np.zeros_like(final_predictions)
+        all_sigmas = all_sigmas[0]
 
 
-    return final_predictions, targets, predictive_uncertainty
+    return final_predictions, targets, predictive_uncertainty, aleatoric_uncertainty

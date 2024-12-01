@@ -1,0 +1,43 @@
+================================================================================
+Memristor Training Log
+Date: 2024-11-29 12:59:15
+================================================================================
+
+Parameters:
+Memory Depth: 5
+Training Steps: 30
+Learning Rate: 0.05
+Cutoff Dimension: 4
+
+Training Progress:
+--------------------------------------------------------------------------------
+Step    0: Loss = 40.8758, Phase1 = 4.0903, Phase3 = 0.1684, Weight = 0.2323
+Step    1: Loss = 39.8749, Phase1 = 4.1403, Phase3 = 0.1187, Weight = 0.1825
+Step    2: Loss = 38.1136, Phase1 = 4.1904, Phase3 = 0.0688, Weight = 0.1330
+Step    3: Loss = 36.3951, Phase1 = 4.2405, Phase3 = 0.0188, Weight = 0.0840
+Step    4: Loss = 34.7160, Phase1 = 4.2906, Phase3 = 0.0000, Weight = 0.0357
+Step    5: Loss = 33.1046, Phase1 = 4.3407, Phase3 = 0.0000, Weight = 0.0100
+Step    6: Loss = 31.6536, Phase1 = 4.3909, Phase3 = 0.0000, Weight = 0.0100
+Step    7: Loss = 30.3051, Phase1 = 4.4412, Phase3 = 0.0000, Weight = 0.0100
+Step    8: Loss = 28.9138, Phase1 = 4.4917, Phase3 = 0.0000, Weight = 0.0100
+Step    9: Loss = 27.4870, Phase1 = 4.5423, Phase3 = 0.0000, Weight = 0.0100
+Step   10: Loss = 26.0328, Phase1 = 4.5931, Phase3 = 0.0000, Weight = 0.0100
+Step   11: Loss = 24.5599, Phase1 = 4.6440, Phase3 = 0.0000, Weight = 0.0100
+Step   12: Loss = 23.0774, Phase1 = 4.6951, Phase3 = 0.0000, Weight = 0.0100
+Step   13: Loss = 21.5949, Phase1 = 4.7462, Phase3 = 0.0000, Weight = 0.0100
+Step   14: Loss = 20.1218, Phase1 = 4.7974, Phase3 = 0.0000, Weight = 0.0100
+Step   15: Loss = 18.6678, Phase1 = 4.8485, Phase3 = 0.0000, Weight = 0.0100
+Step   16: Loss = 17.2423, Phase1 = 4.8995, Phase3 = 0.0000, Weight = 0.0100
+Step   17: Loss = 15.8541, Phase1 = 4.9504, Phase3 = 0.0000, Weight = 0.0100
+Step   18: Loss = 14.5119, Phase1 = 5.0010, Phase3 = 0.0000, Weight = 0.0100
+Step   19: Loss = 13.2233, Phase1 = 5.0513, Phase3 = 0.0000, Weight = 0.0100
+Step   20: Loss = 11.9950, Phase1 = 5.1012, Phase3 = 0.0000, Weight = 0.0100
+Step   21: Loss = 10.8331, Phase1 = 5.1505, Phase3 = 0.0000, Weight = 0.0100
+Step   22: Loss = 9.7421, Phase1 = 5.1993, Phase3 = 0.0000, Weight = 0.0100
+Step   23: Loss = 8.7255, Phase1 = 5.2473, Phase3 = 0.0000, Weight = 0.0100
+Step   24: Loss = 7.7855, Phase1 = 5.2945, Phase3 = 0.0000, Weight = 0.0100
+Step   25: Loss = 6.9234, Phase1 = 5.3408, Phase3 = 0.0000, Weight = 0.0100
+Step   26: Loss = 6.1391, Phase1 = 5.3861, Phase3 = 0.0000, Weight = 0.0100
+Step   27: Loss = 5.4313, Phase1 = 5.4302, Phase3 = 0.0000, Weight = 0.0100
+Step   28: Loss = 4.7980, Phase1 = 5.4730, Phase3 = 0.0000, Weight = 0.0106
+Step   29: Loss = 4.2352, Phase1 = 5.5146, Phase3 = 0.0000, Weight = 0.0133
