@@ -20,6 +20,7 @@ from plotting import plot_predictions
 from baseline import train_mlp_baseline, predict_mlp_baseline, train_polynomial_baseline, predict_polynomial_baseline
 from uq import selective_prediction, compute_eval_metrics
 from model import train_memristor, predict_memristor, build_circuit
+from utils import format_metrics, format_hyperparameters
 
 tf.get_logger().setLevel('ERROR')
 warnings.filterwarnings("ignore")
@@ -42,13 +43,19 @@ print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 class Config:
 
-    LOG_FILE_NAME = f"logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    LOG_NAME = f"logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    LOG_FILE_NAME = f"{LOG_NAME}.txt"
 
     HYPERPARAMETER_OPTIMIZATION = True
     HYPER_STEPS_RANGE = [5]
     HYPER_LEARNING_RATE_RANGE = [0.01]
     HYPER_MEMORY_DEPTH_RANGE = [3]
     HYPER_CUTOFF_DIM_RANGE = [4, 5]
+
+    #TODO: Visualize the results after each run
+
+    MODEL_COMPARISON = True
+    COMP_N_SAMPLES = [2]
 
     #TODO: Check for which params we have the same loss
     MLP_HIDDEN_LAYERS = [64, 64]
@@ -72,7 +79,6 @@ class Config:
     GET_DATA_N_DATA = 200
     GET_DATA_SIGMA_NOISE_1 = 0.1
     GET_DATA_DATAFUNCTION = quartic_data
-
 
 
 def model_comparison(X_train, y_train, X_test, y_test):
@@ -173,51 +179,6 @@ def model_comparison(X_train, y_train, X_test, y_test):
 
     return all_results
 
-def save_results_to_txt(all_results, filepath="results.txt"):
-    """Save model comparison results to a formatted text file"""
-    
-    def format_metrics(metrics_dict, indent=0):
-        lines = []
-        indent_str = " " * indent
-        for key, value in metrics_dict.items():
-            if isinstance(value, dict):
-                lines.append(f"{indent_str}{key}:")
-                lines.extend(format_metrics(value, indent + 2))
-            elif isinstance(value, (np.ndarray, list)):
-                lines.append(f"{indent_str}{key}: {np.mean(value):.4f}")
-            else:
-                lines.append(f"{indent_str}{key}: {value}")
-        return lines
-
-    with open(filepath, "w") as f:
-        # Write header
-        f.write("=" * 80 + "\n")
-        f.write("Model Comparison Results\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write("=" * 80 + "\n\n")
-
-        # Write parameters
-        f.write("Parameters:\n")
-        f.write(f"Memory Depth: {Config.MEMORY_DEPTH}\n")
-        f.write(f"Cutoff Dimension: {Config.CUTOFF_DIM}\n")
-        f.write(f"Training Steps: {Config.TRAINING_STEPS}\n")
-        f.write(f"Learning Rate: {Config.TRAINING_LEARNING_RATE}\n\n")
-
-        # Write results for each model
-        for model_name, result in all_results.items():
-            f.write("-" * 40 + "\n")
-            f.write(f"Model: {model_name}\n")
-            f.write("-" * 40 + "\n")
-            
-            if "metrics" in result:
-                f.write("\nMetrics:\n")
-                metric_lines = format_metrics(result["metrics"], indent=2)
-                f.write("\n".join(metric_lines))
-            
-            if "remaining_fraction" in result:
-                f.write(f"\nRemaining Fraction: {result['remaining_fraction']:.2%}\n")
-            
-            f.write("\n")
 
 def hyperparameter_optimization(X_train, y_train, X_test, y_test):
     """
@@ -235,9 +196,22 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
     best_metrics = None
     best_categories = None
     all_results = {}
+    log_dic = {}
+
 
     # Calculate total number of combinations
     total_combinations = len(steps_range) * len(learning_rate_range) * len(memory_depth_range) * len(cutoff_dim_range)
+
+    with open(Config.LOG_FILE_NAME, "a") as f:
+        f.write("=" * 80 + "\n")
+        f.write("Hyperparameter Optimization Log\n")
+        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("=" * 80 + "\n\n")
+        f.write("Hyperparameter Ranges:\n")
+        f.write(f"Steps Range: {steps_range}\n")
+        f.write(f"Learning Rate Range: {learning_rate_range}\n")
+        f.write(f"Memory Depth Range: {memory_depth_range}\n")
+        f.write(f"Cutoff Dimension Range: {cutoff_dim_range}\n\n")
     
     # Create a tqdm iterator with total number of combinations
     for steps, learning_rate, memory_depth, cutoff_dim in tqdm(
@@ -248,7 +222,20 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
     ):
 
     # for steps, learning_rate, memory_depth, cutoff_dim in [(steps_range[0], learning_rate_range[0], memory_depth_range[0], cutoff_dim_range[0])]:
-        print(f"Training with steps={steps}, learning_rate={learning_rate}, memory_depth={memory_depth}, cutoff_dim={cutoff_dim}")
+        # print(f"Training with steps={steps}, learning_rate={learning_rate}, memory_depth={memory_depth}, cutoff_dim={cutoff_dim}")
+
+        # Create a unique identifier for this parameter combination
+        param_id = f"qnn_hp_s{steps}_lr{learning_rate}_md{memory_depth}_cd{cutoff_dim}"
+
+        log_dic[param_id] = {
+            "res_mem": {},
+            "hyperparameters": {
+                "steps": steps,
+                "learning_rate": learning_rate,
+                "memory_depth": memory_depth,
+                "cutoff_dim": cutoff_dim
+            }
+        }
 
         # Train the memristor model
         res_mem, phase1, phase3, memristor_weight = train_memristor(
@@ -261,6 +248,14 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             filename=Config.LOG_FILE_NAME
         )
 
+        # Store results
+        log_dic[param_id]["res_mem"] = res_mem
+        log_dic[param_id]["parameters"] = {
+            "phase1": phase1,
+            "phase3": phase3,
+            "memristor_weight": memristor_weight
+        }
+
         # Predict using the trained model
         predictions, targets, predictive_uncertainty = predict_memristor(
             X_test, 
@@ -272,14 +267,19 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             stochastic=False, 
             samples=1, 
             var=0.0, 
-            cutoff_dim=cutoff_dim
+            cutoff_dim=cutoff_dim,
+            filename=Config.LOG_FILE_NAME
         )
 
         # Compute evaluation metrics
         metrics, metric_categories = compute_eval_metrics(predictions, targets, predictive_uncertainty)
-        
-        # Create a unique identifier for this parameter combination
-        param_id = f"qnn_hp_s{steps}_lr{learning_rate}_md{memory_depth}_cd{cutoff_dim}"
+
+        with open(Config.LOG_FILE_NAME, "a") as f:
+            f.write("\nMetrics:\n")
+            metric_lines = format_metrics(metrics, indent=2)
+            f.write("\n".join(metric_lines))
+            f.write("\n\n")
+
         
         # Store results in the same format as model_comparison
 
@@ -292,116 +292,79 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
                 "memory_depth": memory_depth,
                 "cutoff_dim": cutoff_dim
             }
-        }
+        }       
 
         # Update best parameters if current loss is lower
         if metrics['accuracy']['rmse'] < best_loss:
             best_loss = metrics['accuracy']['rmse']
-            best_params = (steps, learning_rate, memory_depth, cutoff_dim)
+            best_hyperparams = (steps, learning_rate, memory_depth, cutoff_dim)
             best_metrics = metrics
             best_categories = metric_categories
+            best_params = (phase1, phase3, memristor_weight)
+
 
     # Add best parameters summary to results with metrics
-    if best_params:
+    if best_hyperparams:
         all_results["best_parameters"] = {
             "metrics": best_metrics,
             "categories": best_categories,
             "hyperparameters": {
-                "steps": best_params[0],
-                "learning_rate": best_params[1],
-                "memory_depth": best_params[2],
-                "cutoff_dim": best_params[3],
+                "steps": best_hyperparams[0],
+                "learning_rate": best_hyperparams[1],
+                "memory_depth": best_hyperparams[2],
+                "cutoff_dim": best_hyperparams[3],
                 "best_rmse": best_loss
+            },
+            "parameters": {
+                "phase 1": best_params[0],
+                "phase 3": best_params[1],
+                "memristor weight": best_params[2]
             }
         }
-        print(f"Best parameters: steps={best_params[0]}, learning_rate={best_params[1]}, "
-              f"memory_depth={best_params[2]}, cutoff_dim={best_params[3]} with RMSE={best_loss}")
     else:
         print("No valid hyperparameter combinations found.")
 
-    return best_params, all_results
+    with open(Config.LOG_FILE_NAME, "a") as f:
+            # Write header
+            f.write("=" * 80 + "\n")
+            f.write("Hyperparameter Optimization Results\n")
+            f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write("=" * 80 + "\n\n")
 
-def save_hyperparameter_results(all_results, filepath="hyperparameter_results.txt"):
-    """Save hyperparameter optimization results to a formatted text file"""
-    
-    def format_metrics(metrics_dict, indent=0):
-        lines = []
-        indent_str = " " * indent
-        for key, value in metrics_dict.items():
-            if isinstance(value, dict):
-                lines.append(f"{indent_str}{key}:")
-                lines.extend(format_metrics(value, indent + 2))
-            elif isinstance(value, (np.ndarray, list)):
-                lines.append(f"{indent_str}{key}: {np.mean(value):.4f}")
-            else:
-                lines.append(f"{indent_str}{key}: {value}")
-        return lines
+            # Write hyperparameter ranges
+            f.write("Hyperparameter Ranges:\n")
+            f.write(f"Steps Range: {Config.HYPER_STEPS_RANGE}\n")
+            f.write(f"Learning Rate Range: {Config.HYPER_LEARNING_RATE_RANGE}\n")
+            f.write(f"Memory Depth Range: {Config.HYPER_MEMORY_DEPTH_RANGE}\n")
+            f.write(f"Cutoff Dimension Range: {Config.HYPER_CUTOFF_DIM_RANGE}\n\n")
 
-    def format_hyperparameters(hyperparameters_dict, indent=0):
-        lines = []
-        indent_str = " " * indent
-        for key, value in hyperparameters_dict.items():
-            if isinstance(value, float):
-                lines.append(f"{indent_str}{key}: {value:.6f}")
-            else:
-                lines.append(f"{indent_str}{key}: {value}")
-        return lines
-
-    with open(filepath, "w") as f:
-        # Write header
-        f.write("=" * 80 + "\n")
-        f.write("Hyperparameter Optimization Results\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write("=" * 80 + "\n\n")
-
-        # Write hyperparameter ranges
-        f.write("Hyperparameter Ranges:\n")
-        f.write(f"Steps Range: {Config.HYPER_STEPS_RANGE}\n")
-        f.write(f"Learning Rate Range: {Config.HYPER_LEARNING_RATE_RANGE}\n")
-        f.write(f"Memory Depth Range: {Config.HYPER_MEMORY_DEPTH_RANGE}\n")
-        f.write(f"Cutoff Dimension Range: {Config.HYPER_CUTOFF_DIM_RANGE}\n\n")
-
-        # First write the best parameters if they exist
-        if "best_parameters" in all_results:
-            f.write("=" * 40 + "\n")
-            f.write("Best Parameters\n")
-            f.write("=" * 40 + "\n")
-            
-            result = all_results["best_parameters"]
-            
-            f.write("\nHyperparameters:\n")
-            hyperparameter_lines = format_hyperparameters(result["hyperparameters"], indent=2)
-            f.write("\n".join(hyperparameter_lines))
-            
-            if "metrics" in result:
-                f.write("\n\nMetrics:\n")
-                metric_lines = format_metrics(result["metrics"], indent=2)
-                f.write("\n".join(metric_lines))
-            
-            f.write("\n\n")
-
-        # Write results for each parameter combination
-        for model_name, result in all_results.items():
-            if model_name == "best_parameters":
-                continue
+            # First write the best parameters if they exist
+            if "best_parameters" in all_results:
+                f.write("=" * 40 + "\n")
+                f.write("Best Parameters\n")
+                f.write("=" * 40 + "\n")
                 
-            f.write("-" * 40 + "\n")
-            f.write(f"Model: {model_name}\n")
-            f.write("-" * 40 + "\n")
-            
-            f.write("\nHyperparameters:\n")
-            if "hyperparameters" in result:
+                result = all_results["best_parameters"]
+                
+                f.write("\nHyperparameters:\n")
                 hyperparameter_lines = format_hyperparameters(result["hyperparameters"], indent=2)
                 f.write("\n".join(hyperparameter_lines))
-            
-            if "metrics" in result:
-                f.write("\n\nMetrics:\n")
-                metric_lines = format_metrics(result["metrics"], indent=2)
-                f.write("\n".join(metric_lines))
-            
-            f.write("\n\n")
+                
+                if "metrics" in result:
+                    f.write("\n\nMetrics:\n")
+                    metric_lines = format_metrics(result["metrics"], indent=2)
+                    f.write("\n".join(metric_lines))
 
-    print(f"Results saved to {filepath}")
+                if "parameters" in result:
+                    f.write("\n\nParameters:\n")
+                    parameter_lines = format_metrics(result["parameters"], indent=2)
+                    f.write("\n".join(parameter_lines))
+                
+                f.write("\n\n")
+
+    return best_hyperparams, all_results
+
+
 
 def main():
 
@@ -416,103 +379,94 @@ def main():
 
     if Config.HYPERPARAMETER_OPTIMIZATION:
         # Perform hyperparameter optimization
-        best_params, results = hyperparameter_optimization(X_train, y_train, X_test, y_test)
-        steps, learning_rate, memory_depth, cutoff_dim = best_params
-
-        save_hyperparameter_results(results, f"hyperparameter_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
-
-        # # Save hyperparameter optimization results to a text file
-        # with open("hyperparameter_optimization_results.txt", "w") as file:
-        #     for steps, learning_rate, memory_depth, cutoff_dim, loss in results:
-        #         file.write(f"steps={steps}, learning_rate={learning_rate}, memory_depth={memory_depth}, cutoff_dim={cutoff_dim}, loss={loss}\n")
-
-        Config.TRAINING_STEPS = steps
-        Config.TRAINING_LEARNING_RATE = learning_rate
-        Config.MEMORY_DEPTH = memory_depth
-        Config.CUTOFF_DIM = cutoff_dim
+        best_hyperparams, hpo_results = hyperparameter_optimization(X_train, y_train, X_test, y_test)
+        steps, learning_rate, memory_depth, cutoff_dim = best_hyperparams
+        print(hpo_results)
 
 
-        all_results = model_comparison(X_train, y_train, X_test, y_test)
-        save_results_to_txt(all_results, f"model_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
-
+    if Config.MODEL_COMPARISON:
+        comp_results = model_comparison(X_train, y_train, X_test, y_test)
+        # save_results_to_txt(all_results, f"model_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+        print(comp_results)
 
     
-    # Train the memristor model
-    res_mem, phase1, phase3, memristor_weight = train_memristor(X_train, 
-                                                                y_train, 
-                                                                memory_depth=Config.MEMORY_DEPTH, 
-                                                                training_steps=Config.TRAINING_STEPS,
-                                                                learning_rate=Config.TRAINING_LEARNING_RATE,
-                                                                cutoff_dim=Config.CUTOFF_DIM
-                                                                )
-
-    # Save training results
-    with open(f"{Config.LOG_FILE_NAME}.pkl", "wb") as file:
-        pickle.dump(res_mem, file)
-
-    # Predict using the trained model
-    predictions, targets, predictive_uncertainty = predict_memristor(X_test, 
-                                                                    y_test, 
+    if not Config.HYPERPARAMETER_OPTIMIZATION and not Config.MODEL_COMPARISON:
+        # Train the memristor model
+        res_mem, phase1, phase3, memristor_weight = train_memristor(X_train, 
+                                                                    y_train, 
                                                                     memory_depth=Config.MEMORY_DEPTH, 
-                                                                    phase1=phase1, 
-                                                                    phase3=phase3, 
-                                                                    memristor_weight=memristor_weight,
-                                                                    stochastic=Config.PREDICT_STOCHASTIC, 
-                                                                    var=Config.PREDICT_VARIANCE, 
-                                                                    samples=Config.PREDICT_SAMPLES,
+                                                                    training_steps=Config.TRAINING_STEPS,
+                                                                    learning_rate=Config.TRAINING_LEARNING_RATE,
                                                                     cutoff_dim=Config.CUTOFF_DIM
                                                                     )
 
-    # Ensure predictions and X_test have the same length
-    assert len(predictions) == len(X_test), "Predictions and X_test must have the same length"
+        # Save training results
+        with open(f"{Config.LOG_FILE_NAME}.pkl", "wb") as file:
+            pickle.dump(res_mem, file)
 
-    # Convert predictions, targets, and predictive_uncertainty to NumPy arrays
-    predictions = np.array(predictions)
-    targets = np.array(targets)
-    predictive_uncertainty = np.array(predictive_uncertainty)
+        # Predict using the trained model
+        predictions, targets, predictive_uncertainty = predict_memristor(X_test, 
+                                                                        y_test, 
+                                                                        memory_depth=Config.MEMORY_DEPTH, 
+                                                                        phase1=phase1, 
+                                                                        phase3=phase3, 
+                                                                        memristor_weight=memristor_weight,
+                                                                        stochastic=Config.PREDICT_STOCHASTIC, 
+                                                                        var=Config.PREDICT_VARIANCE, 
+                                                                        samples=Config.PREDICT_SAMPLES,
+                                                                        cutoff_dim=Config.CUTOFF_DIM
+                                                                        )
 
-    # Compute evaluation metrics for full predictions
-    full_metrics, full_metric_categories = compute_eval_metrics(predictions, 
-                                                                targets, 
-                                                                predictive_uncertainty
-                                                                )
-    
-    print("Full Prediction Metrics:")
-    for category in full_metric_categories:
-        print(f"{category}: {full_metrics[category]}")
+        # Ensure predictions and X_test have the same length
+        assert len(predictions) == len(X_test), "Predictions and X_test must have the same length"
 
-    # Apply selective prediction
-    sel_predictions, sel_targets, sel_uncertainty, remaining_fraction = selective_prediction(predictions, 
-                                                                                            targets, 
-                                                                                            predictive_uncertainty, 
-                                                                                            threshold=Config.SELECTIVE_PREDICTION_THRESHOLD
-                                                                                            )
-    
-    print(f"Remaining Fraction after Selective Prediction: {remaining_fraction}")
+        # Convert predictions, targets, and predictive_uncertainty to NumPy arrays
+        predictions = np.array(predictions)
+        targets = np.array(targets)
+        predictive_uncertainty = np.array(predictive_uncertainty)
 
-    # Compute evaluation metrics for selective predictions
-    sel_metrics, sel_metric_categories = compute_eval_metrics(sel_predictions, 
-                                                            sel_targets, 
-                                                            sel_uncertainty)
-    
-    print("Selective Prediction Metrics:")
-    for category in sel_metric_categories:
-        print(f"{category}: {sel_metrics[category]}")
+        # Compute evaluation metrics for full predictions
+        full_metrics, full_metric_categories = compute_eval_metrics(predictions, 
+                                                                    targets, 
+                                                                    predictive_uncertainty
+                                                                    )
+        
+        print("Full Prediction Metrics:")
+        for category in full_metric_categories:
+            print(f"{category}: {full_metrics[category]}")
 
-    # Print all hyperparameters
-    print("Hyperparameters:")
-    print(f"Memory Depth: {Config.MEMORY_DEPTH}")
-    print(f"Cutoff Dimension: {Config.CUTOFF_DIM}")
-    print(f"Training Steps: {Config.TRAINING_STEPS}")
-    print(f"Learning Rate: {Config.TRAINING_LEARNING_RATE}")
+        # Apply selective prediction
+        sel_predictions, sel_targets, sel_uncertainty, remaining_fraction = selective_prediction(predictions, 
+                                                                                                targets, 
+                                                                                                predictive_uncertainty, 
+                                                                                                threshold=Config.SELECTIVE_PREDICTION_THRESHOLD
+                                                                                                )
+        
+        print(f"Remaining Fraction after Selective Prediction: {remaining_fraction}")
+
+        # Compute evaluation metrics for selective predictions
+        sel_metrics, sel_metric_categories = compute_eval_metrics(sel_predictions, 
+                                                                sel_targets, 
+                                                                sel_uncertainty)
+        
+        print("Selective Prediction Metrics:")
+        for category in sel_metric_categories:
+            print(f"{category}: {sel_metrics[category]}")
+
+        # Print all hyperparameters
+        print("Hyperparameters:")
+        print(f"Memory Depth: {Config.MEMORY_DEPTH}")
+        print(f"Cutoff Dimension: {Config.CUTOFF_DIM}")
+        print(f"Training Steps: {Config.TRAINING_STEPS}")
+        print(f"Learning Rate: {Config.TRAINING_LEARNING_RATE}")
 
 
-    # Plotting the results
-    plot_predictions(
-        X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
-        predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
-        aleatoric=None, title="Memristor Model Predictions vs Targets"
-    )
+        # Plotting the results
+        plot_predictions(
+            X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
+            predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
+            aleatoric=None, title="Memristor Model Predictions vs Targets"
+        )
 
     # # Train and predict with MLP baseline
     # mlp_model = train_mlp_baseline(X_train, y_train, hidden_layers=MLP_HIDDEN_LAYERS, epochs=MLP_EPOCHS, learning_rate=MLP_LEARNING_RATE)

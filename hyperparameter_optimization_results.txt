@@ -1,1 +1,0 @@
-steps=5, learning_rate=0.01, memory_depth=2, cutoff_dim=4, loss=0.41185894771141873
