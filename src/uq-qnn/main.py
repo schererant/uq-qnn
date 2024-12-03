@@ -41,8 +41,8 @@ class Config:
     LOG_PATH = f"reports/logs/experiment_{LOG_NAME}/"
     
     # Hyperparameter Optimization
-    HYPERPARAMETER_OPTIMIZATION = False
-    HYPER_STEPS_RANGE = [5, 5]
+    HYPERPARAMETER_OPTIMIZATION = True
+    HYPER_STEPS_RANGE = [5, 5, 5]
     HYPER_LEARNING_RATE_RANGE = [0.01]
     HYPER_MEMORY_DEPTH_RANGE = [6]
     HYPER_CUTOFF_DIM_RANGE = [5]
@@ -68,7 +68,7 @@ class Config:
     TRAINING_STEPS = 5
     TRAINING_LEARNING_RATE = 0.01
 
-    PREDICT_STOCHASTIC = True
+    PREDICT_STOCHASTIC = False
     PREDICT_SAMPLES = 2
     PREDICT_VARIANCE = 0.1
 

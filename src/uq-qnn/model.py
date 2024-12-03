@@ -93,6 +93,10 @@ def train_memristor(X_train,
 
 
     # Initialize variables and optimizer
+    np.random.seed(42)
+    tf.random.set_seed(42)
+    rd.seed(42)
+
     phase1 = tf.Variable(rd.uniform(0.01, 1) * 2 * np.pi, dtype=tf.float32,
                        constraint=lambda z: tf.clip_by_value(z, 0, 2 * np.pi))
     phase3 = tf.Variable(rd.uniform(0.01, 1) * 2 * np.pi, dtype=tf.float32,

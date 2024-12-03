@@ -1,0 +1,38 @@
+================================================================================
+Experiment_logs_20241204_003641
+Date: 2024-12-04 00:36:41
+================================================================================
+
+================================================================================
+Hyperparameter Optimization Log
+Date: 2024-12-04 00:36:41
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [5, 5]
+Learning Rate Range: [0.01]
+Memory Depth Range: [6]
+Cutoff Dimension Range: [5]
+
+----------------------------------------
+qnn_hp_s5_lr0.01_md6_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 5
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 40.7420, Phase1 = 4.0503, Phase3 = 0.2084, Weight = 0.2723
+  Step    1: Loss = 41.3851, Phase1 = 4.0603, Phase3 = 0.1985, Weight = 0.2623
