@@ -177,3 +177,53 @@ Prediction Parameters:
   Phase3: 0.1689
   Memristor Weight: 0.2324
   Stochastic: False
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2856
+  Mean absolute error: 0.4066
+Metrics for Metrics:
+  accuracy:
+    mae: 0.40660440511375373
+    rmse: 0.46128372622009023
+    mdae: 0.42656602412970207
+    marpd: 156.3764794783544
+    r2: -1.9697236783016492
+    corr: -0.7838712370758121
+
+================================================================================
+Hyperparameter Optimization Results
+Date: 2024-12-04 00:52:42
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [5, 5, 5]
+Learning Rate Range: [0.01]
+Memory Depth Range: [6]
+Cutoff Dimension Range: [5]
+
+========================================
+Best Parameters
+========================================
+
+Hyperparameters:
+  steps: 5
+  learning_rate: 0.010000
+  memory_depth: 6
+  cutoff_dim: 5
+  best_rmse: 0.461284
+
+Metrics:
+  accuracy:
+    mae: 0.40660440511375373
+    rmse: 0.46128372622009023
+    mdae: 0.42656602412970207
+    marpd: 156.3764794783544
+    r2: -1.9697236783016492
+    corr: -0.7838712370758121
+
+Parameters:
+  phase 1: 4.0903
+  phase 3: 0.1689
+  memristor weight: 0.2324
+
