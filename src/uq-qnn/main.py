@@ -41,8 +41,8 @@ class Config:
     LOG_PATH = f"reports/logs/experiment_{LOG_NAME}/"
     
     # Hyperparameter Optimization
-    HYPERPARAMETER_OPTIMIZATION = True
-    HYPER_STEPS_RANGE = [5, 5, 5, 5]
+    HYPERPARAMETER_OPTIMIZATION = False
+    HYPER_STEPS_RANGE = [5, 5]
     HYPER_LEARNING_RATE_RANGE = [0.01]
     HYPER_MEMORY_DEPTH_RANGE = [6]
     HYPER_CUTOFF_DIM_RANGE = [5]
@@ -362,6 +362,12 @@ def main():
 
     # Create directory called experiment_CONFIG.LOG_NAME in reports/logs
     os.makedirs(f"reports/logs/experiment_{Config.LOG_NAME}", exist_ok=False)
+
+    with open(Config.LOG_FILE_NAME, "a") as f:
+        f.write("=" * 80 + "\n")
+        f.write(f"Experiment_{Config.LOG_NAME}\n")
+        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("=" * 80 + "\n\n")
 
 
     X_train, y_train, X_test, y_test, _ = get_data(n_data=Config.GET_DATA_N_DATA, 
