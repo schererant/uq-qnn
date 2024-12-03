@@ -1,0 +1,75 @@
+----------------------------------------
+qnn_hp_s5_lr0.01_md6_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 5
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 40.7420, Phase1 = 4.0503, Phase3 = 0.2084, Weight = 0.2723
+  Step    1: Loss = 41.3851, Phase1 = 4.0603, Phase3 = 0.1985, Weight = 0.2623
+  Step    2: Loss = 41.0206, Phase1 = 4.0703, Phase3 = 0.1887, Weight = 0.2523
+  Step    3: Loss = 40.6579, Phase1 = 4.0803, Phase3 = 0.1788, Weight = 0.2423
+  Step    4: Loss = 40.2973, Phase1 = 4.0903, Phase3 = 0.1689, Weight = 0.2324
+
+Final Parameters:
+  Phase1: 4.0903
+  Phase3: 0.1689
+  Memristor Weight: 0.2324
+
+Training Summary:
+  Initial Loss: 40.7420
+  Final Loss: 40.2973
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 4.0903
+  Phase3: 0.1689
+  Memristor Weight: 0.2324
+  Stochastic: True
+  Number of Samples: 10
+  Variance: 0.1
+
+Prediction Progress:
+
+  Sample 1/10:
+
+  Sample 2/10:
+
+  Sample 3/10:
+
+  Sample 4/10:
+
+  Sample 5/10:
+
+  Sample 6/10:
+
+  Sample 7/10:
+
+  Sample 8/10:
+
+  Sample 9/10:
+
+  Sample 10/10:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2880
+  Mean predictive uncertainty: 0.0306
+  Mean absolute error: 0.4075

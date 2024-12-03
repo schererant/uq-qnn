@@ -30,14 +30,6 @@ np.random.seed(42)
 tf.random.set_seed(42)
 rd.seed(42)
 
-print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-
-
-#TODO: try different functions
-#TODO: store hyperparameter, variance, outputs etc. to show difference
-#TODO: save outputs etc.  
-#TODO: 010 pol , ause neg loglike as loss 
-#TODO: 
 
 ###### HYPERPARAMETERS ######
 
@@ -48,14 +40,14 @@ class Config:
     LOG_FILE_NAME = f"reports/logs/experiment_{LOG_NAME}/log.txt"
     LOG_PATH = f"reports/logs/experiment_{LOG_NAME}/"
     
+    # Hyperparameter Optimization
     HYPERPARAMETER_OPTIMIZATION = True
-    HYPER_STEPS_RANGE = [500]
+    HYPER_STEPS_RANGE = [5, 5, 5, 5]
     HYPER_LEARNING_RATE_RANGE = [0.01]
     HYPER_MEMORY_DEPTH_RANGE = [6]
     HYPER_CUTOFF_DIM_RANGE = [5]
 
-    #TODO: Visualize the results after each run
-
+    # Model Comparison
     MODEL_COMPARISON = False
     COMP_N_SAMPLES = [2]
     COMP_MLP_ARCH = [[32], [64, 64], [128, 64, 64]]
@@ -67,21 +59,24 @@ class Config:
 
     POLYNOMIAL_DEGREE = 3
 
+    # Selective Prediction
     SELECTIVE_PREDICTION_THRESHOLD = 0.8
 
-    MEMORY_DEPTH = 5
-    CUTOFF_DIM = 4
-
+    # QNN Hyperparameters
+    MEMORY_DEPTH = 6
+    CUTOFF_DIM = 5
     TRAINING_STEPS = 5
-    TRAINING_LEARNING_RATE = 0.05
+    TRAINING_LEARNING_RATE = 0.01
 
-    PREDICT_STOCHASTIC = False
-    PREDICT_SAMPLES = 1
+    PREDICT_STOCHASTIC = True
+    PREDICT_SAMPLES = 2
     PREDICT_VARIANCE = 0.1
 
     GET_DATA_N_DATA = 200
     GET_DATA_SIGMA_NOISE_1 = 0.1
     GET_DATA_DATAFUNCTION = quartic_data
+
+    PARAM_ID = f"qnn_hp_s{TRAINING_STEPS}_lr{TRAINING_LEARNING_RATE}_md{MEMORY_DEPTH}_cd{CUTOFF_DIM}"
 
 
 def model_comparison(X_train, y_train, X_test, y_test):
@@ -186,11 +181,6 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
     Performs hyperparameter optimization and stores results in a consistent format
     with model_comparison function, including metrics for all results.
     """
-    # Define the ranges for the hyperparameters
-    steps_range = Config.HYPER_STEPS_RANGE
-    learning_rate_range = Config.HYPER_LEARNING_RATE_RANGE
-    memory_depth_range = Config.HYPER_MEMORY_DEPTH_RANGE
-    cutoff_dim_range = Config.HYPER_CUTOFF_DIM_RANGE
 
     # log_file_name = Config.LOG_PATH + Config.LOG_FILE_NAME
 
@@ -199,11 +189,7 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
     best_metrics = None
     best_categories = None
     all_results = {}
-    log_dic = {}
 
-
-    # Calculate total number of combinations
-    total_combinations = len(steps_range) * len(learning_rate_range) * len(memory_depth_range) * len(cutoff_dim_range)
 
     with open(Config.LOG_FILE_NAME, "a") as f:
         f.write("=" * 80 + "\n")
@@ -211,15 +197,15 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
         f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write("=" * 80 + "\n\n")
         f.write("Hyperparameter Ranges:\n")
-        f.write(f"Steps Range: {steps_range}\n")
-        f.write(f"Learning Rate Range: {learning_rate_range}\n")
-        f.write(f"Memory Depth Range: {memory_depth_range}\n")
-        f.write(f"Cutoff Dimension Range: {cutoff_dim_range}\n\n")
+        f.write(f"Steps Range: {Config.HYPER_STEPS_RANGE}\n")
+        f.write(f"Learning Rate Range: {Config.HYPER_LEARNING_RATE_RANGE}\n")
+        f.write(f"Memory Depth Range: {Config.HYPER_MEMORY_DEPTH_RANGE}\n")
+        f.write(f"Cutoff Dimension Range: {Config.HYPER_CUTOFF_DIM_RANGE}\n\n")
     
     # Create a tqdm iterator with total number of combinations
     for steps, learning_rate, memory_depth, cutoff_dim in tqdm(
-        product(steps_range, learning_rate_range, memory_depth_range, cutoff_dim_range),
-        total=total_combinations,
+        product(Config.HYPER_STEPS_RANGE, Config.HYPER_LEARNING_RATE_RANGE, Config.HYPER_MEMORY_DEPTH_RANGE, Config.HYPER_CUTOFF_DIM_RANGE),
+        total=len(Config.HYPER_STEPS_RANGE) * len(Config.HYPER_LEARNING_RATE_RANGE) * len(Config.HYPER_MEMORY_DEPTH_RANGE) * len(Config.HYPER_CUTOFF_DIM_RANGE),
         desc="Hyperparameter Optimization",
         unit="combination"
     ):
@@ -228,17 +214,22 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
         # print(f"Training with steps={steps}, learning_rate={learning_rate}, memory_depth={memory_depth}, cutoff_dim={cutoff_dim}")
 
         # Create a unique identifier for this parameter combination
-        param_id = f"qnn_hp_s{steps}_lr{learning_rate}_md{memory_depth}_cd{cutoff_dim}"
 
-        log_dic[param_id] = {
-            "res_mem": {},
-            "hyperparameters": {
-                "steps": steps,
-                "learning_rate": learning_rate,
-                "memory_depth": memory_depth,
-                "cutoff_dim": cutoff_dim
-            }
-        }
+        Config.TRAINING_STEPS = steps
+        Config.TRAINING_LEARNING_RATE = learning_rate
+        Config.MEMORY_DEPTH = memory_depth
+        Config.CUTOFF_DIM = cutoff_dim
+        Config.PARAM_ID = f"qnn_hp_s{Config.TRAINING_STEPS}_lr{Config.TRAINING_LEARNING_RATE}_md{Config.MEMORY_DEPTH}_cd{Config.CUTOFF_DIM}"
+
+        # log_dic[param_id] = {
+        #     "res_mem": {},
+        #     "hyperparameters": {
+        #         "steps": steps,
+        #         "learning_rate": learning_rate,
+        #         "memory_depth": memory_depth,
+        #         "cutoff_dim": cutoff_dim
+        #     }
+        # }
 
         # Train the memristor model
         res_mem, phase1, phase3, memristor_weight = train_memristor(
@@ -248,23 +239,10 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             training_steps=steps, 
             learning_rate=learning_rate, 
             cutoff_dim=cutoff_dim,
-            filename=Config.LOG_FILE_NAME
+            log_filepath=Config.LOG_FILE_NAME,
+            log_path=Config.LOG_PATH,
+            param_id=Config.PARAM_ID
         )
-
-        # Save plot of training results
-        plot_training_results(res_mem, Config.LOG_PATH+f"training_results_{param_id}.png")
-
-    
-        # Save plot of training results
-        # plot_training_results(res_mem, f"training_results_{param_id}.png")
-
-        # Store results
-        log_dic[param_id]["res_mem"] = res_mem
-        log_dic[param_id]["parameters"] = {
-            "phase1": phase1,
-            "phase3": phase3,
-            "memristor_weight": memristor_weight
-        }
 
         # Predict using the trained model
         predictions, targets, predictive_uncertainty = predict_memristor(
@@ -275,38 +253,29 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             phase3=phase3, 
             memristor_weight=memristor_weight, 
             stochastic=False, 
-            samples=1, 
-            var=0.0, 
-            cutoff_dim=cutoff_dim,
-            filename=Config.LOG_FILE_NAME
+            samples=Config.PREDICT_SAMPLES, 
+            var=Config.PREDICT_VARIANCE, 
+            cutoff_dim=Config.CUTOFF_DIM,
+            log_filepath=Config.LOG_FILE_NAME,
+            log_path=Config.LOG_PATH,
+            param_id=Config.PARAM_ID
         )
 
-        plot_predictions_new(X_test, y_test, predictions, predictive_uncertainty, Config.LOG_PATH+f"prediction_results_{param_id}.png")
         
-
-        
-
         # Compute evaluation metrics
-        metrics, metric_categories = compute_eval_metrics(predictions, targets, predictive_uncertainty)
-
-        plot_eval_metrics(
-            metrics,
-            metric_categories,
-            os.path.join(os.path.dirname(Config.LOG_FILE_NAME), f'metrics_{param_id}.png')
-        )
-
-        with open(Config.LOG_FILE_NAME, "a") as f:
-            f.write("\nMetrics:\n")
-            metric_lines = format_metrics(metrics, indent=2)
-            f.write("\n".join(metric_lines))
-            f.write("\n\n")
+        metrics, metric_categories = compute_eval_metrics(predictions, 
+                                                          targets, 
+                                                          predictive_uncertainty,
+                                                          Config.LOG_FILE_NAME,
+                                                          Config.PARAM_ID
+                                                          )
 
         
 
         
         # Store results in the same format as model_comparison
 
-        all_results[param_id] = {
+        all_results[Config.PARAM_ID] = {
             "metrics": metrics,
             "categories": metric_categories,
             "hyperparameters": {
@@ -421,12 +390,15 @@ def main():
                                                                     memory_depth=Config.MEMORY_DEPTH, 
                                                                     training_steps=Config.TRAINING_STEPS,
                                                                     learning_rate=Config.TRAINING_LEARNING_RATE,
-                                                                    cutoff_dim=Config.CUTOFF_DIM
+                                                                    cutoff_dim=Config.CUTOFF_DIM,
+                                                                    log_filepath=Config.LOG_FILE_NAME,
+                                                                    log_path=Config.LOG_PATH,
+                                                                    param_id=Config.PARAM_ID
                                                                     )
 
         # Save training results
-        with open(f"{Config.LOG_FILE_NAME}.pkl", "wb") as file:
-            pickle.dump(res_mem, file)
+        # with open(f"{Config.LOG_FILE_NAME}.pkl", "wb") as file:
+        #     pickle.dump(res_mem, file)
 
         # Predict using the trained model
         predictions, targets, predictive_uncertainty = predict_memristor(X_test, 
@@ -438,7 +410,10 @@ def main():
                                                                         stochastic=Config.PREDICT_STOCHASTIC, 
                                                                         var=Config.PREDICT_VARIANCE, 
                                                                         samples=Config.PREDICT_SAMPLES,
-                                                                        cutoff_dim=Config.CUTOFF_DIM
+                                                                        cutoff_dim=Config.CUTOFF_DIM,
+                                                                        log_filepath=Config.LOG_FILE_NAME,
+                                                                        log_path=Config.LOG_PATH,
+                                                                        param_id=Config.PARAM_ID
                                                                         )
 
         # Ensure predictions and X_test have the same length
@@ -452,12 +427,12 @@ def main():
         # Compute evaluation metrics for full predictions
         full_metrics, full_metric_categories = compute_eval_metrics(predictions, 
                                                                     targets, 
-                                                                    predictive_uncertainty
+                                                                    predictive_uncertainty,
+                                                                    Config.LOG_FILE_NAME,
+                                                                    Config.PARAM_ID,
+                                                                    name="Full Prediction"
                                                                     )
         
-        print("Full Prediction Metrics:")
-        for category in full_metric_categories:
-            print(f"{category}: {full_metrics[category]}")
 
         # Apply selective prediction
         sel_predictions, sel_targets, sel_uncertainty, remaining_fraction = selective_prediction(predictions, 
@@ -465,31 +440,26 @@ def main():
                                                                                                 predictive_uncertainty, 
                                                                                                 threshold=Config.SELECTIVE_PREDICTION_THRESHOLD
                                                                                                 )
-        
-        print(f"Remaining Fraction after Selective Prediction: {remaining_fraction}")
 
         # Compute evaluation metrics for selective predictions
         sel_metrics, sel_metric_categories = compute_eval_metrics(sel_predictions, 
                                                                 sel_targets, 
-                                                                sel_uncertainty)
-        
-        print("Selective Prediction Metrics:")
-        for category in sel_metric_categories:
-            print(f"{category}: {sel_metrics[category]}")
+                                                                sel_uncertainty,
+                                                                Config.LOG_FILE_NAME,
+                                                                Config.PARAM_ID,
+                                                                name="Selective Prediction"
+                                                                )
 
-        # Print all hyperparameters
-        print("Hyperparameters:")
-        print(f"Memory Depth: {Config.MEMORY_DEPTH}")
-        print(f"Cutoff Dimension: {Config.CUTOFF_DIM}")
-        print(f"Training Steps: {Config.TRAINING_STEPS}")
-        print(f"Learning Rate: {Config.TRAINING_LEARNING_RATE}")
-
+        # Save results to log file
+        with open(Config.LOG_FILE_NAME, "a") as f:
+            f.write(f"Selective Prediction Fraction: {remaining_fraction}\n")
+            f.write("\n\n")
 
         # Plotting the results
         plot_predictions(
             X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
             predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
-            aleatoric=None, title="Memristor Model Predictions vs Targets"
+            aleatoric=None, title="Memristor Model Predictions vs Targets", save_path=Config.LOG_PATH+f"prediction_uncertainty_{Config.PARAM_ID}.png"
         )
 
     # # Train and predict with MLP baseline

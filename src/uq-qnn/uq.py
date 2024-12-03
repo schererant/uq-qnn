@@ -1,7 +1,12 @@
 import numpy as np
 import uncertainty_toolbox as uct
+from plotting import plot_eval_metrics
+import os
+from utils import format_metrics
 
-def selective_prediction(final_predictions, targets, predictive_uncertainty, threshold: float = 0.8):
+
+
+def selective_prediction(final_predictions, targets, predictive_uncertainty, threshold: float = 0.8, log_filepath: str = None):
     """ Copmutes UQ metrics
     
     Interpretation:
@@ -33,10 +38,39 @@ def selective_prediction(final_predictions, targets, predictive_uncertainty, thr
 
     remaining_fraction = len(final_predictions_sel)/len(final_predictions)
 
+    # # Compute evaluation metrics for selective predictions
+    # sel_metrics, sel_metric_categories = compute_eval_metrics(sel_predictions, 
+    #                                                         sel_targets, 
+    #                                                         sel_uncertainty,
+    #                                                         Config.LOG_FILE_NAME,
+    #                                                         Config.PARAM_ID)
+    
+    # print("Selective Prediction Metrics:")
+    # for category in sel_metric_categories:
+    #     print(f"{category}: {sel_metrics[category]}")
+
+    # if log_filepath:
+    #     with open(log_filepath, "a") as f:
+    #         f.write(f"Selective prediction fraction: {remaining_fraction}\n")
+    #         f.write("\nSelective Prediction Metrics:\n")
+    #         metric_lines = format_metrics(sel_metrics, indent=2)
+    #         f.write("\n".join(metric_lines))
+            
+    #         # print sel_metrics_categories
+    #         f.write("\nSelective Prediction Metric Categories:\n")
+    #         f.write("\n".join(sel_metric_categories))
+    #         f.write("\n\n")
+
     return final_predictions_sel, targets_sel, predictive_uncertainty_sel, remaining_fraction
 
 
-def compute_eval_metrics(final_predictions, targets, predictive_uncertainty):
+def compute_eval_metrics(final_predictions,
+                         targets, 
+                         predictive_uncertainty,
+                         log_file_name: str,
+                         param_id: str,
+                         name: str = "Metrics"
+                         ):
     #idea compute eval metrics for selective prediction and full version
     """ Copmutes UQ metrics
     
@@ -85,5 +119,17 @@ def compute_eval_metrics(final_predictions, targets, predictive_uncertainty):
                 final_predictions, targets
             )
         }
+
+    plot_eval_metrics(
+            uq_metrics,
+            uq_metric_categories,
+            os.path.join(os.path.dirname(log_file_name), f'metrics_{param_id}.png')
+        )
+
+    with open(log_file_name, "a") as f:
+        f.write(f"Metrics for {name}:\n")
+        metric_lines = format_metrics(uq_metrics, indent=2)
+        f.write("\n".join(metric_lines))
+        f.write("\n\n")
 
     return uq_metrics, uq_metric_categories

@@ -159,7 +159,10 @@ def plot_training_results(res_mem, filepath):
     plt.savefig(filepath)
     plt.close(fig)
 
-def plot_toy_data(X_train, y_train, X_test, y_test):
+def plot_toy_data(X_train, 
+                  y_train, 
+                  X_test, 
+                  y_test):
     """Plot the toy data."""
     fig, ax = plt.subplots(1)
     ax.scatter(X_train, y_train, color="blue", label="train_data")
@@ -167,9 +170,17 @@ def plot_toy_data(X_train, y_train, X_test, y_test):
     plt.legend()
     plt.show()
 
-def plot_predictions(
-    X_train, y_train, X_test, y_test, y_pred, pred_std=None, pred_quantiles=None, epistemic=None, aleatoric=None, title=None
-) -> None:
+def plot_predictions(X_train, 
+                     y_train, 
+                     X_test, 
+                     y_test, 
+                     y_pred, 
+                     pred_std=None, 
+                     pred_quantiles=None, 
+                     epistemic=None, 
+                     aleatoric=None, 
+                     title=None,
+                     save_path=None) -> None:
     """Plot predictive uncertainty as well as epistemic and aleatoric separately.
     
     Args:
@@ -238,7 +249,11 @@ def plot_predictions(
         ax2.legend()
 
     plt.tight_layout()
-    plt.show()
+    if save_path:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
 
 def plot_all_predictions(X_train, y_train, X_test, y_test, memristor_predictions, mlp_predictions, poly_predictions, predictive_uncertainty):
