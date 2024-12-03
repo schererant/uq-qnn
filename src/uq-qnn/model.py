@@ -120,7 +120,10 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
         with tf.GradientTape() as tape:
             loss = 0.0
 
-            for i in range(num_samples):
+            for i in tqdm(range(num_samples), 
+                         desc=f'Step {step+1}/{training_steps}',
+                         leave=False,
+                         unit='sample'):
                 time_step = i - cycle_index * memory_depth
                 if time_step == memory_depth - 1:
                     cycle_index += 1
@@ -153,6 +156,9 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
             gradients = tape.gradient(loss, [phase1, phase3, memristor_weight])
             optimizer.apply_gradients(zip(gradients, [phase1, phase3, memristor_weight]))
 
+            # Update progress bar with current loss
+            pbar.set_postfix({'loss': f'{float(loss):.4f}'})
+
             # Log results every step
             # log_training_loss(log_filepath, step, loss, phase1, phase3, memristor_weight)
             with open(log_filepath, 'a') as f:
@@ -163,10 +169,10 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
 
 
             res_mem[('loss', 'tr', step)] = [loss.numpy(), phase1.numpy(), phase3.numpy(), memristor_weight.numpy()]
-            print(f"Loss at step {step + 1}: {loss.numpy()}")
+            # print(f"Loss at step {step + 1}: {loss.numpy()}")
 
-    print(f"Final loss: {loss.numpy()}")
-    print(f"Optimal parameters: phase1={phase1.numpy()}, phase3={phase3.numpy()}, memristor_weight={memristor_weight.numpy()}")
+    # print(f"Final loss: {loss.numpy()}")
+    # print(f"Optimal parameters: phase1={phase1.numpy()}, phase3={phase3.numpy()}, memristor_weight={memristor_weight.numpy()}")
 
     with open(log_filepath, 'a') as f:
         f.write("\nFinal Parameters:\n") 
@@ -219,10 +225,10 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
     memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
     cycle_index = 0
 
-    print("Predicting on test data...")
+    # print("Predicting on test data...")
 
     for sample in range(samples):
-        print(f"Sample {sample + 1}/{samples}")
+        # print(f"Sample {sample + 1}/{samples}")
         sample_predictions = []
 
         # Log start of new sample
