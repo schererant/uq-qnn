@@ -1,0 +1,205 @@
+================================================================================
+Hyperparameter Optimization Log
+Date: 2024-12-02 15:53:15
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [20]
+Learning Rate Range: [0.01]
+Memory Depth Range: [3]
+Cutoff Dimension Range: [4, 5]
+
+----------------------------------------
+qnn_hp_s20_lr0.01_md3_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 3
+  Training Steps: 20
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 41.1462, Phase1 = 4.0503, Phase3 = 0.2084, Weight = 0.2723
+  Step    1: Loss = 41.1750, Phase1 = 4.0603, Phase3 = 0.1984, Weight = 0.2623
+  Step    2: Loss = 40.8126, Phase1 = 4.0703, Phase3 = 0.1885, Weight = 0.2523
+  Step    3: Loss = 40.4522, Phase1 = 4.0803, Phase3 = 0.1785, Weight = 0.2423
+  Step    4: Loss = 40.0941, Phase1 = 4.0903, Phase3 = 0.1685, Weight = 0.2324
+  Step    5: Loss = 39.7380, Phase1 = 4.1003, Phase3 = 0.1585, Weight = 0.2224
+  Step    6: Loss = 39.3839, Phase1 = 4.1103, Phase3 = 0.1485, Weight = 0.2125
+  Step    7: Loss = 39.0320, Phase1 = 4.1203, Phase3 = 0.1384, Weight = 0.2027
+  Step    8: Loss = 38.6820, Phase1 = 4.1303, Phase3 = 0.1284, Weight = 0.1928
+  Step    9: Loss = 38.3342, Phase1 = 4.1404, Phase3 = 0.1183, Weight = 0.1830
+  Step   10: Loss = 37.9883, Phase1 = 4.1504, Phase3 = 0.1082, Weight = 0.1732
+  Step   11: Loss = 37.6443, Phase1 = 4.1604, Phase3 = 0.0981, Weight = 0.1635
+  Step   12: Loss = 37.3024, Phase1 = 4.1704, Phase3 = 0.0880, Weight = 0.1539
+  Step   13: Loss = 36.9624, Phase1 = 4.1804, Phase3 = 0.0778, Weight = 0.1442
+  Step   14: Loss = 36.6242, Phase1 = 4.1904, Phase3 = 0.0676, Weight = 0.1347
+  Step   15: Loss = 36.2878, Phase1 = 4.2004, Phase3 = 0.0574, Weight = 0.1252
+  Step   16: Loss = 35.9532, Phase1 = 4.2104, Phase3 = 0.0472, Weight = 0.1158
+  Step   17: Loss = 35.6204, Phase1 = 4.2205, Phase3 = 0.0369, Weight = 0.1064
+  Step   18: Loss = 35.2893, Phase1 = 4.2305, Phase3 = 0.0267, Weight = 0.0971
+  Step   19: Loss = 34.9598, Phase1 = 4.2405, Phase3 = 0.0164, Weight = 0.0879
+
+Final Parameters:
+  Phase1: 4.2405
+  Phase3: 0.0164
+  Memristor Weight: 0.0879
+
+Training Summary:
+  Initial Loss: 41.1462
+  Final Loss: 34.9598
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 3
+  Phase1: 4.2405
+  Phase3: 0.0164
+  Memristor Weight: 0.0879
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2428
+  Mean absolute error: 0.3725
+
+Metrics:
+  accuracy:
+    mae: 0.3725285169921417
+    rmse: 0.42650368920939785
+    mdae: 0.3820738704808095
+    marpd: 157.45298753735233
+    r2: -1.5387817014789977
+    corr: -0.7133651234469489
+
+----------------------------------------
+qnn_hp_s20_lr0.01_md3_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 3
+  Training Steps: 20
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 1.4513
+  Phase3: 4.6439
+  Memristor Weight: 0.6799
+
+Training Progress:
+  Step    0: Loss = 41.8871, Phase1 = 1.4413, Phase3 = 4.6339, Weight = 0.6699
+  Step    1: Loss = 41.3207, Phase1 = 1.4313, Phase3 = 4.6239, Weight = 0.6599
+  Step    2: Loss = 40.7017, Phase1 = 1.4213, Phase3 = 4.6140, Weight = 0.6499
+  Step    3: Loss = 40.0872, Phase1 = 1.4113, Phase3 = 4.6040, Weight = 0.6400
+  Step    4: Loss = 39.4783, Phase1 = 1.4013, Phase3 = 4.5940, Weight = 0.6300
+  Step    5: Loss = 38.8745, Phase1 = 1.3913, Phase3 = 4.5840, Weight = 0.6200
+  Step    6: Loss = 38.2763, Phase1 = 1.3813, Phase3 = 4.5741, Weight = 0.6101
+  Step    7: Loss = 37.6828, Phase1 = 1.3713, Phase3 = 4.5641, Weight = 0.6002
+  Step    8: Loss = 37.0947, Phase1 = 1.3614, Phase3 = 4.5542, Weight = 0.5903
+  Step    9: Loss = 36.5130, Phase1 = 1.3514, Phase3 = 4.5443, Weight = 0.5804
+  Step   10: Loss = 35.9363, Phase1 = 1.3414, Phase3 = 4.5344, Weight = 0.5705
+  Step   11: Loss = 35.3652, Phase1 = 1.3315, Phase3 = 4.5245, Weight = 0.5607
+  Step   12: Loss = 34.8000, Phase1 = 1.3216, Phase3 = 4.5146, Weight = 0.5509
+  Step   13: Loss = 34.2412, Phase1 = 1.3116, Phase3 = 4.5047, Weight = 0.5412
+  Step   14: Loss = 33.6874, Phase1 = 1.3017, Phase3 = 4.4949, Weight = 0.5314
+  Step   15: Loss = 33.1398, Phase1 = 1.2918, Phase3 = 4.4850, Weight = 0.5217
+  Step   16: Loss = 32.5984, Phase1 = 1.2819, Phase3 = 4.4752, Weight = 0.5121
+  Step   17: Loss = 32.0634, Phase1 = 1.2721, Phase3 = 4.4653, Weight = 0.5025
+  Step   18: Loss = 31.5336, Phase1 = 1.2622, Phase3 = 4.4555, Weight = 0.4929
+  Step   19: Loss = 31.0109, Phase1 = 1.2524, Phase3 = 4.4456, Weight = 0.4834
+
+Final Parameters:
+  Phase1: 1.2524
+  Phase3: 4.4456
+  Memristor Weight: 0.4834
+
+Training Summary:
+  Initial Loss: 41.8871
+  Final Loss: 31.0109
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 3
+  Phase1: 1.2524
+  Phase3: 4.4456
+  Memristor Weight: 0.4834
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.6540
+  Mean absolute error: 0.4763
+
+Metrics:
+  accuracy:
+    mae: 0.47634635620973603
+    rmse: 0.5051502367239556
+    mdae: 0.5148605674019751
+    marpd: 140.39001550135396
+    r2: -2.561401168730111
+    corr: 0.5624078004435572
+
+================================================================================
+Hyperparameter Optimization Results
+Date: 2024-12-02 15:57:06
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [20]
+Learning Rate Range: [0.01]
+Memory Depth Range: [3]
+Cutoff Dimension Range: [4, 5]
+
+========================================
+Best Parameters
+========================================
+
+Hyperparameters:
+  steps: 20
+  learning_rate: 0.010000
+  memory_depth: 3
+  cutoff_dim: 4
+  best_rmse: 0.426504
+
+Metrics:
+  accuracy:
+    mae: 0.3725285169921417
+    rmse: 0.42650368920939785
+    mdae: 0.3820738704808095
+    marpd: 157.45298753735233
+    r2: -1.5387817014789977
+    corr: -0.7133651234469489
+
+Parameters:
+  phase 1: 4.2405
+  phase 3: 0.0164
+  memristor weight: 0.0879
+

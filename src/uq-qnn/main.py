@@ -16,7 +16,7 @@ from itertools import product
 from tqdm import tqdm
 
 from dataloader import get_data, quartic_data
-from plotting import plot_predictions
+from plotting import plot_predictions, plot_training_results, plot_predictions_new, plot_eval_metrics
 from baseline import train_mlp_baseline, predict_mlp_baseline, train_polynomial_baseline, predict_polynomial_baseline
 from uq import selective_prediction, compute_eval_metrics
 from model import train_memristor, predict_memristor, build_circuit
@@ -43,19 +43,22 @@ print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
 class Config:
 
+    
     LOG_NAME = f"logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    LOG_FILE_NAME = f"{LOG_NAME}.txt"
-
+    LOG_FILE_NAME = f"reports/logs/experiment_{LOG_NAME}/log.txt"
+    LOG_PATH = f"reports/logs/experiment_{LOG_NAME}/"
+    
     HYPERPARAMETER_OPTIMIZATION = True
-    HYPER_STEPS_RANGE = [5]
+    HYPER_STEPS_RANGE = [500]
     HYPER_LEARNING_RATE_RANGE = [0.01]
-    HYPER_MEMORY_DEPTH_RANGE = [3]
-    HYPER_CUTOFF_DIM_RANGE = [4, 5]
+    HYPER_MEMORY_DEPTH_RANGE = [6]
+    HYPER_CUTOFF_DIM_RANGE = [5]
 
     #TODO: Visualize the results after each run
 
-    MODEL_COMPARISON = True
+    MODEL_COMPARISON = False
     COMP_N_SAMPLES = [2]
+    COMP_MLP_ARCH = [[32], [64, 64], [128, 64, 64]]
 
     #TODO: Check for which params we have the same loss
     MLP_HIDDEN_LAYERS = [64, 64]
@@ -87,11 +90,7 @@ def model_comparison(X_train, y_train, X_test, y_test):
     # 1. MLP Baseline
 
     print("Training MLP Baseline Models...")
-    mlp_architectures = [
-        [32],              
-        [64, 64],         # Matches MLP_HIDDEN_LAYERS
-        [128, 64, 64],    
-    ]
+    mlp_architectures = Config.COMP_MLP_ARCH
     
     for hidden_layers in mlp_architectures:
         mlp_model = train_mlp_baseline(
@@ -122,13 +121,14 @@ def model_comparison(X_train, y_train, X_test, y_test):
         memory_depth=Config.MEMORY_DEPTH,
         training_steps=Config.TRAINING_STEPS,
         learning_rate=Config.TRAINING_LEARNING_RATE,
-        cutoff_dim=Config.CUTOFF_DIM
+        cutoff_dim=Config.CUTOFF_DIM,
+        filename=Config.LOG_FILE_NAME
     )
     
 
     # 3. QNN with UQ
     
-    for n_samples in [5, 20, 50, 100]:
+    for n_samples in Config.COMP_N_SAMPLES:
 
         print(f"Predict QNN UQ Model with {n_samples} samples...")
         predictions, targets, predictive_uncertainty = predict_memristor(
@@ -140,7 +140,8 @@ def model_comparison(X_train, y_train, X_test, y_test):
             memristor_weight=memristor_weight,
             stochastic=True,
             samples=n_samples,
-            var=Config.PREDICT_VARIANCE
+            var=Config.PREDICT_VARIANCE,
+            filename=Config.LOG_FILE_NAME
         )
         
         # Full dataset metrics
@@ -155,7 +156,7 @@ def model_comparison(X_train, y_train, X_test, y_test):
         }
 
         # Selective prediction
-        for threshold in [0.7, 0.8, 0.9]:
+        for threshold in [0.7]:
 
             print(f"Selective Prediction with threshold {threshold}...")
             sel_predictions, sel_targets, sel_uncertainty, remaining_fraction = selective_prediction(
@@ -190,6 +191,8 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
     learning_rate_range = Config.HYPER_LEARNING_RATE_RANGE
     memory_depth_range = Config.HYPER_MEMORY_DEPTH_RANGE
     cutoff_dim_range = Config.HYPER_CUTOFF_DIM_RANGE
+
+    # log_file_name = Config.LOG_PATH + Config.LOG_FILE_NAME
 
     best_loss = float('inf')
     best_params = None
@@ -248,6 +251,13 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             filename=Config.LOG_FILE_NAME
         )
 
+        # Save plot of training results
+        plot_training_results(res_mem, Config.LOG_PATH+f"training_results_{param_id}.png")
+
+    
+        # Save plot of training results
+        # plot_training_results(res_mem, f"training_results_{param_id}.png")
+
         # Store results
         log_dic[param_id]["res_mem"] = res_mem
         log_dic[param_id]["parameters"] = {
@@ -271,14 +281,27 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             filename=Config.LOG_FILE_NAME
         )
 
+        plot_predictions_new(X_test, y_test, predictions, predictive_uncertainty, Config.LOG_PATH+f"prediction_results_{param_id}.png")
+        
+
+        
+
         # Compute evaluation metrics
         metrics, metric_categories = compute_eval_metrics(predictions, targets, predictive_uncertainty)
+
+        plot_eval_metrics(
+            metrics,
+            metric_categories,
+            os.path.join(os.path.dirname(Config.LOG_FILE_NAME), f'metrics_{param_id}.png')
+        )
 
         with open(Config.LOG_FILE_NAME, "a") as f:
             f.write("\nMetrics:\n")
             metric_lines = format_metrics(metrics, indent=2)
             f.write("\n".join(metric_lines))
             f.write("\n\n")
+
+        
 
         
         # Store results in the same format as model_comparison
@@ -368,9 +391,10 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
 
 def main():
 
-    
+    # Create directory called experiment_CONFIG.LOG_NAME in reports/logs
+    os.makedirs(f"reports/logs/experiment_{Config.LOG_NAME}", exist_ok=False)
 
-    # Get the data
+
     X_train, y_train, X_test, y_test, _ = get_data(n_data=Config.GET_DATA_N_DATA, 
                                                    sigma_noise_1=Config.GET_DATA_SIGMA_NOISE_1, 
                                                    datafunction=Config.GET_DATA_DATAFUNCTION
@@ -381,13 +405,13 @@ def main():
         # Perform hyperparameter optimization
         best_hyperparams, hpo_results = hyperparameter_optimization(X_train, y_train, X_test, y_test)
         steps, learning_rate, memory_depth, cutoff_dim = best_hyperparams
-        print(hpo_results)
+        # print(hpo_results)
 
 
     if Config.MODEL_COMPARISON:
         comp_results = model_comparison(X_train, y_train, X_test, y_test)
         # save_results_to_txt(all_results, f"model_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
-        print(comp_results)
+        # print(comp_results)
 
     
     if not Config.HYPERPARAMETER_OPTIMIZATION and not Config.MODEL_COMPARISON:

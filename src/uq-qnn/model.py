@@ -5,8 +5,12 @@ from strawberryfields.ops import *
 import random as rd
 from datetime import datetime
 from utils import log_training_loss
+from tqdm import tqdm, trange
 
-
+# Set random seeds for reproducibility
+np.random.seed(42)
+tf.random.set_seed(42)
+rd.seed(42)
 
 
 def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
@@ -107,7 +111,8 @@ def train_memristor(x_train, y_train, memory_depth, training_steps, learning_rat
     cycle_index = 0
 
     # Training loop
-    for step in range(training_steps):
+    pbar = trange(training_steps, desc='Training', unit='step')
+    for step in pbar:
         # Reset the engine if it has already been executed
         if eng.run_progs:
             eng.reset()
@@ -232,10 +237,10 @@ def predict_memristor(x_test, y_test, memory_depth, phase1, phase3, memristor_we
             if stochastic:
                 phase1_sample = np.random.normal(phase1.numpy(), var)
                 phase3_sample = np.random.normal(phase3.numpy(), var)
-                # Log sampled phases
-                with open(log_filepath, 'a') as f:
-                    f.write(" " * 4 + f"Step {i}: Phase1_sample = {phase1_sample:.4f}, "
-                           f"Phase3_sample = {phase3_sample:.4f}\n")
+                # # Log sampled phases
+                # with open(log_filepath, 'a') as f:
+                #     f.write(" " * 4 + f"Step {i}: Phase1_sample = {phase1_sample:.4f}, "
+                #            f"Phase3_sample = {phase3_sample:.4f}\n")
             else:
                 phase1_sample = phase1.numpy()
                 phase3_sample = phase3.numpy()

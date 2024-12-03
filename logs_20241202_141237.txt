@@ -1,0 +1,1234 @@
+================================================================================
+Hyperparameter Optimization Log
+Date: 2024-12-02 14:12:37
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [5]
+Learning Rate Range: [0.01]
+Memory Depth Range: [3]
+Cutoff Dimension Range: [4, 5]
+
+----------------------------------------
+qnn_hp_s5_lr0.01_md3_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 3
+  Training Steps: 5
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 41.1462, Phase1 = 4.0503, Phase3 = 0.2084, Weight = 0.2723
+  Step    1: Loss = 41.1750, Phase1 = 4.0603, Phase3 = 0.1984, Weight = 0.2623
+  Step    2: Loss = 40.8126, Phase1 = 4.0703, Phase3 = 0.1885, Weight = 0.2523
+  Step    3: Loss = 40.4522, Phase1 = 4.0803, Phase3 = 0.1785, Weight = 0.2423
+  Step    4: Loss = 40.0941, Phase1 = 4.0903, Phase3 = 0.1685, Weight = 0.2324
+
+Final Parameters:
+  Phase1: 4.0903
+  Phase3: 0.1685
+  Memristor Weight: 0.2324
+
+Training Summary:
+  Initial Loss: 41.1462
+  Final Loss: 40.0941
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 3
+  Phase1: 4.0903
+  Phase3: 0.1685
+  Memristor Weight: 0.2324
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2864
+  Mean absolute error: 0.4073
+
+Metrics:
+  accuracy:
+    mae: 0.40734617552034796
+    rmse: 0.462165550650921
+    mdae: 0.4269236493845753
+    marpd: 156.3844805373657
+    r2: -1.9810888224253373
+    corr: -0.7831699543588047
+
+----------------------------------------
+qnn_hp_s5_lr0.01_md3_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 3
+  Training Steps: 5
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 1.4513
+  Phase3: 4.6439
+  Memristor Weight: 0.6799
+
+Training Progress:
+  Step    0: Loss = 41.8871, Phase1 = 1.4413, Phase3 = 4.6339, Weight = 0.6699
+  Step    1: Loss = 41.3207, Phase1 = 1.4313, Phase3 = 4.6239, Weight = 0.6599
+  Step    2: Loss = 40.7017, Phase1 = 1.4213, Phase3 = 4.6140, Weight = 0.6499
+  Step    3: Loss = 40.0872, Phase1 = 1.4113, Phase3 = 4.6040, Weight = 0.6400
+  Step    4: Loss = 39.4783, Phase1 = 1.4013, Phase3 = 4.5940, Weight = 0.6300
+
+Final Parameters:
+  Phase1: 1.4013
+  Phase3: 4.5940
+  Memristor Weight: 0.6300
+
+Training Summary:
+  Initial Loss: 41.8871
+  Final Loss: 39.4783
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 3
+  Phase1: 1.4013
+  Phase3: 4.5940
+  Memristor Weight: 0.6300
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.7124
+  Mean absolute error: 0.5370
+
+Metrics:
+  accuracy:
+    mae: 0.5370062445964625
+    rmse: 0.5681288127541743
+    mdae: 0.5847436830495272
+    marpd: 142.30004496230916
+    r2: -3.5047781259090085
+    corr: 0.4273235874551535
+
+================================================================================
+Hyperparameter Optimization Results
+Date: 2024-12-02 14:13:53
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [5]
+Learning Rate Range: [0.01]
+Memory Depth Range: [3]
+Cutoff Dimension Range: [4, 5]
+
+========================================
+Best Parameters
+========================================
+
+Hyperparameters:
+  steps: 5
+  learning_rate: 0.010000
+  memory_depth: 3
+  cutoff_dim: 4
+  best_rmse: 0.462166
+
+Metrics:
+  accuracy:
+    mae: 0.40734617552034796
+    rmse: 0.462165550650921
+    mdae: 0.4269236493845753
+    marpd: 156.3844805373657
+    r2: -1.9810888224253373
+    corr: -0.7831699543588047
+
+Parameters:
+  phase 1: 4.0903
+  phase 3: 0.1685
+  memristor weight: 0.2324
+
+----------------------------------------
+qnn_hp_s5_lr0.05_md5_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 5
+  Learning Rate: 0.05
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 1.5101
+  Phase3: 3.8076
+  Memristor Weight: 0.5656
+
+Training Progress:
+  Step    0: Loss = 40.0187, Phase1 = 1.4601, Phase3 = 3.7576, Weight = 0.5156
+  Step    1: Loss = 37.1840, Phase1 = 1.4101, Phase3 = 3.7076, Weight = 0.4657
+  Step    2: Loss = 34.3478, Phase1 = 1.3602, Phase3 = 3.6575, Weight = 0.4160
+  Step    3: Loss = 31.6159, Phase1 = 1.3103, Phase3 = 3.6073, Weight = 0.3665
+  Step    4: Loss = 28.9953, Phase1 = 1.2606, Phase3 = 3.5570, Weight = 0.3173
+
+Final Parameters:
+  Phase1: 1.2606
+  Phase3: 3.5570
+  Memristor Weight: 0.3173
+
+Training Summary:
+  Initial Loss: 40.0187
+  Final Loss: 28.9953
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 1.2606
+  Phase3: 3.5570
+  Memristor Weight: 0.3173
+  Stochastic: True
+  Number of Samples: 2
+  Variance: 0.1
+
+Prediction Progress:
+
+  Sample 1/2:
+    Step 0: Phase1_sample = 1.3102, Phase3_sample = 3.5431
+    Step 1: Phase1_sample = 1.3253, Phase3_sample = 3.7093
+    Step 2: Phase1_sample = 1.2372, Phase3_sample = 3.5335
+    Step 3: Phase1_sample = 1.4185, Phase3_sample = 3.6337
+    Step 4: Phase1_sample = 1.2136, Phase3_sample = 3.6112
+    Step 5: Phase1_sample = 1.2142, Phase3_sample = 3.5104
+    Step 6: Phase1_sample = 1.2848, Phase3_sample = 3.3656
+    Step 7: Phase1_sample = 1.0881, Phase3_sample = 3.5007
+    Step 8: Phase1_sample = 1.1593, Phase3_sample = 3.5884
+    Step 9: Phase1_sample = 1.1698, Phase3_sample = 3.4157
+    Step 10: Phase1_sample = 1.4071, Phase3_sample = 3.5344
+    Step 11: Phase1_sample = 1.2673, Phase3_sample = 3.4145
+    Step 12: Phase1_sample = 1.2061, Phase3_sample = 3.5680
+    Step 13: Phase1_sample = 1.1455, Phase3_sample = 3.5945
+    Step 14: Phase1_sample = 1.2005, Phase3_sample = 3.5278
+    Step 15: Phase1_sample = 1.2004, Phase3_sample = 3.7422
+    Step 16: Phase1_sample = 1.2592, Phase3_sample = 3.4512
+    Step 17: Phase1_sample = 1.3428, Phase3_sample = 3.4349
+    Step 18: Phase1_sample = 1.2815, Phase3_sample = 3.3610
+    Step 19: Phase1_sample = 1.1277, Phase3_sample = 3.5766
+    Step 20: Phase1_sample = 1.3344, Phase3_sample = 3.5741
+    Step 21: Phase1_sample = 1.2490, Phase3_sample = 3.5268
+    Step 22: Phase1_sample = 1.1127, Phase3_sample = 3.4850
+    Step 23: Phase1_sample = 1.2145, Phase3_sample = 3.6627
+    Step 24: Phase1_sample = 1.2949, Phase3_sample = 3.3807
+    Step 25: Phase1_sample = 1.2930, Phase3_sample = 3.5184
+    Step 26: Phase1_sample = 1.1929, Phase3_sample = 3.6181
+    Step 27: Phase1_sample = 1.3637, Phase3_sample = 3.6501
+    Step 28: Phase1_sample = 1.1766, Phase3_sample = 3.5260
+    Step 29: Phase1_sample = 1.2937, Phase3_sample = 3.6545
+    Step 30: Phase1_sample = 1.2126, Phase3_sample = 3.5384
+    Step 31: Phase1_sample = 1.1499, Phase3_sample = 3.4373
+    Step 32: Phase1_sample = 1.3418, Phase3_sample = 3.6926
+    Step 33: Phase1_sample = 1.2534, Phase3_sample = 3.6573
+    Step 34: Phase1_sample = 1.2967, Phase3_sample = 3.4924
+    Step 35: Phase1_sample = 1.2967, Phase3_sample = 3.7108
+    Step 36: Phase1_sample = 1.2570, Phase3_sample = 3.7134
+    Step 37: Phase1_sample = 0.9986, Phase3_sample = 3.6391
+    Step 38: Phase1_sample = 1.2693, Phase3_sample = 3.5271
+    Step 39: Phase1_sample = 1.2697, Phase3_sample = 3.3582
+    Step 40: Phase1_sample = 1.2386, Phase3_sample = 3.5927
+    Step 41: Phase1_sample = 1.4084, Phase3_sample = 3.5051
+    Step 42: Phase1_sample = 1.1797, Phase3_sample = 3.5068
+    Step 43: Phase1_sample = 1.3521, Phase3_sample = 3.5898
+    Step 44: Phase1_sample = 1.2076, Phase3_sample = 3.6083
+    Step 45: Phase1_sample = 1.2703, Phase3_sample = 3.6538
+    Step 46: Phase1_sample = 1.1904, Phase3_sample = 3.5242
+    Step 47: Phase1_sample = 1.2214, Phase3_sample = 3.4106
+    Step 48: Phase1_sample = 1.2902, Phase3_sample = 3.5831
+    Step 49: Phase1_sample = 1.2611, Phase3_sample = 3.5335
+    Step 50: Phase1_sample = 1.1190, Phase3_sample = 3.5149
+    Step 51: Phase1_sample = 1.2263, Phase3_sample = 3.4767
+    Step 52: Phase1_sample = 1.2444, Phase3_sample = 3.5974
+    Step 53: Phase1_sample = 1.4492, Phase3_sample = 3.5744
+    Step 54: Phase1_sample = 1.2863, Phase3_sample = 3.5495
+    Step 55: Phase1_sample = 1.0687, Phase3_sample = 3.5543
+    Step 56: Phase1_sample = 1.2666, Phase3_sample = 3.8033
+    Step 57: Phase1_sample = 1.2413, Phase3_sample = 3.5871
+    Step 58: Phase1_sample = 1.2571, Phase3_sample = 3.4401
+    Step 59: Phase1_sample = 1.3748, Phase3_sample = 3.6321
+    Step 60: Phase1_sample = 1.3397, Phase3_sample = 3.4660
+    Step 61: Phase1_sample = 1.4008, Phase3_sample = 3.4168
+    Step 62: Phase1_sample = 1.3193, Phase3_sample = 3.7760
+    Step 63: Phase1_sample = 1.1615, Phase3_sample = 3.5003
+    Step 64: Phase1_sample = 1.2705, Phase3_sample = 3.5066
+    Step 65: Phase1_sample = 1.1055, Phase3_sample = 3.5638
+    Step 66: Phase1_sample = 1.1543, Phase3_sample = 3.6043
+    Step 67: Phase1_sample = 1.1686, Phase3_sample = 3.7119
+    Step 68: Phase1_sample = 1.1822, Phase3_sample = 3.5247
+    Step 69: Phase1_sample = 1.3419, Phase3_sample = 3.4339
+    Step 70: Phase1_sample = 1.2833, Phase3_sample = 3.6877
+    Step 71: Phase1_sample = 1.0998, Phase3_sample = 3.5754
+    Step 72: Phase1_sample = 1.2866, Phase3_sample = 3.6351
+    Step 73: Phase1_sample = 1.1369, Phase3_sample = 3.4249
+    Step 74: Phase1_sample = 1.3128, Phase3_sample = 3.5867
+    Step 75: Phase1_sample = 1.2856, Phase3_sample = 3.5916
+    Step 76: Phase1_sample = 1.1926, Phase3_sample = 3.5802
+    Step 77: Phase1_sample = 1.2899, Phase3_sample = 3.4855
+    Step 78: Phase1_sample = 1.4471, Phase3_sample = 3.6043
+    Step 79: Phase1_sample = 1.1414, Phase3_sample = 3.6226
+    Step 80: Phase1_sample = 1.1631, Phase3_sample = 3.6357
+    Step 81: Phase1_sample = 1.3764, Phase3_sample = 3.4749
+    Step 82: Phase1_sample = 1.3569, Phase3_sample = 3.5982
+    Step 83: Phase1_sample = 1.3428, Phase3_sample = 3.7466
+    Step 84: Phase1_sample = 1.2360, Phase3_sample = 3.4816
+    Step 85: Phase1_sample = 1.1716, Phase3_sample = 3.4754
+    Step 86: Phase1_sample = 1.2529, Phase3_sample = 3.5911
+    Step 87: Phase1_sample = 1.2882, Phase3_sample = 3.6397
+    Step 88: Phase1_sample = 1.2619, Phase3_sample = 3.7023
+    Step 89: Phase1_sample = 1.2341, Phase3_sample = 3.8290
+    Step 90: Phase1_sample = 1.3231, Phase3_sample = 3.4712
+    Step 91: Phase1_sample = 1.1535, Phase3_sample = 3.6052
+    Step 92: Phase1_sample = 1.2382, Phase3_sample = 3.6284
+    Step 93: Phase1_sample = 1.3079, Phase3_sample = 3.5497
+    Step 94: Phase1_sample = 1.1759, Phase3_sample = 3.4055
+    Step 95: Phase1_sample = 1.2159, Phase3_sample = 3.6426
+    Step 96: Phase1_sample = 1.2820, Phase3_sample = 3.4324
+    Step 97: Phase1_sample = 1.2779, Phase3_sample = 3.5955
+    Step 98: Phase1_sample = 1.1722, Phase3_sample = 3.5723
+    Step 99: Phase1_sample = 1.2664, Phase3_sample = 3.4427
+    Step 100: Phase1_sample = 1.2963, Phase3_sample = 3.6130
+    Step 101: Phase1_sample = 1.3689, Phase3_sample = 3.6623
+    Step 102: Phase1_sample = 1.1228, Phase3_sample = 3.4632
+    Step 103: Phase1_sample = 1.3121, Phase3_sample = 3.6083
+    Step 104: Phase1_sample = 1.3121, Phase3_sample = 3.9422
+    Step 105: Phase1_sample = 1.3177, Phase3_sample = 3.6705
+    Step 106: Phase1_sample = 1.3560, Phase3_sample = 3.6221
+    Step 107: Phase1_sample = 1.2290, Phase3_sample = 3.6329
+    Step 108: Phase1_sample = 1.1833, Phase3_sample = 3.5333
+    Step 109: Phase1_sample = 1.2120, Phase3_sample = 3.5651
+    Step 110: Phase1_sample = 1.4920, Phase3_sample = 3.3702
+    Step 111: Phase1_sample = 1.3292, Phase3_sample = 3.3957
+    Step 112: Phase1_sample = 1.2134, Phase3_sample = 3.6658
+    Step 113: Phase1_sample = 1.2670, Phase3_sample = 3.4492
+    Step 114: Phase1_sample = 1.1890, Phase3_sample = 3.6249
+    Step 115: Phase1_sample = 1.1875, Phase3_sample = 3.5786
+    Step 116: Phase1_sample = 1.2651, Phase3_sample = 3.4918
+    Step 117: Phase1_sample = 1.4750, Phase3_sample = 3.6203
+    Step 118: Phase1_sample = 1.0581, Phase3_sample = 3.5756
+    Step 119: Phase1_sample = 1.1944, Phase3_sample = 3.6422
+    Step 120: Phase1_sample = 1.1813, Phase3_sample = 3.5455
+    Step 121: Phase1_sample = 1.3111, Phase3_sample = 3.6435
+    Step 122: Phase1_sample = 1.1405, Phase3_sample = 3.5235
+    Step 123: Phase1_sample = 1.2131, Phase3_sample = 3.4916
+    Step 124: Phase1_sample = 1.4371, Phase3_sample = 3.5975
+    Step 125: Phase1_sample = 1.1345, Phase3_sample = 3.6487
+    Step 126: Phase1_sample = 1.4728, Phase3_sample = 3.6602
+    Step 127: Phase1_sample = 1.1086, Phase3_sample = 3.5085
+    Step 128: Phase1_sample = 1.3873, Phase3_sample = 3.4862
+    Step 129: Phase1_sample = 1.3049, Phase3_sample = 3.6344
+    Step 130: Phase1_sample = 1.1679, Phase3_sample = 3.5510
+    Step 131: Phase1_sample = 0.9364, Phase3_sample = 3.4545
+    Step 132: Phase1_sample = 1.2353, Phase3_sample = 3.4322
+    Step 133: Phase1_sample = 1.4238, Phase3_sample = 3.4139
+    Step 134: Phase1_sample = 1.2166, Phase3_sample = 3.5700
+    Step 135: Phase1_sample = 1.4047, Phase3_sample = 3.4134
+    Step 136: Phase1_sample = 1.3769, Phase3_sample = 3.5580
+    Step 137: Phase1_sample = 1.1624, Phase3_sample = 3.6032
+    Step 138: Phase1_sample = 1.2805, Phase3_sample = 3.4969
+    Step 139: Phase1_sample = 1.2675, Phase3_sample = 3.5184
+    Step 140: Phase1_sample = 1.2719, Phase3_sample = 3.6232
+    Step 141: Phase1_sample = 1.4192, Phase3_sample = 3.4332
+    Step 142: Phase1_sample = 1.4739, Phase3_sample = 3.3617
+    Step 143: Phase1_sample = 1.2454, Phase3_sample = 3.6158
+    Step 144: Phase1_sample = 1.2887, Phase3_sample = 3.4947
+    Step 145: Phase1_sample = 1.2398, Phase3_sample = 3.5077
+    Step 146: Phase1_sample = 1.2016, Phase3_sample = 3.6419
+    Step 147: Phase1_sample = 1.2963, Phase3_sample = 3.4877
+    Step 148: Phase1_sample = 1.3505, Phase3_sample = 3.5877
+    Step 149: Phase1_sample = 1.3419, Phase3_sample = 3.6199
+    Step 150: Phase1_sample = 1.1777, Phase3_sample = 3.5009
+    Step 151: Phase1_sample = 1.3353, Phase3_sample = 3.6180
+    Step 152: Phase1_sample = 1.2585, Phase3_sample = 3.5687
+    Step 153: Phase1_sample = 1.3883, Phase3_sample = 3.4978
+    Step 154: Phase1_sample = 1.3153, Phase3_sample = 3.5367
+    Step 155: Phase1_sample = 1.2388, Phase3_sample = 3.6668
+    Step 156: Phase1_sample = 1.3431, Phase3_sample = 3.6383
+    Step 157: Phase1_sample = 1.3911, Phase3_sample = 3.5591
+    Step 158: Phase1_sample = 1.3288, Phase3_sample = 3.5259
+    Step 159: Phase1_sample = 1.2930, Phase3_sample = 3.5439
+    Step 160: Phase1_sample = 1.2703, Phase3_sample = 3.6165
+    Step 161: Phase1_sample = 1.1787, Phase3_sample = 3.7662
+    Step 162: Phase1_sample = 1.1600, Phase3_sample = 3.4355
+    Step 163: Phase1_sample = 1.3764, Phase3_sample = 3.6361
+    Step 164: Phase1_sample = 1.3230, Phase3_sample = 3.6198
+    Step 165: Phase1_sample = 1.2593, Phase3_sample = 3.4672
+    Step 166: Phase1_sample = 1.2681, Phase3_sample = 3.4892
+    Step 167: Phase1_sample = 1.3581, Phase3_sample = 3.5422
+    Step 168: Phase1_sample = 1.1780, Phase3_sample = 3.5248
+    Step 169: Phase1_sample = 1.3019, Phase3_sample = 3.5006
+    Step 170: Phase1_sample = 1.1783, Phase3_sample = 3.5813
+    Step 171: Phase1_sample = 1.2851, Phase3_sample = 3.5063
+    Step 172: Phase1_sample = 1.2135, Phase3_sample = 3.5802
+    Step 173: Phase1_sample = 1.1158, Phase3_sample = 3.4162
+    Step 174: Phase1_sample = 1.1887, Phase3_sample = 3.5356
+    Step 175: Phase1_sample = 1.2917, Phase3_sample = 3.7045
+    Step 176: Phase1_sample = 1.3463, Phase3_sample = 3.5410
+    Step 177: Phase1_sample = 1.2587, Phase3_sample = 3.4567
+    Step 178: Phase1_sample = 1.2587, Phase3_sample = 3.5281
+    Step 179: Phase1_sample = 1.2928, Phase3_sample = 3.4742
+    Step 180: Phase1_sample = 1.3125, Phase3_sample = 3.7102
+    Step 181: Phase1_sample = 1.2497, Phase3_sample = 3.5971
+    Step 182: Phase1_sample = 1.3296, Phase3_sample = 3.5168
+    Step 183: Phase1_sample = 1.2830, Phase3_sample = 3.5582
+    Step 184: Phase1_sample = 1.2703, Phase3_sample = 3.4797
+    Step 185: Phase1_sample = 1.2630, Phase3_sample = 3.6068
+    Step 186: Phase1_sample = 1.4057, Phase3_sample = 3.6529
+    Step 187: Phase1_sample = 1.4759, Phase3_sample = 3.4802
+    Step 188: Phase1_sample = 1.3478, Phase3_sample = 3.5753
+    Step 189: Phase1_sample = 1.4795, Phase3_sample = 3.4761
+    Step 190: Phase1_sample = 1.1766, Phase3_sample = 3.4970
+    Step 191: Phase1_sample = 1.0482, Phase3_sample = 3.5044
+    Step 192: Phase1_sample = 1.1847, Phase3_sample = 3.5720
+    Step 193: Phase1_sample = 1.2947, Phase3_sample = 3.7446
+    Step 194: Phase1_sample = 1.3556, Phase3_sample = 3.4993
+    Step 195: Phase1_sample = 1.1707, Phase3_sample = 3.6061
+    Step 196: Phase1_sample = 1.1285, Phase3_sample = 3.7401
+    Step 197: Phase1_sample = 1.3785, Phase3_sample = 3.5100
+    Step 198: Phase1_sample = 1.0893, Phase3_sample = 3.6923
+    Step 199: Phase1_sample = 1.2491, Phase3_sample = 3.6807
+    Step 200: Phase1_sample = 1.1011, Phase3_sample = 3.4970
+    Step 201: Phase1_sample = 1.2611, Phase3_sample = 3.5617
+    Step 202: Phase1_sample = 1.2156, Phase3_sample = 3.6192
+    Step 203: Phase1_sample = 1.1538, Phase3_sample = 3.5427
+    Step 204: Phase1_sample = 1.2726, Phase3_sample = 3.6084
+    Step 205: Phase1_sample = 1.3317, Phase3_sample = 3.4445
+    Step 206: Phase1_sample = 1.1072, Phase3_sample = 3.6847
+    Step 207: Phase1_sample = 1.2938, Phase3_sample = 3.4821
+    Step 208: Phase1_sample = 1.4157, Phase3_sample = 3.5685
+    Step 209: Phase1_sample = 1.3785, Phase3_sample = 3.5637
+    Step 210: Phase1_sample = 1.4666, Phase3_sample = 3.7325
+    Step 211: Phase1_sample = 1.2357, Phase3_sample = 3.6541
+    Step 212: Phase1_sample = 1.3251, Phase3_sample = 3.6938
+    Step 213: Phase1_sample = 1.1641, Phase3_sample = 3.6256
+    Step 214: Phase1_sample = 1.3664, Phase3_sample = 3.3811
+    Step 215: Phase1_sample = 1.1422, Phase3_sample = 3.3530
+    Step 216: Phase1_sample = 1.2336, Phase3_sample = 3.6287
+    Step 217: Phase1_sample = 1.4108, Phase3_sample = 3.5644
+    Step 218: Phase1_sample = 1.4234, Phase3_sample = 3.4189
+    Step 219: Phase1_sample = 1.0902, Phase3_sample = 3.5514
+    Step 220: Phase1_sample = 1.2990, Phase3_sample = 3.5537
+    Step 221: Phase1_sample = 1.0538, Phase3_sample = 3.5480
+    Step 222: Phase1_sample = 1.1301, Phase3_sample = 3.6239
+    Step 223: Phase1_sample = 1.2972, Phase3_sample = 3.4630
+    Step 224: Phase1_sample = 1.2092, Phase3_sample = 3.4510
+    Step 225: Phase1_sample = 1.2543, Phase3_sample = 3.6525
+    Step 226: Phase1_sample = 1.1620, Phase3_sample = 3.6074
+    Step 227: Phase1_sample = 1.2075, Phase3_sample = 3.4777
+    Step 228: Phase1_sample = 1.2499, Phase3_sample = 3.4534
+    Step 229: Phase1_sample = 1.2052, Phase3_sample = 3.4372
+    Step 230: Phase1_sample = 1.4570, Phase3_sample = 3.5605
+    Step 231: Phase1_sample = 1.1906, Phase3_sample = 3.5784
+    Step 232: Phase1_sample = 1.2493, Phase3_sample = 3.5349
+    Step 233: Phase1_sample = 1.3220, Phase3_sample = 3.6327
+    Step 234: Phase1_sample = 1.2075, Phase3_sample = 3.4994
+    Step 235: Phase1_sample = 1.2331, Phase3_sample = 3.3268
+    Step 236: Phase1_sample = 1.1090, Phase3_sample = 3.6936
+    Step 237: Phase1_sample = 1.4251, Phase3_sample = 3.5321
+    Step 238: Phase1_sample = 1.3182, Phase3_sample = 3.5881
+    Step 239: Phase1_sample = 1.5685, Phase3_sample = 3.6689
+    Step 240: Phase1_sample = 1.2478, Phase3_sample = 3.4614
+    Step 241: Phase1_sample = 1.0999, Phase3_sample = 3.5773
+    Step 242: Phase1_sample = 1.1849, Phase3_sample = 3.4147
+    Step 243: Phase1_sample = 1.1959, Phase3_sample = 3.4488
+    Step 244: Phase1_sample = 1.4293, Phase3_sample = 3.6451
+    Step 245: Phase1_sample = 1.2598, Phase3_sample = 3.7049
+    Step 246: Phase1_sample = 1.2683, Phase3_sample = 3.4708
+    Step 247: Phase1_sample = 1.4129, Phase3_sample = 3.6108
+    Step 248: Phase1_sample = 1.1568, Phase3_sample = 3.5379
+    Step 249: Phase1_sample = 1.1730, Phase3_sample = 3.4187
+    Step 250: Phase1_sample = 1.3532, Phase3_sample = 3.7479
+    Step 251: Phase1_sample = 1.1207, Phase3_sample = 3.6133
+    Step 252: Phase1_sample = 1.1955, Phase3_sample = 3.5082
+    Step 253: Phase1_sample = 1.2013, Phase3_sample = 3.4706
+    Step 254: Phase1_sample = 1.2654, Phase3_sample = 3.4739
+    Step 255: Phase1_sample = 1.2876, Phase3_sample = 3.5519
+    Step 256: Phase1_sample = 1.2367, Phase3_sample = 3.4662
+    Step 257: Phase1_sample = 1.2029, Phase3_sample = 3.6325
+    Step 258: Phase1_sample = 1.3107, Phase3_sample = 3.4592
+    Step 259: Phase1_sample = 1.2705, Phase3_sample = 3.6321
+    Step 260: Phase1_sample = 1.0936, Phase3_sample = 3.6113
+    Step 261: Phase1_sample = 1.1943, Phase3_sample = 3.6140
+    Step 262: Phase1_sample = 1.1842, Phase3_sample = 3.3765
+    Step 263: Phase1_sample = 1.0978, Phase3_sample = 3.5618
+    Step 264: Phase1_sample = 1.2865, Phase3_sample = 3.4665
+    Step 265: Phase1_sample = 1.3244, Phase3_sample = 3.3908
+    Step 266: Phase1_sample = 1.2540, Phase3_sample = 3.4359
+    Step 267: Phase1_sample = 1.1954, Phase3_sample = 3.5617
+    Step 268: Phase1_sample = 1.1745, Phase3_sample = 3.5185
+    Step 269: Phase1_sample = 1.3612, Phase3_sample = 3.4993
+    Step 270: Phase1_sample = 1.3441, Phase3_sample = 3.4440
+    Step 271: Phase1_sample = 1.3135, Phase3_sample = 3.7011
+    Step 272: Phase1_sample = 1.0134, Phase3_sample = 3.4773
+    Step 273: Phase1_sample = 1.3183, Phase3_sample = 3.5367
+    Step 274: Phase1_sample = 1.2977, Phase3_sample = 3.4966
+    Step 275: Phase1_sample = 1.2692, Phase3_sample = 3.5414
+    Step 276: Phase1_sample = 1.3773, Phase3_sample = 3.5824
+    Step 277: Phase1_sample = 1.2943, Phase3_sample = 3.5158
+    Step 278: Phase1_sample = 1.2118, Phase3_sample = 3.5137
+    Step 279: Phase1_sample = 1.3000, Phase3_sample = 3.5149
+    Step 280: Phase1_sample = 1.2895, Phase3_sample = 3.7645
+    Step 281: Phase1_sample = 1.3477, Phase3_sample = 3.5244
+    Step 282: Phase1_sample = 1.3807, Phase3_sample = 3.5161
+    Step 283: Phase1_sample = 1.0568, Phase3_sample = 3.4561
+    Step 284: Phase1_sample = 1.0735, Phase3_sample = 3.5218
+    Step 285: Phase1_sample = 1.2624, Phase3_sample = 3.7246
+    Step 286: Phase1_sample = 1.2933, Phase3_sample = 3.5350
+    Step 287: Phase1_sample = 1.3435, Phase3_sample = 3.3358
+    Step 288: Phase1_sample = 1.2841, Phase3_sample = 3.6340
+    Step 289: Phase1_sample = 1.1127, Phase3_sample = 3.6713
+    Step 290: Phase1_sample = 1.2944, Phase3_sample = 3.5154
+    Step 291: Phase1_sample = 1.3238, Phase3_sample = 3.7840
+    Step 292: Phase1_sample = 1.2788, Phase3_sample = 3.5818
+    Step 293: Phase1_sample = 1.2146, Phase3_sample = 3.4720
+    Step 294: Phase1_sample = 1.3436, Phase3_sample = 3.4713
+    Step 295: Phase1_sample = 1.2677, Phase3_sample = 3.5092
+    Step 296: Phase1_sample = 1.3085, Phase3_sample = 3.5903
+    Step 297: Phase1_sample = 1.3643, Phase3_sample = 3.5060
+    Step 298: Phase1_sample = 1.2336, Phase3_sample = 3.4591
+    Step 299: Phase1_sample = 1.2161, Phase3_sample = 3.5947
+    Step 300: Phase1_sample = 1.3363, Phase3_sample = 3.4647
+    Step 301: Phase1_sample = 1.3475, Phase3_sample = 3.6925
+    Step 302: Phase1_sample = 1.3019, Phase3_sample = 3.7446
+    Step 303: Phase1_sample = 1.1832, Phase3_sample = 3.4325
+    Step 304: Phase1_sample = 1.0827, Phase3_sample = 3.7066
+    Step 305: Phase1_sample = 1.3260, Phase3_sample = 3.5514
+    Step 306: Phase1_sample = 1.2886, Phase3_sample = 3.4444
+    Step 307: Phase1_sample = 1.5051, Phase3_sample = 3.5699
+    Step 308: Phase1_sample = 1.2715, Phase3_sample = 3.6295
+    Step 309: Phase1_sample = 1.3087, Phase3_sample = 3.5793
+    Step 310: Phase1_sample = 1.1815, Phase3_sample = 3.6041
+    Step 311: Phase1_sample = 1.4488, Phase3_sample = 3.6915
+    Step 312: Phase1_sample = 1.4199, Phase3_sample = 3.5058
+    Step 313: Phase1_sample = 1.1616, Phase3_sample = 3.5444
+    Step 314: Phase1_sample = 1.2661, Phase3_sample = 3.6664
+    Step 315: Phase1_sample = 1.0913, Phase3_sample = 3.7099
+    Step 316: Phase1_sample = 1.2448, Phase3_sample = 3.5143
+    Step 317: Phase1_sample = 1.1594, Phase3_sample = 3.3915
+    Step 318: Phase1_sample = 1.3429, Phase3_sample = 3.5643
+    Step 319: Phase1_sample = 1.1316, Phase3_sample = 3.4274
+    Step 320: Phase1_sample = 1.2270, Phase3_sample = 3.7239
+    Step 321: Phase1_sample = 1.2346, Phase3_sample = 3.4066
+    Step 322: Phase1_sample = 1.2360, Phase3_sample = 3.5297
+    Step 323: Phase1_sample = 0.9909, Phase3_sample = 3.5515
+    Step 324: Phase1_sample = 1.2375, Phase3_sample = 3.6266
+    Step 325: Phase1_sample = 1.4455, Phase3_sample = 3.6696
+    Step 326: Phase1_sample = 1.2337, Phase3_sample = 3.4463
+    Step 327: Phase1_sample = 1.5179, Phase3_sample = 3.5629
+    Step 328: Phase1_sample = 1.2620, Phase3_sample = 3.5545
+    Step 329: Phase1_sample = 1.2804, Phase3_sample = 3.5425
+    Step 330: Phase1_sample = 1.2032, Phase3_sample = 3.5023
+    Step 331: Phase1_sample = 1.2573, Phase3_sample = 3.5026
+    Step 332: Phase1_sample = 1.1893, Phase3_sample = 3.5676
+    Step 333: Phase1_sample = 1.2351, Phase3_sample = 3.7074
+    Step 334: Phase1_sample = 0.9955, Phase3_sample = 3.6661
+    Step 335: Phase1_sample = 1.3852, Phase3_sample = 3.3496
+    Step 336: Phase1_sample = 1.2263, Phase3_sample = 3.5198
+    Step 337: Phase1_sample = 1.1198, Phase3_sample = 3.4792
+    Step 338: Phase1_sample = 1.1495, Phase3_sample = 3.7322
+    Step 339: Phase1_sample = 1.3541, Phase3_sample = 3.6841
+    Step 340: Phase1_sample = 1.3327, Phase3_sample = 3.4440
+    Step 341: Phase1_sample = 1.2081, Phase3_sample = 3.6059
+    Step 342: Phase1_sample = 1.1384, Phase3_sample = 3.6283
+    Step 343: Phase1_sample = 1.2365, Phase3_sample = 3.5195
+    Step 344: Phase1_sample = 1.3317, Phase3_sample = 3.6014
+    Step 345: Phase1_sample = 1.2245, Phase3_sample = 3.6729
+    Step 346: Phase1_sample = 1.1525, Phase3_sample = 3.6185
+    Step 347: Phase1_sample = 1.3199, Phase3_sample = 3.5260
+    Step 348: Phase1_sample = 1.2932, Phase3_sample = 3.4318
+    Step 349: Phase1_sample = 1.3530, Phase3_sample = 3.5385
+    Step 350: Phase1_sample = 1.2083, Phase3_sample = 3.6619
+    Step 351: Phase1_sample = 1.1901, Phase3_sample = 3.4161
+    Step 352: Phase1_sample = 1.1049, Phase3_sample = 3.6176
+    Step 353: Phase1_sample = 1.1325, Phase3_sample = 3.7324
+    Step 354: Phase1_sample = 1.0524, Phase3_sample = 3.7266
+    Step 355: Phase1_sample = 1.2817, Phase3_sample = 3.5473
+    Step 356: Phase1_sample = 1.2061, Phase3_sample = 3.5969
+    Step 357: Phase1_sample = 1.2568, Phase3_sample = 3.6673
+    Step 358: Phase1_sample = 1.2720, Phase3_sample = 3.5720
+    Step 359: Phase1_sample = 1.2242, Phase3_sample = 3.5513
+    Step 360: Phase1_sample = 1.2913, Phase3_sample = 3.3859
+    Step 361: Phase1_sample = 1.1257, Phase3_sample = 3.6313
+    Step 362: Phase1_sample = 1.2777, Phase3_sample = 3.5386
+    Step 363: Phase1_sample = 1.2624, Phase3_sample = 3.5917
+    Step 364: Phase1_sample = 1.2066, Phase3_sample = 3.4791
+    Step 365: Phase1_sample = 1.2802, Phase3_sample = 3.4591
+    Step 366: Phase1_sample = 1.3014, Phase3_sample = 3.3867
+    Step 367: Phase1_sample = 1.3635, Phase3_sample = 3.6042
+    Step 368: Phase1_sample = 1.2862, Phase3_sample = 3.6552
+    Step 369: Phase1_sample = 1.4271, Phase3_sample = 3.6584
+    Step 370: Phase1_sample = 1.0765, Phase3_sample = 3.4290
+    Step 371: Phase1_sample = 1.1981, Phase3_sample = 3.5596
+    Step 372: Phase1_sample = 1.3123, Phase3_sample = 3.4844
+    Step 373: Phase1_sample = 1.2792, Phase3_sample = 3.4814
+    Step 374: Phase1_sample = 1.1994, Phase3_sample = 3.4163
+    Step 375: Phase1_sample = 1.1682, Phase3_sample = 3.4218
+    Step 376: Phase1_sample = 1.1630, Phase3_sample = 3.6623
+    Step 377: Phase1_sample = 1.1656, Phase3_sample = 3.8202
+    Step 378: Phase1_sample = 1.3099, Phase3_sample = 3.5754
+    Step 379: Phase1_sample = 1.1747, Phase3_sample = 3.6270
+    Step 380: Phase1_sample = 1.2030, Phase3_sample = 3.5692
+    Step 381: Phase1_sample = 1.5166, Phase3_sample = 3.5473
+    Step 382: Phase1_sample = 1.3755, Phase3_sample = 3.4866
+    Step 383: Phase1_sample = 1.2571, Phase3_sample = 3.7340
+    Step 384: Phase1_sample = 1.1979, Phase3_sample = 3.7382
+    Step 385: Phase1_sample = 1.3313, Phase3_sample = 3.5007
+    Step 386: Phase1_sample = 1.3238, Phase3_sample = 3.6542
+    Step 387: Phase1_sample = 1.3227, Phase3_sample = 3.3999
+    Step 388: Phase1_sample = 1.1879, Phase3_sample = 3.5322
+    Step 389: Phase1_sample = 1.2531, Phase3_sample = 3.6190
+    Step 390: Phase1_sample = 1.2783, Phase3_sample = 3.4234
+    Step 391: Phase1_sample = 1.2986, Phase3_sample = 3.6180
+    Step 392: Phase1_sample = 1.3165, Phase3_sample = 3.6650
+    Step 393: Phase1_sample = 1.3440, Phase3_sample = 3.6029
+    Step 394: Phase1_sample = 1.2535, Phase3_sample = 3.3909
+    Step 395: Phase1_sample = 1.3035, Phase3_sample = 3.5777
+    Step 396: Phase1_sample = 1.2877, Phase3_sample = 3.4293
+    Step 397: Phase1_sample = 1.1525, Phase3_sample = 3.6623
+    Step 398: Phase1_sample = 1.2566, Phase3_sample = 3.6251
+    Step 399: Phase1_sample = 1.2634, Phase3_sample = 3.5599
+    Step 400: Phase1_sample = 1.3544, Phase3_sample = 3.5054
+    Step 401: Phase1_sample = 1.2702, Phase3_sample = 3.5107
+    Step 402: Phase1_sample = 1.2171, Phase3_sample = 3.5260
+    Step 403: Phase1_sample = 1.2828, Phase3_sample = 3.5091
+    Step 404: Phase1_sample = 1.3861, Phase3_sample = 3.4675
+    Step 405: Phase1_sample = 1.2419, Phase3_sample = 3.5130
+    Step 406: Phase1_sample = 1.4053, Phase3_sample = 3.5766
+    Step 407: Phase1_sample = 1.3638, Phase3_sample = 3.4084
+    Step 408: Phase1_sample = 1.2873, Phase3_sample = 3.6459
+    Step 409: Phase1_sample = 1.2688, Phase3_sample = 3.6635
+    Step 410: Phase1_sample = 1.2088, Phase3_sample = 3.6979
+    Step 411: Phase1_sample = 1.4905, Phase3_sample = 3.5207
+    Step 412: Phase1_sample = 1.2160, Phase3_sample = 3.7023
+    Step 413: Phase1_sample = 1.4185, Phase3_sample = 3.5047
+    Step 414: Phase1_sample = 1.2185, Phase3_sample = 3.5288
+    Step 415: Phase1_sample = 1.1261, Phase3_sample = 3.4651
+    Step 416: Phase1_sample = 1.1602, Phase3_sample = 3.4802
+    Step 417: Phase1_sample = 1.2571, Phase3_sample = 3.5804
+    Step 418: Phase1_sample = 1.4156, Phase3_sample = 3.4571
+    Step 419: Phase1_sample = 1.3590, Phase3_sample = 3.5356
+    Step 420: Phase1_sample = 1.2556, Phase3_sample = 3.6244
+    Step 421: Phase1_sample = 1.1483, Phase3_sample = 3.5952
+    Step 422: Phase1_sample = 1.2772, Phase3_sample = 3.6062
+    Step 423: Phase1_sample = 1.2895, Phase3_sample = 3.8025
+    Step 424: Phase1_sample = 1.1968, Phase3_sample = 3.5039
+    Step 425: Phase1_sample = 1.1983, Phase3_sample = 3.5014
+    Step 426: Phase1_sample = 1.1968, Phase3_sample = 3.6759
+    Step 427: Phase1_sample = 1.4026, Phase3_sample = 3.4999
+    Step 428: Phase1_sample = 1.1773, Phase3_sample = 3.6041
+    Step 429: Phase1_sample = 1.2053, Phase3_sample = 3.6202
+    Step 430: Phase1_sample = 1.2809, Phase3_sample = 3.4054
+    Step 431: Phase1_sample = 1.4153, Phase3_sample = 3.7365
+    Step 432: Phase1_sample = 1.1993, Phase3_sample = 3.5182
+    Step 433: Phase1_sample = 1.2892, Phase3_sample = 3.5904
+    Step 434: Phase1_sample = 1.3264, Phase3_sample = 3.7580
+    Step 435: Phase1_sample = 1.2429, Phase3_sample = 3.4771
+    Step 436: Phase1_sample = 1.1226, Phase3_sample = 3.4839
+    Step 437: Phase1_sample = 1.2573, Phase3_sample = 3.7364
+    Step 438: Phase1_sample = 1.2088, Phase3_sample = 3.5793
+    Step 439: Phase1_sample = 1.2589, Phase3_sample = 3.6758
+    Step 440: Phase1_sample = 1.5133, Phase3_sample = 3.5039
+    Step 441: Phase1_sample = 1.2116, Phase3_sample = 3.6614
+    Step 442: Phase1_sample = 1.3288, Phase3_sample = 3.7416
+    Step 443: Phase1_sample = 1.3190, Phase3_sample = 3.5210
+    Step 444: Phase1_sample = 1.3196, Phase3_sample = 3.6678
+    Step 445: Phase1_sample = 1.3426, Phase3_sample = 3.6077
+    Step 446: Phase1_sample = 1.3672, Phase3_sample = 3.6739
+    Step 447: Phase1_sample = 1.3988, Phase3_sample = 3.6218
+    Step 448: Phase1_sample = 1.2439, Phase3_sample = 3.5716
+    Step 449: Phase1_sample = 1.3812, Phase3_sample = 3.4753
+    Step 450: Phase1_sample = 1.2974, Phase3_sample = 3.5176
+    Step 451: Phase1_sample = 1.2634, Phase3_sample = 3.6848
+    Step 452: Phase1_sample = 1.2797, Phase3_sample = 3.5616
+    Step 453: Phase1_sample = 1.1246, Phase3_sample = 3.6316
+    Step 454: Phase1_sample = 1.3251, Phase3_sample = 3.7733
+    Step 455: Phase1_sample = 1.2298, Phase3_sample = 3.5789
+    Step 456: Phase1_sample = 1.2855, Phase3_sample = 3.7147
+    Step 457: Phase1_sample = 1.2510, Phase3_sample = 3.5849
+    Step 458: Phase1_sample = 1.3214, Phase3_sample = 3.5756
+    Step 459: Phase1_sample = 1.2159, Phase3_sample = 3.5764
+    Step 460: Phase1_sample = 1.3679, Phase3_sample = 3.4543
+    Step 461: Phase1_sample = 1.2739, Phase3_sample = 3.4869
+    Step 462: Phase1_sample = 1.3801, Phase3_sample = 3.4046
+    Step 463: Phase1_sample = 1.2047, Phase3_sample = 3.5947
+    Step 464: Phase1_sample = 1.4171, Phase3_sample = 3.5504
+    Step 465: Phase1_sample = 1.2050, Phase3_sample = 3.7451
+    Step 466: Phase1_sample = 1.1158, Phase3_sample = 3.3371
+    Step 467: Phase1_sample = 1.3046, Phase3_sample = 3.5067
+    Step 468: Phase1_sample = 1.1584, Phase3_sample = 3.6278
+    Step 469: Phase1_sample = 1.2849, Phase3_sample = 3.5005
+    Step 470: Phase1_sample = 1.1325, Phase3_sample = 3.6442
+    Step 471: Phase1_sample = 1.3256, Phase3_sample = 3.5470
+    Step 472: Phase1_sample = 1.4452, Phase3_sample = 3.4499
+    Step 473: Phase1_sample = 1.1080, Phase3_sample = 3.4878
+    Step 474: Phase1_sample = 1.2560, Phase3_sample = 3.5813
+    Step 475: Phase1_sample = 1.2364, Phase3_sample = 3.5922
+    Step 476: Phase1_sample = 1.1354, Phase3_sample = 3.7013
+    Step 477: Phase1_sample = 1.2524, Phase3_sample = 3.6687
+    Step 478: Phase1_sample = 1.2948, Phase3_sample = 3.6026
+    Step 479: Phase1_sample = 1.3175, Phase3_sample = 3.6017
+    Step 480: Phase1_sample = 1.3248, Phase3_sample = 3.6899
+    Step 481: Phase1_sample = 1.2802, Phase3_sample = 3.6279
+    Step 482: Phase1_sample = 1.2516, Phase3_sample = 3.7010
+    Step 483: Phase1_sample = 1.1929, Phase3_sample = 3.7370
+    Step 484: Phase1_sample = 1.2566, Phase3_sample = 3.4139
+    Step 485: Phase1_sample = 1.2734, Phase3_sample = 3.4888
+    Step 486: Phase1_sample = 1.3446, Phase3_sample = 3.4917
+    Step 487: Phase1_sample = 1.2159, Phase3_sample = 3.3680
+    Step 488: Phase1_sample = 1.2153, Phase3_sample = 3.3146
+    Step 489: Phase1_sample = 1.1022, Phase3_sample = 3.6330
+    Step 490: Phase1_sample = 1.3391, Phase3_sample = 3.5995
+    Step 491: Phase1_sample = 1.1639, Phase3_sample = 3.5522
+    Step 492: Phase1_sample = 1.2602, Phase3_sample = 3.4411
+    Step 493: Phase1_sample = 1.4109, Phase3_sample = 3.6447
+    Step 494: Phase1_sample = 1.2385, Phase3_sample = 3.5596
+    Step 495: Phase1_sample = 1.2814, Phase3_sample = 3.3528
+    Step 496: Phase1_sample = 1.2358, Phase3_sample = 3.4888
+    Step 497: Phase1_sample = 1.1604, Phase3_sample = 3.5288
+    Step 498: Phase1_sample = 1.4403, Phase3_sample = 3.6210
+    Step 499: Phase1_sample = 1.2034, Phase3_sample = 3.6142
+
+  Sample 2/2:
+    Step 0: Phase1_sample = 1.4005, Phase3_sample = 3.6494
+    Step 1: Phase1_sample = 1.2665, Phase3_sample = 3.4923
+    Step 2: Phase1_sample = 1.3304, Phase3_sample = 3.5963
+    Step 3: Phase1_sample = 1.3501, Phase3_sample = 3.6205
+    Step 4: Phase1_sample = 1.3655, Phase3_sample = 3.5034
+    Step 5: Phase1_sample = 1.3923, Phase3_sample = 3.5767
+    Step 6: Phase1_sample = 1.4681, Phase3_sample = 3.4880
+    Step 7: Phase1_sample = 1.4342, Phase3_sample = 3.5767
+    Step 8: Phase1_sample = 1.1954, Phase3_sample = 3.5086
+    Step 9: Phase1_sample = 1.2285, Phase3_sample = 3.5994
+    Step 10: Phase1_sample = 1.3128, Phase3_sample = 3.4996
+    Step 11: Phase1_sample = 1.2581, Phase3_sample = 3.7712
+    Step 12: Phase1_sample = 1.4333, Phase3_sample = 3.6006
+    Step 13: Phase1_sample = 1.2644, Phase3_sample = 3.5690
+    Step 14: Phase1_sample = 1.3219, Phase3_sample = 3.4547
+    Step 15: Phase1_sample = 1.2348, Phase3_sample = 3.3901
+    Step 16: Phase1_sample = 1.3005, Phase3_sample = 3.6217
+    Step 17: Phase1_sample = 1.2122, Phase3_sample = 3.7144
+    Step 18: Phase1_sample = 1.1380, Phase3_sample = 3.4105
+    Step 19: Phase1_sample = 1.2830, Phase3_sample = 3.6617
+    Step 20: Phase1_sample = 1.4290, Phase3_sample = 3.5111
+    Step 21: Phase1_sample = 1.3684, Phase3_sample = 3.5531
+    Step 22: Phase1_sample = 1.2433, Phase3_sample = 3.6453
+    Step 23: Phase1_sample = 1.3258, Phase3_sample = 3.3993
+    Step 24: Phase1_sample = 1.4082, Phase3_sample = 3.6950
+    Step 25: Phase1_sample = 1.1980, Phase3_sample = 3.5965
+    Step 26: Phase1_sample = 1.3100, Phase3_sample = 3.5830
+    Step 27: Phase1_sample = 1.2055, Phase3_sample = 3.4898
+    Step 28: Phase1_sample = 1.2580, Phase3_sample = 3.6742
+    Step 29: Phase1_sample = 1.3149, Phase3_sample = 3.5199
+    Step 30: Phase1_sample = 1.3377, Phase3_sample = 3.2721
+    Step 31: Phase1_sample = 1.3754, Phase3_sample = 3.3830
+    Step 32: Phase1_sample = 1.2243, Phase3_sample = 3.4450
+    Step 33: Phase1_sample = 1.1311, Phase3_sample = 3.6730
+    Step 34: Phase1_sample = 1.2138, Phase3_sample = 3.5916
+    Step 35: Phase1_sample = 1.2559, Phase3_sample = 3.6047
+    Step 36: Phase1_sample = 1.2682, Phase3_sample = 3.4287
+    Step 37: Phase1_sample = 1.3602, Phase3_sample = 3.5076
+    Step 38: Phase1_sample = 1.1049, Phase3_sample = 3.5141
+    Step 39: Phase1_sample = 1.4106, Phase3_sample = 3.6420
+    Step 40: Phase1_sample = 1.2257, Phase3_sample = 3.5220
+    Step 41: Phase1_sample = 1.2284, Phase3_sample = 3.7646
+    Step 42: Phase1_sample = 1.2988, Phase3_sample = 3.6000
+    Step 43: Phase1_sample = 1.3636, Phase3_sample = 3.5808
+    Step 44: Phase1_sample = 1.2347, Phase3_sample = 3.5373
+    Step 45: Phase1_sample = 1.2534, Phase3_sample = 3.5532
+    Step 46: Phase1_sample = 1.3333, Phase3_sample = 3.5621
+    Step 47: Phase1_sample = 1.3338, Phase3_sample = 3.5489
+    Step 48: Phase1_sample = 1.2684, Phase3_sample = 3.3571
+    Step 49: Phase1_sample = 1.3522, Phase3_sample = 3.5916
+    Step 50: Phase1_sample = 1.3604, Phase3_sample = 3.2673
+    Step 51: Phase1_sample = 1.4694, Phase3_sample = 3.5430
+    Step 52: Phase1_sample = 1.3714, Phase3_sample = 3.4530
+    Step 53: Phase1_sample = 1.3218, Phase3_sample = 3.4516
+    Step 54: Phase1_sample = 1.1982, Phase3_sample = 3.7484
+    Step 55: Phase1_sample = 1.2415, Phase3_sample = 3.5787
+    Step 56: Phase1_sample = 1.3476, Phase3_sample = 3.6065
+    Step 57: Phase1_sample = 1.2756, Phase3_sample = 3.5935
+    Step 58: Phase1_sample = 1.5009, Phase3_sample = 3.5512
+    Step 59: Phase1_sample = 1.2807, Phase3_sample = 3.6620
+    Step 60: Phase1_sample = 1.3711, Phase3_sample = 3.6757
+    Step 61: Phase1_sample = 1.3244, Phase3_sample = 3.4427
+    Step 62: Phase1_sample = 1.4239, Phase3_sample = 3.4423
+    Step 63: Phase1_sample = 1.2908, Phase3_sample = 3.4815
+    Step 64: Phase1_sample = 1.2542, Phase3_sample = 3.5898
+    Step 65: Phase1_sample = 1.2927, Phase3_sample = 3.5991
+    Step 66: Phase1_sample = 1.4219, Phase3_sample = 3.6023
+    Step 67: Phase1_sample = 1.2362, Phase3_sample = 3.6534
+    Step 68: Phase1_sample = 1.3795, Phase3_sample = 3.4342
+    Step 69: Phase1_sample = 1.3203, Phase3_sample = 3.6271
+    Step 70: Phase1_sample = 1.2308, Phase3_sample = 3.6945
+    Step 71: Phase1_sample = 1.2456, Phase3_sample = 3.5695
+    Step 72: Phase1_sample = 1.2433, Phase3_sample = 3.5585
+    Step 73: Phase1_sample = 1.1509, Phase3_sample = 3.4129
+    Step 74: Phase1_sample = 1.4200, Phase3_sample = 3.4723
+    Step 75: Phase1_sample = 1.1614, Phase3_sample = 3.3416
+    Step 76: Phase1_sample = 1.1967, Phase3_sample = 3.4246
+    Step 77: Phase1_sample = 1.4248, Phase3_sample = 3.6579
+    Step 78: Phase1_sample = 1.1918, Phase3_sample = 3.7822
+    Step 79: Phase1_sample = 1.3587, Phase3_sample = 3.5245
+    Step 80: Phase1_sample = 1.0106, Phase3_sample = 3.7860
+    Step 81: Phase1_sample = 1.1216, Phase3_sample = 3.3924
+    Step 82: Phase1_sample = 1.3628, Phase3_sample = 3.8009
+    Step 83: Phase1_sample = 1.3990, Phase3_sample = 3.6133
+    Step 84: Phase1_sample = 1.3200, Phase3_sample = 3.6423
+    Step 85: Phase1_sample = 1.3365, Phase3_sample = 3.5851
+    Step 86: Phase1_sample = 1.2710, Phase3_sample = 3.5507
+    Step 87: Phase1_sample = 1.1852, Phase3_sample = 3.5289
+    Step 88: Phase1_sample = 1.0913, Phase3_sample = 3.5471
+    Step 89: Phase1_sample = 1.1617, Phase3_sample = 3.4466
+    Step 90: Phase1_sample = 1.2786, Phase3_sample = 3.6962
+    Step 91: Phase1_sample = 1.3524, Phase3_sample = 3.3999
+    Step 92: Phase1_sample = 1.1616, Phase3_sample = 3.6510
+    Step 93: Phase1_sample = 1.1623, Phase3_sample = 3.5345
+    Step 94: Phase1_sample = 1.3156, Phase3_sample = 3.4601
+    Step 95: Phase1_sample = 1.2711, Phase3_sample = 3.4236
+    Step 96: Phase1_sample = 1.2004, Phase3_sample = 3.5889
+    Step 97: Phase1_sample = 1.1013, Phase3_sample = 3.6010
+    Step 98: Phase1_sample = 1.2586, Phase3_sample = 3.6122
+    Step 99: Phase1_sample = 1.2830, Phase3_sample = 3.6934
+    Step 100: Phase1_sample = 1.2731, Phase3_sample = 3.5140
+    Step 101: Phase1_sample = 1.2728, Phase3_sample = 3.6113
+    Step 102: Phase1_sample = 1.2655, Phase3_sample = 3.5610
+    Step 103: Phase1_sample = 1.1904, Phase3_sample = 3.4907
+    Step 104: Phase1_sample = 1.1203, Phase3_sample = 3.7319
+    Step 105: Phase1_sample = 1.1362, Phase3_sample = 3.4877
+    Step 106: Phase1_sample = 1.1887, Phase3_sample = 3.6464
+    Step 107: Phase1_sample = 1.2311, Phase3_sample = 3.6817
+    Step 108: Phase1_sample = 1.1932, Phase3_sample = 3.5849
+    Step 109: Phase1_sample = 1.1770, Phase3_sample = 3.7715
+    Step 110: Phase1_sample = 1.1418, Phase3_sample = 3.5879
+    Step 111: Phase1_sample = 1.3239, Phase3_sample = 3.5983
+    Step 112: Phase1_sample = 1.2420, Phase3_sample = 3.5440
+    Step 113: Phase1_sample = 1.2649, Phase3_sample = 3.5423
+    Step 114: Phase1_sample = 1.3570, Phase3_sample = 3.7780
+    Step 115: Phase1_sample = 1.2048, Phase3_sample = 3.4200
+    Step 116: Phase1_sample = 1.2517, Phase3_sample = 3.8149
+    Step 117: Phase1_sample = 1.1802, Phase3_sample = 3.7209
+    Step 118: Phase1_sample = 1.4283, Phase3_sample = 3.5016
+    Step 119: Phase1_sample = 1.3175, Phase3_sample = 3.7198
+    Step 120: Phase1_sample = 1.2227, Phase3_sample = 3.5366
+    Step 121: Phase1_sample = 1.2024, Phase3_sample = 3.4555
+    Step 122: Phase1_sample = 1.1956, Phase3_sample = 3.4346
+    Step 123: Phase1_sample = 1.2640, Phase3_sample = 3.4800
+    Step 124: Phase1_sample = 1.2839, Phase3_sample = 3.4014
+    Step 125: Phase1_sample = 1.2937, Phase3_sample = 3.6403
+    Step 126: Phase1_sample = 1.0612, Phase3_sample = 3.5944
+    Step 127: Phase1_sample = 1.3833, Phase3_sample = 3.4360
+    Step 128: Phase1_sample = 1.4278, Phase3_sample = 3.5989
+    Step 129: Phase1_sample = 1.1901, Phase3_sample = 3.5514
+    Step 130: Phase1_sample = 1.3164, Phase3_sample = 3.5646
+    Step 131: Phase1_sample = 1.3144, Phase3_sample = 3.4649
+    Step 132: Phase1_sample = 1.2775, Phase3_sample = 3.4156
+    Step 133: Phase1_sample = 1.2494, Phase3_sample = 3.4666
+    Step 134: Phase1_sample = 1.1870, Phase3_sample = 3.6806
+    Step 135: Phase1_sample = 1.3697, Phase3_sample = 3.6179
+    Step 136: Phase1_sample = 1.1513, Phase3_sample = 3.5253
+    Step 137: Phase1_sample = 1.3819, Phase3_sample = 3.5711
+    Step 138: Phase1_sample = 1.4925, Phase3_sample = 3.5963
+    Step 139: Phase1_sample = 1.2798, Phase3_sample = 3.5260
+    Step 140: Phase1_sample = 1.2739, Phase3_sample = 3.5417
+    Step 141: Phase1_sample = 1.3314, Phase3_sample = 3.6526
+    Step 142: Phase1_sample = 1.1820, Phase3_sample = 3.4238
+    Step 143: Phase1_sample = 1.0769, Phase3_sample = 3.6078
+    Step 144: Phase1_sample = 1.1502, Phase3_sample = 3.3417
+    Step 145: Phase1_sample = 1.2994, Phase3_sample = 3.8063
+    Step 146: Phase1_sample = 1.2600, Phase3_sample = 3.6408
+    Step 147: Phase1_sample = 1.2687, Phase3_sample = 3.5471
+    Step 148: Phase1_sample = 1.3525, Phase3_sample = 3.5279
+    Step 149: Phase1_sample = 1.2873, Phase3_sample = 3.5891
+    Step 150: Phase1_sample = 1.1938, Phase3_sample = 3.6562
+    Step 151: Phase1_sample = 1.2431, Phase3_sample = 3.4814
+    Step 152: Phase1_sample = 1.3142, Phase3_sample = 3.4671
+    Step 153: Phase1_sample = 1.2634, Phase3_sample = 3.5560
+    Step 154: Phase1_sample = 1.3692, Phase3_sample = 3.6044
+    Step 155: Phase1_sample = 1.2581, Phase3_sample = 3.6387
+    Step 156: Phase1_sample = 1.3996, Phase3_sample = 3.6127
+    Step 157: Phase1_sample = 1.2616, Phase3_sample = 3.4258
+    Step 158: Phase1_sample = 1.1541, Phase3_sample = 3.5264
+    Step 159: Phase1_sample = 1.1996, Phase3_sample = 3.5383
+    Step 160: Phase1_sample = 1.2662, Phase3_sample = 3.6099
+    Step 161: Phase1_sample = 1.2535, Phase3_sample = 3.6056
+    Step 162: Phase1_sample = 1.2670, Phase3_sample = 3.3594
+    Step 163: Phase1_sample = 1.1666, Phase3_sample = 3.5425
+    Step 164: Phase1_sample = 1.1396, Phase3_sample = 3.6169
+    Step 165: Phase1_sample = 1.4136, Phase3_sample = 3.6788
+    Step 166: Phase1_sample = 1.2392, Phase3_sample = 3.7060
+    Step 167: Phase1_sample = 1.2754, Phase3_sample = 3.5232
+    Step 168: Phase1_sample = 1.1992, Phase3_sample = 3.5267
+    Step 169: Phase1_sample = 1.2217, Phase3_sample = 3.5740
+    Step 170: Phase1_sample = 1.2766, Phase3_sample = 3.5573
+    Step 171: Phase1_sample = 1.3043, Phase3_sample = 3.6760
+    Step 172: Phase1_sample = 1.3555, Phase3_sample = 3.4085
+    Step 173: Phase1_sample = 1.0052, Phase3_sample = 3.6504
+    Step 174: Phase1_sample = 1.1239, Phase3_sample = 3.5345
+    Step 175: Phase1_sample = 1.1436, Phase3_sample = 3.3768
+    Step 176: Phase1_sample = 1.3147, Phase3_sample = 3.6329
+    Step 177: Phase1_sample = 1.2029, Phase3_sample = 3.2979
+    Step 178: Phase1_sample = 1.2059, Phase3_sample = 3.5961
+    Step 179: Phase1_sample = 1.1127, Phase3_sample = 3.5753
+    Step 180: Phase1_sample = 1.2590, Phase3_sample = 3.6149
+    Step 181: Phase1_sample = 1.2725, Phase3_sample = 3.4596
+    Step 182: Phase1_sample = 1.3802, Phase3_sample = 3.5411
+    Step 183: Phase1_sample = 1.2578, Phase3_sample = 3.4636
+    Step 184: Phase1_sample = 1.2162, Phase3_sample = 3.4685
+    Step 185: Phase1_sample = 1.2433, Phase3_sample = 3.7281
+    Step 186: Phase1_sample = 1.1234, Phase3_sample = 3.3956
+    Step 187: Phase1_sample = 1.4077, Phase3_sample = 3.5360
+    Step 188: Phase1_sample = 1.1937, Phase3_sample = 3.6609
+    Step 189: Phase1_sample = 1.2000, Phase3_sample = 3.7396
+    Step 190: Phase1_sample = 1.3284, Phase3_sample = 3.5082
+    Step 191: Phase1_sample = 1.4763, Phase3_sample = 3.4964
+    Step 192: Phase1_sample = 1.3348, Phase3_sample = 3.5869
+    Step 193: Phase1_sample = 1.3907, Phase3_sample = 3.7131
+    Step 194: Phase1_sample = 1.2638, Phase3_sample = 3.4816
+    Step 195: Phase1_sample = 1.3066, Phase3_sample = 3.4892
+    Step 196: Phase1_sample = 1.4619, Phase3_sample = 3.5706
+    Step 197: Phase1_sample = 1.2240, Phase3_sample = 3.5754
+    Step 198: Phase1_sample = 1.1259, Phase3_sample = 3.4598
+    Step 199: Phase1_sample = 1.3806, Phase3_sample = 3.4913
+    Step 200: Phase1_sample = 1.1559, Phase3_sample = 3.6106
+    Step 201: Phase1_sample = 1.3791, Phase3_sample = 3.6289
+    Step 202: Phase1_sample = 1.3602, Phase3_sample = 3.4813
+    Step 203: Phase1_sample = 1.1184, Phase3_sample = 3.7071
+    Step 204: Phase1_sample = 1.2283, Phase3_sample = 3.5319
+    Step 205: Phase1_sample = 1.3934, Phase3_sample = 3.6126
+    Step 206: Phase1_sample = 1.3062, Phase3_sample = 3.7735
+    Step 207: Phase1_sample = 1.1962, Phase3_sample = 3.6497
+    Step 208: Phase1_sample = 1.2663, Phase3_sample = 3.5838
+    Step 209: Phase1_sample = 1.4134, Phase3_sample = 3.6077
+    Step 210: Phase1_sample = 1.3144, Phase3_sample = 3.6642
+    Step 211: Phase1_sample = 1.2241, Phase3_sample = 3.4730
+    Step 212: Phase1_sample = 1.1561, Phase3_sample = 3.3603
+    Step 213: Phase1_sample = 1.4662, Phase3_sample = 3.4466
+    Step 214: Phase1_sample = 1.2384, Phase3_sample = 3.5293
+    Step 215: Phase1_sample = 1.2913, Phase3_sample = 3.6385
+    Step 216: Phase1_sample = 1.3466, Phase3_sample = 3.4986
+    Step 217: Phase1_sample = 1.2439, Phase3_sample = 3.5852
+    Step 218: Phase1_sample = 1.2357, Phase3_sample = 3.7177
+    Step 219: Phase1_sample = 1.3097, Phase3_sample = 3.6304
+    Step 220: Phase1_sample = 1.3269, Phase3_sample = 3.6743
+    Step 221: Phase1_sample = 1.2787, Phase3_sample = 3.4273
+    Step 222: Phase1_sample = 1.3005, Phase3_sample = 3.4918
+    Step 223: Phase1_sample = 1.2077, Phase3_sample = 3.6156
+    Step 224: Phase1_sample = 1.3844, Phase3_sample = 3.5591
+    Step 225: Phase1_sample = 1.2914, Phase3_sample = 3.7272
+    Step 226: Phase1_sample = 1.2846, Phase3_sample = 3.8171
+    Step 227: Phase1_sample = 1.3171, Phase3_sample = 3.3809
+    Step 228: Phase1_sample = 1.3359, Phase3_sample = 3.5951
+    Step 229: Phase1_sample = 1.3895, Phase3_sample = 3.6243
+    Step 230: Phase1_sample = 1.2467, Phase3_sample = 3.4345
+    Step 231: Phase1_sample = 1.2397, Phase3_sample = 3.4719
+    Step 232: Phase1_sample = 1.2025, Phase3_sample = 3.6158
+    Step 233: Phase1_sample = 1.4276, Phase3_sample = 3.5964
+    Step 234: Phase1_sample = 1.1410, Phase3_sample = 3.6014
+    Step 235: Phase1_sample = 1.3802, Phase3_sample = 3.4960
+    Step 236: Phase1_sample = 1.2472, Phase3_sample = 3.5584
+    Step 237: Phase1_sample = 1.1821, Phase3_sample = 3.6218
+    Step 238: Phase1_sample = 1.2485, Phase3_sample = 3.5989
+    Step 239: Phase1_sample = 1.1718, Phase3_sample = 3.5132
+    Step 240: Phase1_sample = 1.3328, Phase3_sample = 3.5197
+    Step 241: Phase1_sample = 1.4333, Phase3_sample = 3.5170
+    Step 242: Phase1_sample = 1.2830, Phase3_sample = 3.6502
+    Step 243: Phase1_sample = 1.1187, Phase3_sample = 3.3809
+    Step 244: Phase1_sample = 1.1080, Phase3_sample = 3.6832
+    Step 245: Phase1_sample = 1.2054, Phase3_sample = 3.8128
+    Step 246: Phase1_sample = 1.2041, Phase3_sample = 3.5754
+    Step 247: Phase1_sample = 1.4148, Phase3_sample = 3.7576
+    Step 248: Phase1_sample = 1.4667, Phase3_sample = 3.6778
+    Step 249: Phase1_sample = 1.3630, Phase3_sample = 3.6162
+    Step 250: Phase1_sample = 1.3384, Phase3_sample = 3.5018
+    Step 251: Phase1_sample = 1.1787, Phase3_sample = 3.5566
+    Step 252: Phase1_sample = 1.2435, Phase3_sample = 3.5116
+    Step 253: Phase1_sample = 1.3302, Phase3_sample = 3.6525
+    Step 254: Phase1_sample = 1.2694, Phase3_sample = 3.7047
+    Step 255: Phase1_sample = 1.1464, Phase3_sample = 3.5376
+    Step 256: Phase1_sample = 1.1889, Phase3_sample = 3.3703
+    Step 257: Phase1_sample = 1.2523, Phase3_sample = 3.5448
+    Step 258: Phase1_sample = 1.4119, Phase3_sample = 3.6200
+    Step 259: Phase1_sample = 1.1581, Phase3_sample = 3.7424
+    Step 260: Phase1_sample = 1.3827, Phase3_sample = 3.6152
+    Step 261: Phase1_sample = 1.2379, Phase3_sample = 3.4610
+    Step 262: Phase1_sample = 1.2233, Phase3_sample = 3.6658
+    Step 263: Phase1_sample = 1.4490, Phase3_sample = 3.7113
+    Step 264: Phase1_sample = 1.2117, Phase3_sample = 3.4450
+    Step 265: Phase1_sample = 1.2747, Phase3_sample = 3.3801
+    Step 266: Phase1_sample = 1.2929, Phase3_sample = 3.5422
+    Step 267: Phase1_sample = 1.2140, Phase3_sample = 3.3975
+    Step 268: Phase1_sample = 1.3119, Phase3_sample = 3.5037
+    Step 269: Phase1_sample = 1.1436, Phase3_sample = 3.2697
+    Step 270: Phase1_sample = 1.2578, Phase3_sample = 3.7342
+    Step 271: Phase1_sample = 1.4267, Phase3_sample = 3.5112
+    Step 272: Phase1_sample = 1.2003, Phase3_sample = 3.6038
+    Step 273: Phase1_sample = 1.1607, Phase3_sample = 3.5871
+    Step 274: Phase1_sample = 1.3372, Phase3_sample = 3.6796
+    Step 275: Phase1_sample = 1.2506, Phase3_sample = 3.5366
+    Step 276: Phase1_sample = 1.1728, Phase3_sample = 3.4743
+    Step 277: Phase1_sample = 1.2379, Phase3_sample = 3.5937
+    Step 278: Phase1_sample = 1.3519, Phase3_sample = 3.4766
+    Step 279: Phase1_sample = 1.4098, Phase3_sample = 3.5298
+    Step 280: Phase1_sample = 1.2584, Phase3_sample = 3.4822
+    Step 281: Phase1_sample = 1.0181, Phase3_sample = 3.6454
+    Step 282: Phase1_sample = 1.3343, Phase3_sample = 3.5288
+    Step 283: Phase1_sample = 1.2673, Phase3_sample = 3.6085
+    Step 284: Phase1_sample = 1.1043, Phase3_sample = 3.5040
+    Step 285: Phase1_sample = 1.3400, Phase3_sample = 3.4315
+    Step 286: Phase1_sample = 1.2899, Phase3_sample = 3.4213
+    Step 287: Phase1_sample = 1.3072, Phase3_sample = 3.5534
+    Step 288: Phase1_sample = 1.0991, Phase3_sample = 3.6734
+    Step 289: Phase1_sample = 1.1871, Phase3_sample = 3.4759
+    Step 290: Phase1_sample = 1.2806, Phase3_sample = 3.6718
+    Step 291: Phase1_sample = 1.1590, Phase3_sample = 3.5631
+    Step 292: Phase1_sample = 1.3034, Phase3_sample = 3.6263
+    Step 293: Phase1_sample = 1.2782, Phase3_sample = 3.5203
+    Step 294: Phase1_sample = 1.1778, Phase3_sample = 3.5656
+    Step 295: Phase1_sample = 1.1534, Phase3_sample = 3.2648
+    Step 296: Phase1_sample = 1.3042, Phase3_sample = 3.6473
+    Step 297: Phase1_sample = 1.0243, Phase3_sample = 3.4560
+    Step 298: Phase1_sample = 1.3225, Phase3_sample = 3.7627
+    Step 299: Phase1_sample = 1.2626, Phase3_sample = 3.4842
+    Step 300: Phase1_sample = 1.2423, Phase3_sample = 3.6944
+    Step 301: Phase1_sample = 1.1960, Phase3_sample = 3.4770
+    Step 302: Phase1_sample = 1.2123, Phase3_sample = 3.4616
+    Step 303: Phase1_sample = 1.2728, Phase3_sample = 3.7194
+    Step 304: Phase1_sample = 1.2929, Phase3_sample = 3.5317
+    Step 305: Phase1_sample = 1.2314, Phase3_sample = 3.4006
+    Step 306: Phase1_sample = 1.3489, Phase3_sample = 3.5492
+    Step 307: Phase1_sample = 1.2425, Phase3_sample = 3.8763
+    Step 308: Phase1_sample = 1.2904, Phase3_sample = 3.4818
+    Step 309: Phase1_sample = 1.2179, Phase3_sample = 3.6718
+    Step 310: Phase1_sample = 1.2719, Phase3_sample = 3.4131
+    Step 311: Phase1_sample = 1.3525, Phase3_sample = 3.4901
+    Step 312: Phase1_sample = 1.4479, Phase3_sample = 3.6650
+    Step 313: Phase1_sample = 1.2158, Phase3_sample = 3.6851
+    Step 314: Phase1_sample = 1.2674, Phase3_sample = 3.6422
+    Step 315: Phase1_sample = 1.3090, Phase3_sample = 3.4723
+    Step 316: Phase1_sample = 1.1962, Phase3_sample = 3.6600
+    Step 317: Phase1_sample = 1.2271, Phase3_sample = 3.5166
+    Step 318: Phase1_sample = 1.1651, Phase3_sample = 3.5993
+    Step 319: Phase1_sample = 1.4668, Phase3_sample = 3.4502
+    Step 320: Phase1_sample = 1.2630, Phase3_sample = 3.6982
+    Step 321: Phase1_sample = 1.2526, Phase3_sample = 3.6022
+    Step 322: Phase1_sample = 1.1543, Phase3_sample = 3.5998
+    Step 323: Phase1_sample = 1.2419, Phase3_sample = 3.6555
+    Step 324: Phase1_sample = 1.3793, Phase3_sample = 3.8159
+    Step 325: Phase1_sample = 1.3185, Phase3_sample = 3.5895
+    Step 326: Phase1_sample = 1.2800, Phase3_sample = 3.5216
+    Step 327: Phase1_sample = 1.2944, Phase3_sample = 3.5274
+    Step 328: Phase1_sample = 1.2774, Phase3_sample = 3.6887
+    Step 329: Phase1_sample = 1.1599, Phase3_sample = 3.6709
+    Step 330: Phase1_sample = 1.3923, Phase3_sample = 3.5451
+    Step 331: Phase1_sample = 1.0484, Phase3_sample = 3.4962
+    Step 332: Phase1_sample = 1.3903, Phase3_sample = 3.5547
+    Step 333: Phase1_sample = 1.1606, Phase3_sample = 3.5065
+    Step 334: Phase1_sample = 1.3446, Phase3_sample = 3.6116
+    Step 335: Phase1_sample = 1.2367, Phase3_sample = 3.5203
+    Step 336: Phase1_sample = 1.2214, Phase3_sample = 3.4647
+    Step 337: Phase1_sample = 1.4221, Phase3_sample = 3.5247
+    Step 338: Phase1_sample = 1.3823, Phase3_sample = 3.7091
+    Step 339: Phase1_sample = 1.3604, Phase3_sample = 3.5138
+    Step 340: Phase1_sample = 1.3009, Phase3_sample = 3.5545
+    Step 341: Phase1_sample = 1.1702, Phase3_sample = 3.5894
+    Step 342: Phase1_sample = 1.1427, Phase3_sample = 3.6757
+    Step 343: Phase1_sample = 1.2141, Phase3_sample = 3.5771
+    Step 344: Phase1_sample = 1.2889, Phase3_sample = 3.5311
+    Step 345: Phase1_sample = 1.3192, Phase3_sample = 3.5095
+    Step 346: Phase1_sample = 1.3477, Phase3_sample = 3.4224
+    Step 347: Phase1_sample = 1.2732, Phase3_sample = 3.7508
+    Step 348: Phase1_sample = 1.1605, Phase3_sample = 3.4892
+    Step 349: Phase1_sample = 1.3120, Phase3_sample = 3.5749
+    Step 350: Phase1_sample = 1.2956, Phase3_sample = 3.6059
+    Step 351: Phase1_sample = 1.3240, Phase3_sample = 3.6679
+    Step 352: Phase1_sample = 1.3015, Phase3_sample = 3.5328
+    Step 353: Phase1_sample = 1.3278, Phase3_sample = 3.7469
+    Step 354: Phase1_sample = 1.2473, Phase3_sample = 3.4595
+    Step 355: Phase1_sample = 1.3713, Phase3_sample = 3.5449
+    Step 356: Phase1_sample = 1.0433, Phase3_sample = 3.6417
+    Step 357: Phase1_sample = 1.2070, Phase3_sample = 3.5479
+    Step 358: Phase1_sample = 1.2938, Phase3_sample = 3.5760
+    Step 359: Phase1_sample = 1.3315, Phase3_sample = 3.5134
+    Step 360: Phase1_sample = 1.3119, Phase3_sample = 3.5310
+    Step 361: Phase1_sample = 1.3344, Phase3_sample = 3.6185
+    Step 362: Phase1_sample = 1.1670, Phase3_sample = 3.6656
+    Step 363: Phase1_sample = 1.2070, Phase3_sample = 3.6378
+    Step 364: Phase1_sample = 1.2973, Phase3_sample = 3.7408
+    Step 365: Phase1_sample = 1.2382, Phase3_sample = 3.5220
+    Step 366: Phase1_sample = 1.2586, Phase3_sample = 3.5266
+    Step 367: Phase1_sample = 1.3406, Phase3_sample = 3.3953
+    Step 368: Phase1_sample = 1.1552, Phase3_sample = 3.4502
+    Step 369: Phase1_sample = 1.3556, Phase3_sample = 3.7280
+    Step 370: Phase1_sample = 1.2501, Phase3_sample = 3.5401
+    Step 371: Phase1_sample = 1.2676, Phase3_sample = 3.6731
+    Step 372: Phase1_sample = 1.1678, Phase3_sample = 3.5808
+    Step 373: Phase1_sample = 1.3581, Phase3_sample = 3.6071
+    Step 374: Phase1_sample = 1.2795, Phase3_sample = 3.6571
+    Step 375: Phase1_sample = 0.9902, Phase3_sample = 3.6247
+    Step 376: Phase1_sample = 1.1952, Phase3_sample = 3.3739
+    Step 377: Phase1_sample = 1.3117, Phase3_sample = 3.6943
+    Step 378: Phase1_sample = 1.2468, Phase3_sample = 3.6522
+    Step 379: Phase1_sample = 1.4218, Phase3_sample = 3.6884
+    Step 380: Phase1_sample = 1.4246, Phase3_sample = 3.6312
+    Step 381: Phase1_sample = 1.2681, Phase3_sample = 3.3968
+    Step 382: Phase1_sample = 1.2360, Phase3_sample = 3.4726
+    Step 383: Phase1_sample = 1.4777, Phase3_sample = 3.5394
+    Step 384: Phase1_sample = 1.2729, Phase3_sample = 3.6121
+    Step 385: Phase1_sample = 1.2649, Phase3_sample = 3.7265
+    Step 386: Phase1_sample = 1.1983, Phase3_sample = 3.5764
+    Step 387: Phase1_sample = 1.1863, Phase3_sample = 3.4250
+    Step 388: Phase1_sample = 1.1994, Phase3_sample = 3.5533
+    Step 389: Phase1_sample = 1.2176, Phase3_sample = 3.4877
+    Step 390: Phase1_sample = 1.1199, Phase3_sample = 3.5486
+    Step 391: Phase1_sample = 1.1101, Phase3_sample = 3.6330
+    Step 392: Phase1_sample = 1.2688, Phase3_sample = 3.4112
+    Step 393: Phase1_sample = 1.2296, Phase3_sample = 3.4817
+    Step 394: Phase1_sample = 1.2925, Phase3_sample = 3.6910
+    Step 395: Phase1_sample = 1.0730, Phase3_sample = 3.5685
+    Step 396: Phase1_sample = 1.2446, Phase3_sample = 3.6241
+    Step 397: Phase1_sample = 1.2819, Phase3_sample = 3.4818
+    Step 398: Phase1_sample = 1.2287, Phase3_sample = 3.4774
+    Step 399: Phase1_sample = 1.3682, Phase3_sample = 3.5591
+    Step 400: Phase1_sample = 1.4507, Phase3_sample = 3.5509
+    Step 401: Phase1_sample = 1.1897, Phase3_sample = 3.4056
+    Step 402: Phase1_sample = 1.0803, Phase3_sample = 3.3985
+    Step 403: Phase1_sample = 1.2873, Phase3_sample = 3.6078
+    Step 404: Phase1_sample = 1.1024, Phase3_sample = 3.6465
+    Step 405: Phase1_sample = 1.2123, Phase3_sample = 3.5716
+    Step 406: Phase1_sample = 1.4218, Phase3_sample = 3.6466
+    Step 407: Phase1_sample = 1.2337, Phase3_sample = 3.4678
+    Step 408: Phase1_sample = 1.0454, Phase3_sample = 3.4850
+    Step 409: Phase1_sample = 1.2395, Phase3_sample = 3.4582
+    Step 410: Phase1_sample = 1.2474, Phase3_sample = 3.5646
+    Step 411: Phase1_sample = 1.2381, Phase3_sample = 3.4920
+    Step 412: Phase1_sample = 1.2774, Phase3_sample = 3.6011
+    Step 413: Phase1_sample = 1.1515, Phase3_sample = 3.6980
+    Step 414: Phase1_sample = 1.2507, Phase3_sample = 3.5588
+    Step 415: Phase1_sample = 1.3314, Phase3_sample = 3.5803
+    Step 416: Phase1_sample = 1.3559, Phase3_sample = 3.5857
+    Step 417: Phase1_sample = 1.1993, Phase3_sample = 3.5931
+    Step 418: Phase1_sample = 1.1462, Phase3_sample = 3.5678
+    Step 419: Phase1_sample = 1.2572, Phase3_sample = 3.5361
+    Step 420: Phase1_sample = 1.2477, Phase3_sample = 3.3688
+    Step 421: Phase1_sample = 1.2057, Phase3_sample = 3.5662
+    Step 422: Phase1_sample = 1.2766, Phase3_sample = 3.4542
+    Step 423: Phase1_sample = 1.3871, Phase3_sample = 3.4703
+    Step 424: Phase1_sample = 1.3575, Phase3_sample = 3.5997
+    Step 425: Phase1_sample = 1.1959, Phase3_sample = 3.7345
+    Step 426: Phase1_sample = 1.1412, Phase3_sample = 3.6489
+    Step 427: Phase1_sample = 1.3606, Phase3_sample = 3.4899
+    Step 428: Phase1_sample = 1.3998, Phase3_sample = 3.5320
+    Step 429: Phase1_sample = 1.2894, Phase3_sample = 3.5830
+    Step 430: Phase1_sample = 1.2471, Phase3_sample = 3.6380
+    Step 431: Phase1_sample = 1.3399, Phase3_sample = 3.3821
+    Step 432: Phase1_sample = 1.3910, Phase3_sample = 3.3907
+    Step 433: Phase1_sample = 1.3638, Phase3_sample = 3.6696
+    Step 434: Phase1_sample = 1.1515, Phase3_sample = 3.5159
+    Step 435: Phase1_sample = 1.1500, Phase3_sample = 3.5355
+    Step 436: Phase1_sample = 1.2298, Phase3_sample = 3.6349
+    Step 437: Phase1_sample = 1.3916, Phase3_sample = 3.6965
+    Step 438: Phase1_sample = 1.2043, Phase3_sample = 3.5360
+    Step 439: Phase1_sample = 1.0922, Phase3_sample = 3.4764
+    Step 440: Phase1_sample = 1.3571, Phase3_sample = 3.7185
+    Step 441: Phase1_sample = 1.1371, Phase3_sample = 3.4977
+    Step 442: Phase1_sample = 1.2579, Phase3_sample = 3.5850
+    Step 443: Phase1_sample = 1.1796, Phase3_sample = 3.5994
+    Step 444: Phase1_sample = 1.2132, Phase3_sample = 3.5555
+    Step 445: Phase1_sample = 1.3152, Phase3_sample = 3.5576
+    Step 446: Phase1_sample = 1.2169, Phase3_sample = 3.5460
+    Step 447: Phase1_sample = 1.2517, Phase3_sample = 3.5200
+    Step 448: Phase1_sample = 1.2347, Phase3_sample = 3.7168
+    Step 449: Phase1_sample = 1.3167, Phase3_sample = 3.5274
+    Step 450: Phase1_sample = 1.3303, Phase3_sample = 3.5236
+    Step 451: Phase1_sample = 1.3779, Phase3_sample = 3.5939
+    Step 452: Phase1_sample = 1.2498, Phase3_sample = 3.6017
+    Step 453: Phase1_sample = 1.1035, Phase3_sample = 3.4443
+    Step 454: Phase1_sample = 1.1412, Phase3_sample = 3.5712
+    Step 455: Phase1_sample = 1.4338, Phase3_sample = 3.7801
+    Step 456: Phase1_sample = 1.3244, Phase3_sample = 3.6070
+    Step 457: Phase1_sample = 1.0805, Phase3_sample = 3.5027
+    Step 458: Phase1_sample = 1.1818, Phase3_sample = 3.4949
+    Step 459: Phase1_sample = 1.2438, Phase3_sample = 3.5097
+    Step 460: Phase1_sample = 1.0626, Phase3_sample = 3.6317
+    Step 461: Phase1_sample = 1.1533, Phase3_sample = 3.5809
+    Step 462: Phase1_sample = 1.4680, Phase3_sample = 3.4650
+    Step 463: Phase1_sample = 1.0075, Phase3_sample = 3.5284
+    Step 464: Phase1_sample = 1.3707, Phase3_sample = 3.7528
+    Step 465: Phase1_sample = 1.1376, Phase3_sample = 3.6066
+    Step 466: Phase1_sample = 1.2140, Phase3_sample = 3.5464
+    Step 467: Phase1_sample = 1.5250, Phase3_sample = 3.4067
+    Step 468: Phase1_sample = 1.2859, Phase3_sample = 3.6037
+    Step 469: Phase1_sample = 1.3691, Phase3_sample = 3.5668
+    Step 470: Phase1_sample = 1.2914, Phase3_sample = 3.5178
+    Step 471: Phase1_sample = 1.2875, Phase3_sample = 3.5226
+    Step 472: Phase1_sample = 1.3227, Phase3_sample = 3.5200
+    Step 473: Phase1_sample = 1.2983, Phase3_sample = 3.5540
+    Step 474: Phase1_sample = 1.3732, Phase3_sample = 3.5518
+    Step 475: Phase1_sample = 1.0833, Phase3_sample = 3.6831
+    Step 476: Phase1_sample = 1.1700, Phase3_sample = 3.4916
+    Step 477: Phase1_sample = 1.2010, Phase3_sample = 3.6944
+    Step 478: Phase1_sample = 1.0470, Phase3_sample = 3.8707
+    Step 479: Phase1_sample = 1.3662, Phase3_sample = 3.5793
+    Step 480: Phase1_sample = 1.2551, Phase3_sample = 3.5855
+    Step 481: Phase1_sample = 1.3127, Phase3_sample = 3.6215
+    Step 482: Phase1_sample = 1.3161, Phase3_sample = 3.5659
+    Step 483: Phase1_sample = 1.2408, Phase3_sample = 3.5418
+    Step 484: Phase1_sample = 1.2411, Phase3_sample = 3.6703
+    Step 485: Phase1_sample = 1.3199, Phase3_sample = 3.2629
+    Step 486: Phase1_sample = 1.3262, Phase3_sample = 3.5764
+    Step 487: Phase1_sample = 1.2587, Phase3_sample = 3.5181
+    Step 488: Phase1_sample = 1.3730, Phase3_sample = 3.6517
+    Step 489: Phase1_sample = 1.1833, Phase3_sample = 3.5977
+    Step 490: Phase1_sample = 1.1634, Phase3_sample = 3.4190
+    Step 491: Phase1_sample = 1.1979, Phase3_sample = 3.6432
+    Step 492: Phase1_sample = 1.3559, Phase3_sample = 3.6083
+    Step 493: Phase1_sample = 1.3331, Phase3_sample = 3.6086
+    Step 494: Phase1_sample = 1.1964, Phase3_sample = 3.6001
+    Step 495: Phase1_sample = 1.3406, Phase3_sample = 3.6324
+    Step 496: Phase1_sample = 1.3795, Phase3_sample = 3.6278
+    Step 497: Phase1_sample = 1.2957, Phase3_sample = 3.6640
+    Step 498: Phase1_sample = 1.2579, Phase3_sample = 3.4688
+    Step 499: Phase1_sample = 1.2443, Phase3_sample = 3.4825
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.6193
+  Mean predictive uncertainty: 0.0153
+  Mean absolute error: 0.4456

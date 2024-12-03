@@ -1,0 +1,1951 @@
+================================================================================
+Hyperparameter Optimization Log
+Date: 2024-12-02 16:42:58
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [50, 70]
+Learning Rate Range: [0.01, 0.05]
+Memory Depth Range: [5, 6]
+Cutoff Dimension Range: [4, 5]
+
+----------------------------------------
+qnn_hp_s50_lr0.01_md5_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 50
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 40.8758, Phase1 = 4.0503, Phase3 = 0.2084, Weight = 0.2723
+  Step    1: Loss = 41.3133, Phase1 = 4.0603, Phase3 = 0.1985, Weight = 0.2623
+  Step    2: Loss = 40.9495, Phase1 = 4.0703, Phase3 = 0.1886, Weight = 0.2523
+  Step    3: Loss = 40.5875, Phase1 = 4.0803, Phase3 = 0.1787, Weight = 0.2423
+  Step    4: Loss = 40.2277, Phase1 = 4.0903, Phase3 = 0.1687, Weight = 0.2324
+  Step    5: Loss = 39.8698, Phase1 = 4.1004, Phase3 = 0.1588, Weight = 0.2224
+  Step    6: Loss = 39.5139, Phase1 = 4.1104, Phase3 = 0.1488, Weight = 0.2125
+  Step    7: Loss = 39.1599, Phase1 = 4.1204, Phase3 = 0.1389, Weight = 0.2026
+  Step    8: Loss = 38.8080, Phase1 = 4.1304, Phase3 = 0.1289, Weight = 0.1928
+  Step    9: Loss = 38.4579, Phase1 = 4.1404, Phase3 = 0.1188, Weight = 0.1830
+  Step   10: Loss = 38.1099, Phase1 = 4.1504, Phase3 = 0.1088, Weight = 0.1732
+  Step   11: Loss = 37.7637, Phase1 = 4.1604, Phase3 = 0.0987, Weight = 0.1635
+  Step   12: Loss = 37.4193, Phase1 = 4.1705, Phase3 = 0.0886, Weight = 0.1538
+  Step   13: Loss = 37.0769, Phase1 = 4.1805, Phase3 = 0.0785, Weight = 0.1442
+  Step   14: Loss = 36.7363, Phase1 = 4.1905, Phase3 = 0.0684, Weight = 0.1346
+  Step   15: Loss = 36.3974, Phase1 = 4.2005, Phase3 = 0.0582, Weight = 0.1251
+  Step   16: Loss = 36.0602, Phase1 = 4.2105, Phase3 = 0.0480, Weight = 0.1157
+  Step   17: Loss = 35.7247, Phase1 = 4.2206, Phase3 = 0.0378, Weight = 0.1063
+  Step   18: Loss = 35.3909, Phase1 = 4.2306, Phase3 = 0.0276, Weight = 0.0970
+  Step   19: Loss = 35.0587, Phase1 = 4.2406, Phase3 = 0.0173, Weight = 0.0878
+  Step   20: Loss = 34.7281, Phase1 = 4.2507, Phase3 = 0.0070, Weight = 0.0787
+  Step   21: Loss = 34.3990, Phase1 = 4.2607, Phase3 = 0.0000, Weight = 0.0696
+  Step   22: Loss = 34.0748, Phase1 = 4.2708, Phase3 = 0.0000, Weight = 0.0606
+  Step   23: Loss = 33.7591, Phase1 = 4.2808, Phase3 = 0.0000, Weight = 0.0518
+  Step   24: Loss = 33.4447, Phase1 = 4.2909, Phase3 = 0.0000, Weight = 0.0430
+  Step   25: Loss = 33.1315, Phase1 = 4.3009, Phase3 = 0.0000, Weight = 0.0343
+  Step   26: Loss = 32.8194, Phase1 = 4.3110, Phase3 = 0.0000, Weight = 0.0257
+  Step   27: Loss = 32.5084, Phase1 = 4.3211, Phase3 = 0.0000, Weight = 0.0172
+  Step   28: Loss = 32.1984, Phase1 = 4.3311, Phase3 = 0.0000, Weight = 0.0100
+  Step   29: Loss = 31.8959, Phase1 = 4.3412, Phase3 = 0.0000, Weight = 0.0100
+  Step   30: Loss = 31.6301, Phase1 = 4.3513, Phase3 = 0.0000, Weight = 0.0100
+  Step   31: Loss = 31.3621, Phase1 = 4.3615, Phase3 = 0.0000, Weight = 0.0100
+  Step   32: Loss = 31.0917, Phase1 = 4.3716, Phase3 = 0.0000, Weight = 0.0100
+  Step   33: Loss = 30.8190, Phase1 = 4.3818, Phase3 = 0.0000, Weight = 0.0100
+  Step   34: Loss = 30.5440, Phase1 = 4.3920, Phase3 = 0.0000, Weight = 0.0100
+  Step   35: Loss = 30.2666, Phase1 = 4.4022, Phase3 = 0.0000, Weight = 0.0100
+  Step   36: Loss = 29.9870, Phase1 = 4.4124, Phase3 = 0.0000, Weight = 0.0100
+  Step   37: Loss = 29.7051, Phase1 = 4.4227, Phase3 = 0.0000, Weight = 0.0100
+  Step   38: Loss = 29.4210, Phase1 = 4.4330, Phase3 = 0.0000, Weight = 0.0100
+  Step   39: Loss = 29.1347, Phase1 = 4.4433, Phase3 = 0.0000, Weight = 0.0100
+  Step   40: Loss = 28.8464, Phase1 = 4.4537, Phase3 = 0.0000, Weight = 0.0100
+  Step   41: Loss = 28.5559, Phase1 = 4.4640, Phase3 = 0.0000, Weight = 0.0100
+  Step   42: Loss = 28.2636, Phase1 = 4.4744, Phase3 = 0.0000, Weight = 0.0100
+  Step   43: Loss = 27.9693, Phase1 = 4.4849, Phase3 = 0.0000, Weight = 0.0100
+  Step   44: Loss = 27.6732, Phase1 = 4.4953, Phase3 = 0.0000, Weight = 0.0100
+  Step   45: Loss = 27.3755, Phase1 = 4.5058, Phase3 = 0.0000, Weight = 0.0100
+  Step   46: Loss = 27.0761, Phase1 = 4.5163, Phase3 = 0.0000, Weight = 0.0100
+  Step   47: Loss = 26.7753, Phase1 = 4.5268, Phase3 = 0.0000, Weight = 0.0100
+  Step   48: Loss = 26.4730, Phase1 = 4.5373, Phase3 = 0.0000, Weight = 0.0100
+  Step   49: Loss = 26.1694, Phase1 = 4.5479, Phase3 = 0.0000, Weight = 0.0100
+
+Final Parameters:
+  Phase1: 4.5479
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+
+Training Summary:
+  Initial Loss: 40.8758
+  Final Loss: 26.1694
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 4.5479
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.1784
+  Mean absolute error: 0.3105
+
+Metrics:
+  accuracy:
+    mae: 0.31048991379163104
+    rmse: 0.3625988180764493
+    mdae: 0.30459643522507507
+    marpd: 158.07474156804415
+    r2: -0.8349851055978772
+    corr: -0.45685757409113187
+
+----------------------------------------
+qnn_hp_s50_lr0.01_md5_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 50
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 1.4513
+  Phase3: 4.6439
+  Memristor Weight: 0.6799
+
+Training Progress:
+  Step    0: Loss = 41.8051, Phase1 = 1.4413, Phase3 = 4.6339, Weight = 0.6699
+  Step    1: Loss = 41.3030, Phase1 = 1.4313, Phase3 = 4.6239, Weight = 0.6599
+  Step    2: Loss = 40.6849, Phase1 = 1.4213, Phase3 = 4.6140, Weight = 0.6499
+  Step    3: Loss = 40.0713, Phase1 = 1.4113, Phase3 = 4.6040, Weight = 0.6400
+  Step    4: Loss = 39.4629, Phase1 = 1.4013, Phase3 = 4.5940, Weight = 0.6300
+  Step    5: Loss = 38.8595, Phase1 = 1.3913, Phase3 = 4.5840, Weight = 0.6200
+  Step    6: Loss = 38.2615, Phase1 = 1.3813, Phase3 = 4.5741, Weight = 0.6101
+  Step    7: Loss = 37.6692, Phase1 = 1.3713, Phase3 = 4.5641, Weight = 0.6002
+  Step    8: Loss = 37.0819, Phase1 = 1.3614, Phase3 = 4.5542, Weight = 0.5903
+  Step    9: Loss = 36.5000, Phase1 = 1.3514, Phase3 = 4.5442, Weight = 0.5804
+  Step   10: Loss = 35.9240, Phase1 = 1.3414, Phase3 = 4.5343, Weight = 0.5705
+  Step   11: Loss = 35.3534, Phase1 = 1.3315, Phase3 = 4.5244, Weight = 0.5607
+  Step   12: Loss = 34.7890, Phase1 = 1.3215, Phase3 = 4.5145, Weight = 0.5509
+  Step   13: Loss = 34.2301, Phase1 = 1.3116, Phase3 = 4.5046, Weight = 0.5411
+  Step   14: Loss = 33.6769, Phase1 = 1.3017, Phase3 = 4.4947, Weight = 0.5314
+  Step   15: Loss = 33.1299, Phase1 = 1.2918, Phase3 = 4.4849, Weight = 0.5217
+  Step   16: Loss = 32.5891, Phase1 = 1.2819, Phase3 = 4.4750, Weight = 0.5121
+  Step   17: Loss = 32.0537, Phase1 = 1.2720, Phase3 = 4.4651, Weight = 0.5025
+  Step   18: Loss = 31.5247, Phase1 = 1.2622, Phase3 = 4.4553, Weight = 0.4929
+  Step   19: Loss = 31.0018, Phase1 = 1.2523, Phase3 = 4.4454, Weight = 0.4834
+  Step   20: Loss = 30.4855, Phase1 = 1.2425, Phase3 = 4.4356, Weight = 0.4739
+  Step   21: Loss = 29.9747, Phase1 = 1.2327, Phase3 = 4.4257, Weight = 0.4645
+  Step   22: Loss = 29.4705, Phase1 = 1.2229, Phase3 = 4.4158, Weight = 0.4551
+  Step   23: Loss = 28.9722, Phase1 = 1.2132, Phase3 = 4.4060, Weight = 0.4458
+  Step   24: Loss = 28.4800, Phase1 = 1.2034, Phase3 = 4.3961, Weight = 0.4366
+  Step   25: Loss = 27.9942, Phase1 = 1.1937, Phase3 = 4.3862, Weight = 0.4274
+  Step   26: Loss = 27.5146, Phase1 = 1.1840, Phase3 = 4.3763, Weight = 0.4182
+  Step   27: Loss = 27.0413, Phase1 = 1.1743, Phase3 = 4.3664, Weight = 0.4092
+  Step   28: Loss = 26.5738, Phase1 = 1.1647, Phase3 = 4.3565, Weight = 0.4002
+  Step   29: Loss = 26.1132, Phase1 = 1.1550, Phase3 = 4.3465, Weight = 0.3912
+  Step   30: Loss = 25.6582, Phase1 = 1.1455, Phase3 = 4.3366, Weight = 0.3823
+  Step   31: Loss = 25.2096, Phase1 = 1.1359, Phase3 = 4.3266, Weight = 0.3735
+  Step   32: Loss = 24.7674, Phase1 = 1.1263, Phase3 = 4.3166, Weight = 0.3647
+  Step   33: Loss = 24.3307, Phase1 = 1.1168, Phase3 = 4.3065, Weight = 0.3561
+  Step   34: Loss = 23.9007, Phase1 = 1.1074, Phase3 = 4.2964, Weight = 0.3474
+  Step   35: Loss = 23.4766, Phase1 = 1.0979, Phase3 = 4.2863, Weight = 0.3389
+  Step   36: Loss = 23.0583, Phase1 = 1.0885, Phase3 = 4.2762, Weight = 0.3304
+  Step   37: Loss = 22.6459, Phase1 = 1.0791, Phase3 = 4.2660, Weight = 0.3220
+  Step   38: Loss = 22.2397, Phase1 = 1.0698, Phase3 = 4.2558, Weight = 0.3137
+  Step   39: Loss = 21.8393, Phase1 = 1.0604, Phase3 = 4.2456, Weight = 0.3054
+  Step   40: Loss = 21.4448, Phase1 = 1.0512, Phase3 = 4.2353, Weight = 0.2972
+  Step   41: Loss = 21.0562, Phase1 = 1.0419, Phase3 = 4.2250, Weight = 0.2891
+  Step   42: Loss = 20.6733, Phase1 = 1.0327, Phase3 = 4.2146, Weight = 0.2811
+  Step   43: Loss = 20.2962, Phase1 = 1.0235, Phase3 = 4.2042, Weight = 0.2731
+  Step   44: Loss = 19.9248, Phase1 = 1.0144, Phase3 = 4.1938, Weight = 0.2653
+  Step   45: Loss = 19.5589, Phase1 = 1.0053, Phase3 = 4.1833, Weight = 0.2575
+  Step   46: Loss = 19.1986, Phase1 = 0.9962, Phase3 = 4.1728, Weight = 0.2497
+  Step   47: Loss = 18.8437, Phase1 = 0.9872, Phase3 = 4.1622, Weight = 0.2421
+  Step   48: Loss = 18.4944, Phase1 = 0.9782, Phase3 = 4.1516, Weight = 0.2345
+  Step   49: Loss = 18.1505, Phase1 = 0.9692, Phase3 = 4.1410, Weight = 0.2270
+
+Final Parameters:
+  Phase1: 0.9692
+  Phase3: 4.1410
+  Memristor Weight: 0.2270
+
+Training Summary:
+  Initial Loss: 41.8051
+  Final Loss: 18.1505
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 0.9692
+  Phase3: 4.1410
+  Memristor Weight: 0.2270
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.5431
+  Mean absolute error: 0.3632
+
+Metrics:
+  accuracy:
+    mae: 0.36315142087003827
+    rmse: 0.38873869248050147
+    mdae: 0.3882385355925132
+    marpd: 135.72366339238818
+    r2: -1.1090909801559503
+    corr: 0.7269729213783652
+
+----------------------------------------
+qnn_hp_s50_lr0.01_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 50
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 5.6125
+  Phase3: 0.6036
+  Memristor Weight: 0.4277
+
+Training Progress:
+  Step    0: Loss = 2.2099, Phase1 = 5.6225, Phase3 = 0.5936, Weight = 0.4377
+  Step    1: Loss = 2.1014, Phase1 = 5.6325, Phase3 = 0.5836, Weight = 0.4477
+  Step    2: Loss = 1.9895, Phase1 = 5.6425, Phase3 = 0.5737, Weight = 0.4577
+  Step    3: Loss = 1.8809, Phase1 = 5.6524, Phase3 = 0.5637, Weight = 0.4677
+  Step    4: Loss = 1.7761, Phase1 = 5.6623, Phase3 = 0.5538, Weight = 0.4777
+  Step    5: Loss = 1.6748, Phase1 = 5.6722, Phase3 = 0.5440, Weight = 0.4876
+  Step    6: Loss = 1.5773, Phase1 = 5.6821, Phase3 = 0.5342, Weight = 0.4976
+  Step    7: Loss = 1.4834, Phase1 = 5.6918, Phase3 = 0.5245, Weight = 0.5075
+  Step    8: Loss = 1.3936, Phase1 = 5.7015, Phase3 = 0.5149, Weight = 0.5175
+  Step    9: Loss = 1.3077, Phase1 = 5.7112, Phase3 = 0.5053, Weight = 0.5274
+  Step   10: Loss = 1.2256, Phase1 = 5.7207, Phase3 = 0.4959, Weight = 0.5372
+  Step   11: Loss = 1.1476, Phase1 = 5.7302, Phase3 = 0.4866, Weight = 0.5471
+  Step   12: Loss = 1.0735, Phase1 = 5.7395, Phase3 = 0.4774, Weight = 0.5569
+  Step   13: Loss = 1.0035, Phase1 = 5.7487, Phase3 = 0.4684, Weight = 0.5667
+  Step   14: Loss = 0.9374, Phase1 = 5.7578, Phase3 = 0.4595, Weight = 0.5764
+  Step   15: Loss = 0.8755, Phase1 = 5.7667, Phase3 = 0.4508, Weight = 0.5861
+  Step   16: Loss = 0.8174, Phase1 = 5.7755, Phase3 = 0.4423, Weight = 0.5957
+  Step   17: Loss = 0.7632, Phase1 = 5.7841, Phase3 = 0.4340, Weight = 0.6053
+  Step   18: Loss = 0.7129, Phase1 = 5.7925, Phase3 = 0.4258, Weight = 0.6148
+  Step   19: Loss = 0.6663, Phase1 = 5.8007, Phase3 = 0.4179, Weight = 0.6242
+  Step   20: Loss = 0.6235, Phase1 = 5.8087, Phase3 = 0.4102, Weight = 0.6335
+  Step   21: Loss = 0.5842, Phase1 = 5.8165, Phase3 = 0.4028, Weight = 0.6428
+  Step   22: Loss = 0.5484, Phase1 = 5.8241, Phase3 = 0.3955, Weight = 0.6520
+  Step   23: Loss = 0.5160, Phase1 = 5.8314, Phase3 = 0.3886, Weight = 0.6610
+  Step   24: Loss = 0.4867, Phase1 = 5.8384, Phase3 = 0.3819, Weight = 0.6700
+  Step   25: Loss = 0.4604, Phase1 = 5.8452, Phase3 = 0.3754, Weight = 0.6789
+  Step   26: Loss = 0.4370, Phase1 = 5.8517, Phase3 = 0.3692, Weight = 0.6876
+  Step   27: Loss = 0.4163, Phase1 = 5.8578, Phase3 = 0.3633, Weight = 0.6962
+  Step   28: Loss = 0.3981, Phase1 = 5.8637, Phase3 = 0.3576, Weight = 0.7047
+  Step   29: Loss = 0.3822, Phase1 = 5.8693, Phase3 = 0.3522, Weight = 0.7130
+  Step   30: Loss = 0.3683, Phase1 = 5.8745, Phase3 = 0.3471, Weight = 0.7212
+  Step   31: Loss = 0.3564, Phase1 = 5.8794, Phase3 = 0.3423, Weight = 0.7293
+  Step   32: Loss = 0.3463, Phase1 = 5.8840, Phase3 = 0.3377, Weight = 0.7372
+  Step   33: Loss = 0.3376, Phase1 = 5.8882, Phase3 = 0.3335, Weight = 0.7449
+  Step   34: Loss = 0.3303, Phase1 = 5.8921, Phase3 = 0.3294, Weight = 0.7525
+  Step   35: Loss = 0.3240, Phase1 = 5.8956, Phase3 = 0.3257, Weight = 0.7600
+  Step   36: Loss = 0.3188, Phase1 = 5.8988, Phase3 = 0.3222, Weight = 0.7672
+  Step   37: Loss = 0.3144, Phase1 = 5.9016, Phase3 = 0.3189, Weight = 0.7743
+  Step   38: Loss = 0.3106, Phase1 = 5.9041, Phase3 = 0.3159, Weight = 0.7813
+  Step   39: Loss = 0.3072, Phase1 = 5.9063, Phase3 = 0.3131, Weight = 0.7880
+  Step   40: Loss = 0.3043, Phase1 = 5.9081, Phase3 = 0.3105, Weight = 0.7947
+  Step   41: Loss = 0.3016, Phase1 = 5.9097, Phase3 = 0.3082, Weight = 0.8011
+  Step   42: Loss = 0.2991, Phase1 = 5.9109, Phase3 = 0.3060, Weight = 0.8074
+  Step   43: Loss = 0.2966, Phase1 = 5.9118, Phase3 = 0.3041, Weight = 0.8135
+  Step   44: Loss = 0.2942, Phase1 = 5.9124, Phase3 = 0.3024, Weight = 0.8195
+  Step   45: Loss = 0.2917, Phase1 = 5.9127, Phase3 = 0.3008, Weight = 0.8254
+  Step   46: Loss = 0.2891, Phase1 = 5.9128, Phase3 = 0.2994, Weight = 0.8311
+  Step   47: Loss = 0.2865, Phase1 = 5.9127, Phase3 = 0.2982, Weight = 0.8366
+  Step   48: Loss = 0.2836, Phase1 = 5.9123, Phase3 = 0.2971, Weight = 0.8421
+  Step   49: Loss = 0.2807, Phase1 = 5.9116, Phase3 = 0.2961, Weight = 0.8474
+
+Final Parameters:
+  Phase1: 5.9116
+  Phase3: 0.2961
+  Memristor Weight: 0.8474
+
+Training Summary:
+  Initial Loss: 2.2099
+  Final Loss: 0.2807
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 5.9116
+  Phase3: 0.2961
+  Memristor Weight: 0.8474
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2182
+  Mean absolute error: 0.0338
+
+Metrics:
+  accuracy:
+    mae: 0.033752164404657156
+    rmse: 0.04311898646601679
+    mdae: 0.029065927302342736
+    marpd: 61.84551681167423
+    r2: 0.9740512248304085
+    corr: 0.9915756761190316
+
+----------------------------------------
+qnn_hp_s50_lr0.01_md6_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 50
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 0.2482
+  Phase3: 1.4228
+  Memristor Weight: 0.5103
+
+Training Progress:
+  Step    0: Loss = 4.0411, Phase1 = 0.2382, Phase3 = 1.4328, Weight = 0.5003
+  Step    1: Loss = 3.8519, Phase1 = 0.2282, Phase3 = 1.4428, Weight = 0.4903
+  Step    2: Loss = 3.6695, Phase1 = 0.2182, Phase3 = 1.4528, Weight = 0.4804
+  Step    3: Loss = 3.4942, Phase1 = 0.2083, Phase3 = 1.4628, Weight = 0.4705
+  Step    4: Loss = 3.3261, Phase1 = 0.1984, Phase3 = 1.4728, Weight = 0.4606
+  Step    5: Loss = 3.1653, Phase1 = 0.1885, Phase3 = 1.4827, Weight = 0.4509
+  Step    6: Loss = 3.0116, Phase1 = 0.1786, Phase3 = 1.4926, Weight = 0.4412
+  Step    7: Loss = 2.8652, Phase1 = 0.1689, Phase3 = 1.5025, Weight = 0.4316
+  Step    8: Loss = 2.7259, Phase1 = 0.1591, Phase3 = 1.5124, Weight = 0.4222
+  Step    9: Loss = 2.5936, Phase1 = 0.1495, Phase3 = 1.5222, Weight = 0.4129
+  Step   10: Loss = 2.4684, Phase1 = 0.1399, Phase3 = 1.5320, Weight = 0.4038
+  Step   11: Loss = 2.3501, Phase1 = 0.1305, Phase3 = 1.5417, Weight = 0.3949
+  Step   12: Loss = 2.2385, Phase1 = 0.1211, Phase3 = 1.5515, Weight = 0.3862
+  Step   13: Loss = 2.1336, Phase1 = 0.1118, Phase3 = 1.5611, Weight = 0.3777
+  Step   14: Loss = 2.0351, Phase1 = 0.1026, Phase3 = 1.5707, Weight = 0.3695
+  Step   15: Loss = 1.9429, Phase1 = 0.0936, Phase3 = 1.5803, Weight = 0.3616
+  Step   16: Loss = 1.8567, Phase1 = 0.0847, Phase3 = 1.5898, Weight = 0.3539
+  Step   17: Loss = 1.7764, Phase1 = 0.0759, Phase3 = 1.5992, Weight = 0.3466
+  Step   18: Loss = 1.7016, Phase1 = 0.0673, Phase3 = 1.6085, Weight = 0.3397
+  Step   19: Loss = 1.6322, Phase1 = 0.0588, Phase3 = 1.6178, Weight = 0.3331
+  Step   20: Loss = 1.5679, Phase1 = 0.0504, Phase3 = 1.6270, Weight = 0.3269
+  Step   21: Loss = 1.5083, Phase1 = 0.0422, Phase3 = 1.6362, Weight = 0.3211
+  Step   22: Loss = 1.4532, Phase1 = 0.0342, Phase3 = 1.6453, Weight = 0.3158
+  Step   23: Loss = 1.4023, Phase1 = 0.0264, Phase3 = 1.6542, Weight = 0.3109
+  Step   24: Loss = 1.3553, Phase1 = 0.0187, Phase3 = 1.6631, Weight = 0.3064
+  Step   25: Loss = 1.3120, Phase1 = 0.0112, Phase3 = 1.6719, Weight = 0.3024
+  Step   26: Loss = 1.2720, Phase1 = 0.0039, Phase3 = 1.6807, Weight = 0.2989
+  Step   27: Loss = 1.2350, Phase1 = 0.0000, Phase3 = 1.6893, Weight = 0.2959
+  Step   28: Loss = 1.2133, Phase1 = 0.0000, Phase3 = 1.6978, Weight = 0.2934
+  Step   29: Loss = 1.2075, Phase1 = 0.0000, Phase3 = 1.7063, Weight = 0.2913
+  Step   30: Loss = 1.2016, Phase1 = 0.0000, Phase3 = 1.7147, Weight = 0.2896
+  Step   31: Loss = 1.1957, Phase1 = 0.0000, Phase3 = 1.7230, Weight = 0.2882
+  Step   32: Loss = 1.1897, Phase1 = 0.0000, Phase3 = 1.7313, Weight = 0.2873
+  Step   33: Loss = 1.1836, Phase1 = 0.0000, Phase3 = 1.7395, Weight = 0.2866
+  Step   34: Loss = 1.1774, Phase1 = 0.0000, Phase3 = 1.7477, Weight = 0.2863
+  Step   35: Loss = 1.1712, Phase1 = 0.0000, Phase3 = 1.7558, Weight = 0.2862
+  Step   36: Loss = 1.1649, Phase1 = 0.0000, Phase3 = 1.7639, Weight = 0.2864
+  Step   37: Loss = 1.1586, Phase1 = 0.0000, Phase3 = 1.7720, Weight = 0.2868
+  Step   38: Loss = 1.1523, Phase1 = 0.0000, Phase3 = 1.7800, Weight = 0.2874
+  Step   39: Loss = 1.1459, Phase1 = 0.0000, Phase3 = 1.7880, Weight = 0.2882
+  Step   40: Loss = 1.1395, Phase1 = 0.0000, Phase3 = 1.7960, Weight = 0.2891
+  Step   41: Loss = 1.1331, Phase1 = 0.0000, Phase3 = 1.8039, Weight = 0.2903
+  Step   42: Loss = 1.1267, Phase1 = 0.0000, Phase3 = 1.8118, Weight = 0.2915
+  Step   43: Loss = 1.1204, Phase1 = 0.0000, Phase3 = 1.8197, Weight = 0.2929
+  Step   44: Loss = 1.1140, Phase1 = 0.0000, Phase3 = 1.8276, Weight = 0.2944
+  Step   45: Loss = 1.1077, Phase1 = 0.0000, Phase3 = 1.8354, Weight = 0.2959
+  Step   46: Loss = 1.1015, Phase1 = 0.0000, Phase3 = 1.8432, Weight = 0.2976
+  Step   47: Loss = 1.0953, Phase1 = 0.0000, Phase3 = 1.8510, Weight = 0.2993
+  Step   48: Loss = 1.0891, Phase1 = 0.0000, Phase3 = 1.8587, Weight = 0.3010
+  Step   49: Loss = 1.0831, Phase1 = 0.0000, Phase3 = 1.8665, Weight = 0.3028
+
+Final Parameters:
+  Phase1: 0.0000
+  Phase3: 1.8665
+  Memristor Weight: 0.3028
+
+Training Summary:
+  Initial Loss: 4.0411
+  Final Loss: 1.0831
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 0.0000
+  Phase3: 1.8665
+  Memristor Weight: 0.3028
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2547
+  Mean absolute error: 0.0783
+
+Metrics:
+  accuracy:
+    mae: 0.07828621112670896
+    rmse: 0.0934767015982656
+    mdae: 0.08193173056677214
+    marpd: 100.92014772913085
+    r2: 0.878048671904202
+    corr: 0.9642224206509764
+
+----------------------------------------
+qnn_hp_s50_lr0.05_md5_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 50
+  Learning Rate: 0.05
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 0.2279
+  Phase3: 1.2997
+  Memristor Weight: 0.6534
+
+Training Progress:
+  Step    0: Loss = 4.5747, Phase1 = 0.1779, Phase3 = 1.3497, Weight = 0.6034
+  Step    1: Loss = 3.5664, Phase1 = 0.1283, Phase3 = 1.3995, Weight = 0.5541
+  Step    2: Loss = 2.7384, Phase1 = 0.0793, Phase3 = 1.4490, Weight = 0.5063
+  Step    3: Loss = 2.0835, Phase1 = 0.0315, Phase3 = 1.4981, Weight = 0.4611
+  Step    4: Loss = 1.5901, Phase1 = 0.0000, Phase3 = 1.5464, Weight = 0.4195
+  Step    5: Loss = 1.3221, Phase1 = 0.0000, Phase3 = 1.5938, Weight = 0.3824
+  Step    6: Loss = 1.2737, Phase1 = 0.0000, Phase3 = 1.6407, Weight = 0.3496
+  Step    7: Loss = 1.2344, Phase1 = 0.0000, Phase3 = 1.6870, Weight = 0.3209
+  Step    8: Loss = 1.2016, Phase1 = 0.0000, Phase3 = 1.7329, Weight = 0.2963
+  Step    9: Loss = 1.1731, Phase1 = 0.0000, Phase3 = 1.7785, Weight = 0.2756
+  Step   10: Loss = 1.1471, Phase1 = 0.0000, Phase3 = 1.8236, Weight = 0.2587
+  Step   11: Loss = 1.1223, Phase1 = 0.0000, Phase3 = 1.8685, Weight = 0.2455
+  Step   12: Loss = 1.0978, Phase1 = 0.0000, Phase3 = 1.9129, Weight = 0.2357
+  Step   13: Loss = 1.0730, Phase1 = 0.0000, Phase3 = 1.9569, Weight = 0.2292
+  Step   14: Loss = 1.0478, Phase1 = 0.0000, Phase3 = 2.0005, Weight = 0.2256
+  Step   15: Loss = 1.0223, Phase1 = 0.0000, Phase3 = 2.0436, Weight = 0.2246
+  Step   16: Loss = 0.9967, Phase1 = 0.0000, Phase3 = 2.0861, Weight = 0.2259
+  Step   17: Loss = 0.9714, Phase1 = 0.0000, Phase3 = 2.1279, Weight = 0.2293
+  Step   18: Loss = 0.9469, Phase1 = 0.0000, Phase3 = 2.1690, Weight = 0.2343
+  Step   19: Loss = 0.9235, Phase1 = 0.0000, Phase3 = 2.2093, Weight = 0.2407
+  Step   20: Loss = 0.9015, Phase1 = 0.0000, Phase3 = 2.2487, Weight = 0.2481
+  Step   21: Loss = 0.8813, Phase1 = 0.0000, Phase3 = 2.2870, Weight = 0.2564
+  Step   22: Loss = 0.8631, Phase1 = 0.0000, Phase3 = 2.3243, Weight = 0.2653
+  Step   23: Loss = 0.8468, Phase1 = 0.0000, Phase3 = 2.3604, Weight = 0.2745
+  Step   24: Loss = 0.8327, Phase1 = 0.0000, Phase3 = 2.3952, Weight = 0.2838
+  Step   25: Loss = 0.8206, Phase1 = 0.0000, Phase3 = 2.4287, Weight = 0.2931
+  Step   26: Loss = 0.8105, Phase1 = 0.0000, Phase3 = 2.4609, Weight = 0.3021
+  Step   27: Loss = 0.8022, Phase1 = 0.0000, Phase3 = 2.4916, Weight = 0.3107
+  Step   28: Loss = 0.7956, Phase1 = 0.0000, Phase3 = 2.5208, Weight = 0.3187
+  Step   29: Loss = 0.7904, Phase1 = 0.0000, Phase3 = 2.5485, Weight = 0.3262
+  Step   30: Loss = 0.7866, Phase1 = 0.0000, Phase3 = 2.5746, Weight = 0.3329
+  Step   31: Loss = 0.7838, Phase1 = 0.0000, Phase3 = 2.5991, Weight = 0.3389
+  Step   32: Loss = 0.7818, Phase1 = 0.0000, Phase3 = 2.6221, Weight = 0.3440
+  Step   33: Loss = 0.7806, Phase1 = 0.0000, Phase3 = 2.6435, Weight = 0.3483
+  Step   34: Loss = 0.7800, Phase1 = 0.0000, Phase3 = 2.6633, Weight = 0.3517
+  Step   35: Loss = 0.7797, Phase1 = 0.0000, Phase3 = 2.6816, Weight = 0.3542
+  Step   36: Loss = 0.7797, Phase1 = 0.0000, Phase3 = 2.6983, Weight = 0.3558
+  Step   37: Loss = 0.7799, Phase1 = 0.0000, Phase3 = 2.7135, Weight = 0.3567
+  Step   38: Loss = 0.7801, Phase1 = 0.0000, Phase3 = 2.7272, Weight = 0.3567
+  Step   39: Loss = 0.7804, Phase1 = 0.0000, Phase3 = 2.7395, Weight = 0.3561
+  Step   40: Loss = 0.7806, Phase1 = 0.0000, Phase3 = 2.7505, Weight = 0.3547
+  Step   41: Loss = 0.7808, Phase1 = 0.0000, Phase3 = 2.7601, Weight = 0.3527
+  Step   42: Loss = 0.7809, Phase1 = 0.0000, Phase3 = 2.7684, Weight = 0.3502
+  Step   43: Loss = 0.7810, Phase1 = 0.0000, Phase3 = 2.7755, Weight = 0.3472
+  Step   44: Loss = 0.7809, Phase1 = 0.0000, Phase3 = 2.7815, Weight = 0.3438
+  Step   45: Loss = 0.7808, Phase1 = 0.0000, Phase3 = 2.7863, Weight = 0.3401
+  Step   46: Loss = 0.7806, Phase1 = 0.0000, Phase3 = 2.7902, Weight = 0.3361
+  Step   47: Loss = 0.7804, Phase1 = 0.0000, Phase3 = 2.7931, Weight = 0.3320
+  Step   48: Loss = 0.7802, Phase1 = 0.0000, Phase3 = 2.7952, Weight = 0.3278
+  Step   49: Loss = 0.7800, Phase1 = 0.0000, Phase3 = 2.7964, Weight = 0.3236
+
+Final Parameters:
+  Phase1: 0.0000
+  Phase3: 2.7964
+  Memristor Weight: 0.3236
+
+Training Summary:
+  Initial Loss: 4.5747
+  Final Loss: 0.7800
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 0.0000
+  Phase3: 2.7964
+  Memristor Weight: 0.3236
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2486
+  Mean absolute error: 0.0660
+
+Metrics:
+  accuracy:
+    mae: 0.0659811257946866
+    rmse: 0.0794457764532036
+    mdae: 0.06782294872890861
+    marpd: 95.62334748232135
+    r2: 0.9119110561448485
+    corr: 0.9744147405222378
+
+----------------------------------------
+qnn_hp_s50_lr0.05_md5_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 50
+  Learning Rate: 0.05
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 3.4526
+  Phase3: 1.4341
+  Memristor Weight: 0.5934
+
+Training Progress:
+  Step    0: Loss = 60.1266, Phase1 = 3.5026, Phase3 = 1.3841, Weight = 0.5434
+  Step    1: Loss = 58.5847, Phase1 = 3.5526, Phase3 = 1.3352, Weight = 0.4935
+  Step    2: Loss = 56.4463, Phase1 = 3.6026, Phase3 = 1.2867, Weight = 0.4438
+  Step    3: Loss = 54.3876, Phase1 = 3.6526, Phase3 = 1.2386, Weight = 0.3943
+  Step    4: Loss = 52.4092, Phase1 = 3.7025, Phase3 = 1.1910, Weight = 0.3452
+  Step    5: Loss = 50.5097, Phase1 = 3.7525, Phase3 = 1.1442, Weight = 0.2966
+  Step    6: Loss = 48.6864, Phase1 = 3.8024, Phase3 = 1.0985, Weight = 0.2485
+  Step    7: Loss = 46.9350, Phase1 = 3.8522, Phase3 = 1.0540, Weight = 0.2010
+  Step    8: Loss = 45.2497, Phase1 = 3.9020, Phase3 = 1.0111, Weight = 0.1543
+  Step    9: Loss = 43.6241, Phase1 = 3.9519, Phase3 = 0.9702, Weight = 0.1084
+  Step   10: Loss = 42.0511, Phase1 = 4.0017, Phase3 = 0.9315, Weight = 0.0635
+  Step   11: Loss = 40.5230, Phase1 = 4.0516, Phase3 = 0.8954, Weight = 0.0196
+  Step   12: Loss = 39.0320, Phase1 = 4.1016, Phase3 = 0.8623, Weight = 0.0100
+  Step   13: Loss = 37.8320, Phase1 = 4.1518, Phase3 = 0.8336, Weight = 0.0100
+  Step   14: Loss = 36.6565, Phase1 = 4.2022, Phase3 = 0.8110, Weight = 0.0100
+  Step   15: Loss = 35.4205, Phase1 = 4.2530, Phase3 = 0.7954, Weight = 0.0100
+  Step   16: Loss = 34.1242, Phase1 = 4.3042, Phase3 = 0.7872, Weight = 0.0100
+  Step   17: Loss = 32.7701, Phase1 = 4.3559, Phase3 = 0.7862, Weight = 0.0100
+  Step   18: Loss = 31.3627, Phase1 = 4.4079, Phase3 = 0.7918, Weight = 0.0100
+  Step   19: Loss = 29.9085, Phase1 = 4.4603, Phase3 = 0.8032, Weight = 0.0100
+  Step   20: Loss = 28.4162, Phase1 = 4.5131, Phase3 = 0.8191, Weight = 0.0100
+  Step   21: Loss = 26.8958, Phase1 = 4.5663, Phase3 = 0.8383, Weight = 0.0100
+  Step   22: Loss = 25.3588, Phase1 = 4.6197, Phase3 = 0.8593, Weight = 0.0100
+  Step   23: Loss = 23.8171, Phase1 = 4.6733, Phase3 = 0.8802, Weight = 0.0100
+  Step   24: Loss = 22.2826, Phase1 = 4.7271, Phase3 = 0.8987, Weight = 0.0100
+  Step   25: Loss = 20.7664, Phase1 = 4.7809, Phase3 = 0.9125, Weight = 0.0100
+  Step   26: Loss = 19.2781, Phase1 = 4.8347, Phase3 = 0.9189, Weight = 0.0100
+  Step   27: Loss = 17.8248, Phase1 = 4.8884, Phase3 = 0.9159, Weight = 0.0100
+  Step   28: Loss = 16.4120, Phase1 = 4.9418, Phase3 = 0.9028, Weight = 0.0100
+  Step   29: Loss = 15.0439, Phase1 = 4.9949, Phase3 = 0.8802, Weight = 0.0100
+  Step   30: Loss = 13.7249, Phase1 = 5.0476, Phase3 = 0.8491, Weight = 0.0100
+  Step   31: Loss = 12.4601, Phase1 = 5.0998, Phase3 = 0.8110, Weight = 0.0100
+  Step   32: Loss = 11.2549, Phase1 = 5.1514, Phase3 = 0.7671, Weight = 0.0100
+  Step   33: Loss = 10.1149, Phase1 = 5.2022, Phase3 = 0.7186, Weight = 0.0100
+  Step   34: Loss = 9.0454, Phase1 = 5.2521, Phase3 = 0.6663, Weight = 0.0100
+  Step   35: Loss = 8.0503, Phase1 = 5.3012, Phase3 = 0.6111, Weight = 0.0100
+  Step   36: Loss = 7.1332, Phase1 = 5.3491, Phase3 = 0.5536, Weight = 0.0100
+  Step   37: Loss = 6.2958, Phase1 = 5.3959, Phase3 = 0.4944, Weight = 0.0100
+  Step   38: Loss = 5.5389, Phase1 = 5.4413, Phase3 = 0.4340, Weight = 0.0100
+  Step   39: Loss = 4.8615, Phase1 = 5.4854, Phase3 = 0.3731, Weight = 0.0100
+  Step   40: Loss = 4.2616, Phase1 = 5.5280, Phase3 = 0.3120, Weight = 0.0101
+  Step   41: Loss = 3.7358, Phase1 = 5.5691, Phase3 = 0.2511, Weight = 0.0112
+  Step   42: Loss = 3.2772, Phase1 = 5.6085, Phase3 = 0.1910, Weight = 0.0135
+  Step   43: Loss = 2.8807, Phase1 = 5.6462, Phase3 = 0.1319, Weight = 0.0168
+  Step   44: Loss = 2.5409, Phase1 = 5.6822, Phase3 = 0.0740, Weight = 0.0211
+  Step   45: Loss = 2.2519, Phase1 = 5.7164, Phase3 = 0.0177, Weight = 0.0263
+  Step   46: Loss = 2.0082, Phase1 = 5.7487, Phase3 = 0.0000, Weight = 0.0323
+  Step   47: Loss = 1.8172, Phase1 = 5.7793, Phase3 = 0.0000, Weight = 0.0390
+  Step   48: Loss = 1.6652, Phase1 = 5.8080, Phase3 = 0.0000, Weight = 0.0466
+  Step   49: Loss = 1.5411, Phase1 = 5.8349, Phase3 = 0.0000, Weight = 0.0548
+
+Final Parameters:
+  Phase1: 5.8349
+  Phase3: 0.0000
+  Memristor Weight: 0.0548
+
+Training Summary:
+  Initial Loss: 60.1266
+  Final Loss: 1.5411
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 5.8349
+  Phase3: 0.0000
+  Memristor Weight: 0.0548
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.1766
+  Mean absolute error: 0.0461
+
+Metrics:
+  accuracy:
+    mae: 0.04608042661422505
+    rmse: 0.08798948072383271
+    mdae: 0.020689529282749614
+    marpd: 60.37694173920595
+    r2: 0.8919458914936857
+    corr: 0.9837874857594214
+
+----------------------------------------
+qnn_hp_s50_lr0.05_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 50
+  Learning Rate: 0.05
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 5.0978
+  Phase3: 0.1033
+  Memristor Weight: 0.8078
+
+Training Progress:
+  Step    0: Loss = 10.3262, Phase1 = 5.1478, Phase3 = 0.0533, Weight = 0.8578
+  Step    1: Loss = 9.1792, Phase1 = 5.1977, Phase3 = 0.0063, Weight = 0.9078
+  Step    2: Loss = 7.9749, Phase1 = 5.2475, Phase3 = 0.0000, Weight = 0.9580
+  Step    3: Loss = 6.8412, Phase1 = 5.2971, Phase3 = 0.0000, Weight = 1.0000
+  Step    4: Loss = 5.7897, Phase1 = 5.3463, Phase3 = 0.0000, Weight = 1.0000
+  Step    5: Loss = 4.8601, Phase1 = 5.3950, Phase3 = 0.0000, Weight = 1.0000
+  Step    6: Loss = 4.0190, Phase1 = 5.4431, Phase3 = 0.0000, Weight = 1.0000
+  Step    7: Loss = 3.2679, Phase1 = 5.4904, Phase3 = 0.0000, Weight = 1.0000
+  Step    8: Loss = 2.6067, Phase1 = 5.5368, Phase3 = 0.0000, Weight = 1.0000
+  Step    9: Loss = 2.0345, Phase1 = 5.5820, Phase3 = 0.0000, Weight = 1.0000
+  Step   10: Loss = 1.5491, Phase1 = 5.6260, Phase3 = 0.0000, Weight = 1.0000
+  Step   11: Loss = 1.1476, Phase1 = 5.6684, Phase3 = 0.0000, Weight = 1.0000
+  Step   12: Loss = 0.8256, Phase1 = 5.7090, Phase3 = 0.0000, Weight = 1.0000
+  Step   13: Loss = 0.5776, Phase1 = 5.7476, Phase3 = 0.0000, Weight = 1.0000
+  Step   14: Loss = 0.3971, Phase1 = 5.7841, Phase3 = 0.0000, Weight = 1.0000
+  Step   15: Loss = 0.2765, Phase1 = 5.8181, Phase3 = 0.0000, Weight = 1.0000
+  Step   16: Loss = 0.2076, Phase1 = 5.8496, Phase3 = 0.0000, Weight = 1.0000
+  Step   17: Loss = 0.1815, Phase1 = 5.8782, Phase3 = 0.0000, Weight = 1.0000
+  Step   18: Loss = 0.1892, Phase1 = 5.9039, Phase3 = 0.0000, Weight = 1.0000
+  Step   19: Loss = 0.2216, Phase1 = 5.9266, Phase3 = 0.0000, Weight = 1.0000
+  Step   20: Loss = 0.2703, Phase1 = 5.9461, Phase3 = 0.0000, Weight = 1.0000
+  Step   21: Loss = 0.3274, Phase1 = 5.9626, Phase3 = 0.0000, Weight = 1.0000
+  Step   22: Loss = 0.3861, Phase1 = 5.9759, Phase3 = 0.0000, Weight = 1.0000
+  Step   23: Loss = 0.4409, Phase1 = 5.9861, Phase3 = 0.0000, Weight = 1.0000
+  Step   24: Loss = 0.4876, Phase1 = 5.9934, Phase3 = 0.0000, Weight = 1.0000
+  Step   25: Loss = 0.5230, Phase1 = 5.9979, Phase3 = 0.0000, Weight = 1.0000
+  Step   26: Loss = 0.5457, Phase1 = 5.9997, Phase3 = 0.0000, Weight = 1.0000
+  Step   27: Loss = 0.5552, Phase1 = 5.9990, Phase3 = 0.0000, Weight = 1.0000
+  Step   28: Loss = 0.5518, Phase1 = 5.9961, Phase3 = 0.0000, Weight = 1.0000
+  Step   29: Loss = 0.5369, Phase1 = 5.9912, Phase3 = 0.0000, Weight = 1.0000
+  Step   30: Loss = 0.5124, Phase1 = 5.9846, Phase3 = 0.0000, Weight = 0.9988
+  Step   31: Loss = 0.4800, Phase1 = 5.9764, Phase3 = 0.0000, Weight = 0.9955
+  Step   32: Loss = 0.4422, Phase1 = 5.9670, Phase3 = 0.0000, Weight = 0.9907
+  Step   33: Loss = 0.4020, Phase1 = 5.9566, Phase3 = 0.0000, Weight = 0.9851
+  Step   34: Loss = 0.3620, Phase1 = 5.9454, Phase3 = 0.0000, Weight = 0.9793
+  Step   35: Loss = 0.3245, Phase1 = 5.9338, Phase3 = 0.0000, Weight = 0.9740
+  Step   36: Loss = 0.2909, Phase1 = 5.9220, Phase3 = 0.0000, Weight = 0.9697
+  Step   37: Loss = 0.2623, Phase1 = 5.9101, Phase3 = 0.0000, Weight = 0.9669
+  Step   38: Loss = 0.2391, Phase1 = 5.8985, Phase3 = 0.0000, Weight = 0.9660
+  Step   39: Loss = 0.2209, Phase1 = 5.8872, Phase3 = 0.0000, Weight = 0.9675
+  Step   40: Loss = 0.2074, Phase1 = 5.8765, Phase3 = 0.0000, Weight = 0.9714
+  Step   41: Loss = 0.1977, Phase1 = 5.8664, Phase3 = 0.0000, Weight = 0.9780
+  Step   42: Loss = 0.1909, Phase1 = 5.8571, Phase3 = 0.0000, Weight = 0.9874
+  Step   43: Loss = 0.1859, Phase1 = 5.8486, Phase3 = 0.0000, Weight = 0.9994
+  Step   44: Loss = 0.1820, Phase1 = 5.8411, Phase3 = 0.0000, Weight = 1.0000
+  Step   45: Loss = 0.1850, Phase1 = 5.8346, Phase3 = 0.0000, Weight = 1.0000
+  Step   46: Loss = 0.1894, Phase1 = 5.8291, Phase3 = 0.0000, Weight = 1.0000
+  Step   47: Loss = 0.1944, Phase1 = 5.8246, Phase3 = 0.0000, Weight = 1.0000
+  Step   48: Loss = 0.1993, Phase1 = 5.8211, Phase3 = 0.0000, Weight = 1.0000
+  Step   49: Loss = 0.2035, Phase1 = 5.8187, Phase3 = 0.0000, Weight = 1.0000
+
+Final Parameters:
+  Phase1: 5.8187
+  Phase3: 0.0000
+  Memristor Weight: 1.0000
+
+Training Summary:
+  Initial Loss: 10.3262
+  Final Loss: 0.2035
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 5.8187
+  Phase3: 0.0000
+  Memristor Weight: 1.0000
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2022
+  Mean absolute error: 0.0237
+
+Metrics:
+  accuracy:
+    mae: 0.023731696652545004
+    rmse: 0.03339109639199634
+    mdae: 0.01923999488698838
+    marpd: 57.5883126280088
+    r2: 0.9844388698967865
+    corr: 0.9967846672144218
+
+----------------------------------------
+qnn_hp_s50_lr0.05_md6_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 50
+  Learning Rate: 0.05
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.4055
+  Phase3: 2.1793
+  Memristor Weight: 0.1639
+
+Training Progress:
+  Step    0: Loss = 29.2790, Phase1 = 4.4555, Phase3 = 2.2293, Weight = 0.1139
+  Step    1: Loss = 27.8798, Phase1 = 4.5055, Phase3 = 2.2788, Weight = 0.0642
+  Step    2: Loss = 26.4619, Phase1 = 4.5553, Phase3 = 2.3271, Weight = 0.0153
+  Step    3: Loss = 25.1243, Phase1 = 4.6051, Phase3 = 2.3735, Weight = 0.0100
+  Step    4: Loss = 23.9203, Phase1 = 4.6547, Phase3 = 2.4174, Weight = 0.0100
+  Step    5: Loss = 22.7581, Phase1 = 4.7042, Phase3 = 2.4582, Weight = 0.0100
+  Step    6: Loss = 21.6268, Phase1 = 4.7536, Phase3 = 2.4958, Weight = 0.0100
+  Step    7: Loss = 20.5247, Phase1 = 4.8028, Phase3 = 2.5306, Weight = 0.0100
+  Step    8: Loss = 19.4501, Phase1 = 4.8518, Phase3 = 2.5631, Weight = 0.0100
+  Step    9: Loss = 18.4019, Phase1 = 4.9007, Phase3 = 2.5943, Weight = 0.0100
+  Step   10: Loss = 17.3792, Phase1 = 4.9493, Phase3 = 2.6253, Weight = 0.0100
+  Step   11: Loss = 16.3810, Phase1 = 4.9977, Phase3 = 2.6572, Weight = 0.0100
+  Step   12: Loss = 15.4066, Phase1 = 5.0459, Phase3 = 2.6911, Weight = 0.0100
+  Step   13: Loss = 14.4546, Phase1 = 5.0938, Phase3 = 2.7279, Weight = 0.0122
+  Step   14: Loss = 13.5197, Phase1 = 5.1414, Phase3 = 2.7680, Weight = 0.0211
+  Step   15: Loss = 12.5912, Phase1 = 5.1887, Phase3 = 2.8113, Weight = 0.0360
+  Step   16: Loss = 11.6666, Phase1 = 5.2357, Phase3 = 2.8575, Weight = 0.0563
+  Step   17: Loss = 10.7461, Phase1 = 5.2824, Phase3 = 2.9062, Weight = 0.0813
+  Step   18: Loss = 9.8318, Phase1 = 5.3288, Phase3 = 2.9570, Weight = 0.1105
+  Step   19: Loss = 8.9277, Phase1 = 5.3747, Phase3 = 3.0096, Weight = 0.1432
+  Step   20: Loss = 8.0387, Phase1 = 5.4203, Phase3 = 3.0637, Weight = 0.1789
+  Step   21: Loss = 7.1711, Phase1 = 5.4654, Phase3 = 3.1191, Weight = 0.2172
+  Step   22: Loss = 6.3310, Phase1 = 5.5100, Phase3 = 3.1754, Weight = 0.2576
+  Step   23: Loss = 5.5245, Phase1 = 5.5540, Phase3 = 3.2325, Weight = 0.2999
+  Step   24: Loss = 4.7581, Phase1 = 5.5974, Phase3 = 3.2900, Weight = 0.3437
+  Step   25: Loss = 4.0375, Phase1 = 5.6400, Phase3 = 3.3476, Weight = 0.3887
+  Step   26: Loss = 3.3693, Phase1 = 5.6818, Phase3 = 3.4049, Weight = 0.4345
+  Step   27: Loss = 2.7586, Phase1 = 5.7226, Phase3 = 3.4617, Weight = 0.4810
+  Step   28: Loss = 2.2100, Phase1 = 5.7623, Phase3 = 3.5176, Weight = 0.5279
+  Step   29: Loss = 1.7274, Phase1 = 5.8007, Phase3 = 3.5722, Weight = 0.5748
+  Step   30: Loss = 1.3131, Phase1 = 5.8377, Phase3 = 3.6250, Weight = 0.6215
+  Step   31: Loss = 0.9680, Phase1 = 5.8730, Phase3 = 3.6758, Weight = 0.6676
+  Step   32: Loss = 0.6919, Phase1 = 5.9066, Phase3 = 3.7241, Weight = 0.7129
+  Step   33: Loss = 0.4824, Phase1 = 5.9383, Phase3 = 3.7696, Weight = 0.7569
+  Step   34: Loss = 0.3357, Phase1 = 5.9679, Phase3 = 3.8119, Weight = 0.7994
+  Step   35: Loss = 0.2463, Phase1 = 5.9951, Phase3 = 3.8506, Weight = 0.8400
+  Step   36: Loss = 0.2070, Phase1 = 6.0199, Phase3 = 3.8855, Weight = 0.8782
+  Step   37: Loss = 0.2095, Phase1 = 6.0422, Phase3 = 3.9163, Weight = 0.9138
+  Step   38: Loss = 0.2448, Phase1 = 6.0618, Phase3 = 3.9430, Weight = 0.9464
+  Step   39: Loss = 0.3030, Phase1 = 6.0787, Phase3 = 3.9653, Weight = 0.9757
+  Step   40: Loss = 0.3747, Phase1 = 6.0928, Phase3 = 3.9833, Weight = 1.0000
+  Step   41: Loss = 0.4503, Phase1 = 6.1041, Phase3 = 3.9970, Weight = 1.0000
+  Step   42: Loss = 0.5109, Phase1 = 6.1127, Phase3 = 4.0066, Weight = 1.0000
+  Step   43: Loss = 0.5605, Phase1 = 6.1188, Phase3 = 4.0123, Weight = 1.0000
+  Step   44: Loss = 0.5969, Phase1 = 6.1225, Phase3 = 4.0142, Weight = 1.0000
+  Step   45: Loss = 0.6190, Phase1 = 6.1239, Phase3 = 4.0127, Weight = 1.0000
+  Step   46: Loss = 0.6267, Phase1 = 6.1232, Phase3 = 4.0080, Weight = 1.0000
+  Step   47: Loss = 0.6208, Phase1 = 6.1206, Phase3 = 4.0005, Weight = 1.0000
+  Step   48: Loss = 0.6027, Phase1 = 6.1163, Phase3 = 3.9904, Weight = 1.0000
+  Step   49: Loss = 0.5744, Phase1 = 6.1105, Phase3 = 3.9782, Weight = 0.9981
+
+Final Parameters:
+  Phase1: 6.1105
+  Phase3: 3.9782
+  Memristor Weight: 0.9981
+
+Training Summary:
+  Initial Loss: 29.2790
+  Final Loss: 0.5744
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 6.1105
+  Phase3: 3.9782
+  Memristor Weight: 0.9981
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2507
+  Mean absolute error: 0.0517
+
+Metrics:
+  accuracy:
+    mae: 0.0517340082504164
+    rmse: 0.06537827350300336
+    mdae: 0.04869576248378041
+    marpd: 79.17357558104977
+    r2: 0.9403450246681619
+    corr: 0.9878172512702219
+
+----------------------------------------
+qnn_hp_s70_lr0.01_md5_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 70
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 6.0170
+  Phase3: 2.1566
+  Memristor Weight: 0.1018
+
+Training Progress:
+  Step    0: Loss = 1.4765, Phase1 = 6.0270, Phase3 = 2.1666, Weight = 0.1118
+  Step    1: Loss = 1.3988, Phase1 = 6.0370, Phase3 = 2.1766, Weight = 0.1218
+  Step    2: Loss = 1.3247, Phase1 = 6.0470, Phase3 = 2.1866, Weight = 0.1318
+  Step    3: Loss = 1.2541, Phase1 = 6.0569, Phase3 = 2.1966, Weight = 0.1417
+  Step    4: Loss = 1.1874, Phase1 = 6.0667, Phase3 = 2.2067, Weight = 0.1516
+  Step    5: Loss = 1.1247, Phase1 = 6.0764, Phase3 = 2.2167, Weight = 0.1615
+  Step    6: Loss = 1.0660, Phase1 = 6.0861, Phase3 = 2.2268, Weight = 0.1713
+  Step    7: Loss = 1.0114, Phase1 = 6.0956, Phase3 = 2.2369, Weight = 0.1810
+  Step    8: Loss = 0.9610, Phase1 = 6.1049, Phase3 = 2.2470, Weight = 0.1907
+  Step    9: Loss = 0.9150, Phase1 = 6.1140, Phase3 = 2.2571, Weight = 0.2002
+  Step   10: Loss = 0.8730, Phase1 = 6.1229, Phase3 = 2.2672, Weight = 0.2097
+  Step   11: Loss = 0.8353, Phase1 = 6.1315, Phase3 = 2.2773, Weight = 0.2191
+  Step   12: Loss = 0.8016, Phase1 = 6.1398, Phase3 = 2.2874, Weight = 0.2283
+  Step   13: Loss = 0.7719, Phase1 = 6.1477, Phase3 = 2.2975, Weight = 0.2374
+  Step   14: Loss = 0.7459, Phase1 = 6.1553, Phase3 = 2.3076, Weight = 0.2463
+  Step   15: Loss = 0.7235, Phase1 = 6.1623, Phase3 = 2.3177, Weight = 0.2551
+  Step   16: Loss = 0.7043, Phase1 = 6.1689, Phase3 = 2.3277, Weight = 0.2636
+  Step   17: Loss = 0.6880, Phase1 = 6.1748, Phase3 = 2.3377, Weight = 0.2721
+  Step   18: Loss = 0.6742, Phase1 = 6.1803, Phase3 = 2.3476, Weight = 0.2803
+  Step   19: Loss = 0.6626, Phase1 = 6.1850, Phase3 = 2.3575, Weight = 0.2883
+  Step   20: Loss = 0.6528, Phase1 = 6.1891, Phase3 = 2.3673, Weight = 0.2961
+  Step   21: Loss = 0.6444, Phase1 = 6.1926, Phase3 = 2.3770, Weight = 0.3037
+  Step   22: Loss = 0.6369, Phase1 = 6.1953, Phase3 = 2.3867, Weight = 0.3110
+  Step   23: Loss = 0.6301, Phase1 = 6.1974, Phase3 = 2.3962, Weight = 0.3182
+  Step   24: Loss = 0.6236, Phase1 = 6.1987, Phase3 = 2.4057, Weight = 0.3251
+  Step   25: Loss = 0.6171, Phase1 = 6.1994, Phase3 = 2.4151, Weight = 0.3319
+  Step   26: Loss = 0.6104, Phase1 = 6.1994, Phase3 = 2.4243, Weight = 0.3384
+  Step   27: Loss = 0.6035, Phase1 = 6.1989, Phase3 = 2.4335, Weight = 0.3447
+  Step   28: Loss = 0.5961, Phase1 = 6.1977, Phase3 = 2.4425, Weight = 0.3509
+  Step   29: Loss = 0.5883, Phase1 = 6.1960, Phase3 = 2.4514, Weight = 0.3568
+  Step   30: Loss = 0.5801, Phase1 = 6.1938, Phase3 = 2.4601, Weight = 0.3627
+  Step   31: Loss = 0.5715, Phase1 = 6.1911, Phase3 = 2.4687, Weight = 0.3683
+  Step   32: Loss = 0.5625, Phase1 = 6.1881, Phase3 = 2.4772, Weight = 0.3739
+  Step   33: Loss = 0.5533, Phase1 = 6.1847, Phase3 = 2.4856, Weight = 0.3793
+  Step   34: Loss = 0.5440, Phase1 = 6.1811, Phase3 = 2.4938, Weight = 0.3846
+  Step   35: Loss = 0.5346, Phase1 = 6.1772, Phase3 = 2.5018, Weight = 0.3899
+  Step   36: Loss = 0.5252, Phase1 = 6.1731, Phase3 = 2.5098, Weight = 0.3951
+  Step   37: Loss = 0.5160, Phase1 = 6.1689, Phase3 = 2.5175, Weight = 0.4002
+  Step   38: Loss = 0.5070, Phase1 = 6.1646, Phase3 = 2.5252, Weight = 0.4053
+  Step   39: Loss = 0.4984, Phase1 = 6.1602, Phase3 = 2.5327, Weight = 0.4104
+  Step   40: Loss = 0.4900, Phase1 = 6.1559, Phase3 = 2.5400, Weight = 0.4155
+  Step   41: Loss = 0.4820, Phase1 = 6.1516, Phase3 = 2.5473, Weight = 0.4206
+  Step   42: Loss = 0.4743, Phase1 = 6.1474, Phase3 = 2.5543, Weight = 0.4257
+  Step   43: Loss = 0.4670, Phase1 = 6.1433, Phase3 = 2.5613, Weight = 0.4308
+  Step   44: Loss = 0.4601, Phase1 = 6.1393, Phase3 = 2.5681, Weight = 0.4360
+  Step   45: Loss = 0.4535, Phase1 = 6.1355, Phase3 = 2.5748, Weight = 0.4412
+  Step   46: Loss = 0.4472, Phase1 = 6.1319, Phase3 = 2.5814, Weight = 0.4465
+  Step   47: Loss = 0.4412, Phase1 = 6.1285, Phase3 = 2.5878, Weight = 0.4518
+  Step   48: Loss = 0.4354, Phase1 = 6.1254, Phase3 = 2.5941, Weight = 0.4572
+  Step   49: Loss = 0.4297, Phase1 = 6.1225, Phase3 = 2.6003, Weight = 0.4626
+  Step   50: Loss = 0.4242, Phase1 = 6.1198, Phase3 = 2.6064, Weight = 0.4681
+  Step   51: Loss = 0.4188, Phase1 = 6.1173, Phase3 = 2.6123, Weight = 0.4737
+  Step   52: Loss = 0.4135, Phase1 = 6.1151, Phase3 = 2.6182, Weight = 0.4793
+  Step   53: Loss = 0.4083, Phase1 = 6.1131, Phase3 = 2.6239, Weight = 0.4849
+  Step   54: Loss = 0.4031, Phase1 = 6.1114, Phase3 = 2.6295, Weight = 0.4906
+  Step   55: Loss = 0.3979, Phase1 = 6.1098, Phase3 = 2.6350, Weight = 0.4963
+  Step   56: Loss = 0.3927, Phase1 = 6.1085, Phase3 = 2.6404, Weight = 0.5021
+  Step   57: Loss = 0.3876, Phase1 = 6.1073, Phase3 = 2.6457, Weight = 0.5079
+  Step   58: Loss = 0.3825, Phase1 = 6.1062, Phase3 = 2.6508, Weight = 0.5137
+  Step   59: Loss = 0.3775, Phase1 = 6.1053, Phase3 = 2.6559, Weight = 0.5195
+  Step   60: Loss = 0.3725, Phase1 = 6.1046, Phase3 = 2.6609, Weight = 0.5253
+  Step   61: Loss = 0.3676, Phase1 = 6.1039, Phase3 = 2.6657, Weight = 0.5311
+  Step   62: Loss = 0.3627, Phase1 = 6.1032, Phase3 = 2.6704, Weight = 0.5369
+  Step   63: Loss = 0.3580, Phase1 = 6.1027, Phase3 = 2.6751, Weight = 0.5428
+  Step   64: Loss = 0.3533, Phase1 = 6.1021, Phase3 = 2.6796, Weight = 0.5486
+  Step   65: Loss = 0.3487, Phase1 = 6.1016, Phase3 = 2.6840, Weight = 0.5543
+  Step   66: Loss = 0.3442, Phase1 = 6.1010, Phase3 = 2.6883, Weight = 0.5601
+  Step   67: Loss = 0.3399, Phase1 = 6.1005, Phase3 = 2.6926, Weight = 0.5658
+  Step   68: Loss = 0.3356, Phase1 = 6.0998, Phase3 = 2.6967, Weight = 0.5715
+  Step   69: Loss = 0.3314, Phase1 = 6.0992, Phase3 = 2.7007, Weight = 0.5772
+
+Final Parameters:
+  Phase1: 6.0992
+  Phase3: 2.7007
+  Memristor Weight: 0.5772
+
+Training Summary:
+  Initial Loss: 1.4765
+  Final Loss: 0.3314
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 6.0992
+  Phase3: 2.7007
+  Memristor Weight: 0.5772
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2155
+  Mean absolute error: 0.0363
+
+Metrics:
+  accuracy:
+    mae: 0.03627057911043805
+    rmse: 0.04711930119160897
+    mdae: 0.03438849422509277
+    marpd: 67.18009779690001
+    r2: 0.96901314805181
+    corr: 0.9908974169371944
+
+----------------------------------------
+qnn_hp_s70_lr0.01_md5_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 70
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 0.6644
+  Phase3: 5.3345
+  Memristor Weight: 0.6077
+
+Training Progress:
+  Step    0: Loss = 15.1365, Phase1 = 0.6544, Phase3 = 5.3245, Weight = 0.5977
+  Step    1: Loss = 14.7581, Phase1 = 0.6444, Phase3 = 5.3145, Weight = 0.5877
+  Step    2: Loss = 14.3779, Phase1 = 0.6345, Phase3 = 5.3046, Weight = 0.5777
+  Step    3: Loss = 14.0051, Phase1 = 0.6245, Phase3 = 5.2946, Weight = 0.5678
+  Step    4: Loss = 13.6390, Phase1 = 0.6145, Phase3 = 5.2846, Weight = 0.5578
+  Step    5: Loss = 13.2804, Phase1 = 0.6046, Phase3 = 5.2746, Weight = 0.5479
+  Step    6: Loss = 12.9286, Phase1 = 0.5946, Phase3 = 5.2646, Weight = 0.5380
+  Step    7: Loss = 12.5843, Phase1 = 0.5847, Phase3 = 5.2546, Weight = 0.5282
+  Step    8: Loss = 12.2468, Phase1 = 0.5748, Phase3 = 5.2446, Weight = 0.5184
+  Step    9: Loss = 11.9169, Phase1 = 0.5649, Phase3 = 5.2346, Weight = 0.5087
+  Step   10: Loss = 11.5933, Phase1 = 0.5551, Phase3 = 5.2246, Weight = 0.4990
+  Step   11: Loss = 11.2776, Phase1 = 0.5453, Phase3 = 5.2146, Weight = 0.4894
+  Step   12: Loss = 10.9690, Phase1 = 0.5355, Phase3 = 5.2046, Weight = 0.4799
+  Step   13: Loss = 10.6673, Phase1 = 0.5258, Phase3 = 5.1946, Weight = 0.4704
+  Step   14: Loss = 10.3727, Phase1 = 0.5161, Phase3 = 5.1846, Weight = 0.4610
+  Step   15: Loss = 10.0851, Phase1 = 0.5064, Phase3 = 5.1746, Weight = 0.4517
+  Step   16: Loss = 9.8044, Phase1 = 0.4968, Phase3 = 5.1646, Weight = 0.4425
+  Step   17: Loss = 9.5307, Phase1 = 0.4873, Phase3 = 5.1546, Weight = 0.4334
+  Step   18: Loss = 9.2640, Phase1 = 0.4777, Phase3 = 5.1446, Weight = 0.4244
+  Step   19: Loss = 9.0038, Phase1 = 0.4683, Phase3 = 5.1345, Weight = 0.4154
+  Step   20: Loss = 8.7504, Phase1 = 0.4589, Phase3 = 5.1245, Weight = 0.4066
+  Step   21: Loss = 8.5036, Phase1 = 0.4495, Phase3 = 5.1144, Weight = 0.3980
+  Step   22: Loss = 8.2631, Phase1 = 0.4402, Phase3 = 5.1044, Weight = 0.3894
+  Step   23: Loss = 8.0292, Phase1 = 0.4309, Phase3 = 5.0943, Weight = 0.3809
+  Step   24: Loss = 7.8014, Phase1 = 0.4218, Phase3 = 5.0842, Weight = 0.3726
+  Step   25: Loss = 7.5801, Phase1 = 0.4126, Phase3 = 5.0740, Weight = 0.3644
+  Step   26: Loss = 7.3646, Phase1 = 0.4036, Phase3 = 5.0639, Weight = 0.3563
+  Step   27: Loss = 7.1553, Phase1 = 0.3946, Phase3 = 5.0538, Weight = 0.3484
+  Step   28: Loss = 6.9514, Phase1 = 0.3857, Phase3 = 5.0436, Weight = 0.3406
+  Step   29: Loss = 6.7535, Phase1 = 0.3768, Phase3 = 5.0334, Weight = 0.3329
+  Step   30: Loss = 6.5612, Phase1 = 0.3680, Phase3 = 5.0232, Weight = 0.3254
+  Step   31: Loss = 6.3741, Phase1 = 0.3593, Phase3 = 5.0130, Weight = 0.3180
+  Step   32: Loss = 6.1927, Phase1 = 0.3506, Phase3 = 5.0028, Weight = 0.3108
+  Step   33: Loss = 6.0165, Phase1 = 0.3420, Phase3 = 4.9925, Weight = 0.3037
+  Step   34: Loss = 5.8451, Phase1 = 0.3335, Phase3 = 4.9823, Weight = 0.2967
+  Step   35: Loss = 5.6790, Phase1 = 0.3251, Phase3 = 4.9720, Weight = 0.2899
+  Step   36: Loss = 5.5176, Phase1 = 0.3168, Phase3 = 4.9617, Weight = 0.2833
+  Step   37: Loss = 5.3608, Phase1 = 0.3085, Phase3 = 4.9514, Weight = 0.2768
+  Step   38: Loss = 5.2088, Phase1 = 0.3003, Phase3 = 4.9411, Weight = 0.2705
+  Step   39: Loss = 5.0611, Phase1 = 0.2921, Phase3 = 4.9308, Weight = 0.2643
+  Step   40: Loss = 4.9180, Phase1 = 0.2841, Phase3 = 4.9205, Weight = 0.2582
+  Step   41: Loss = 4.7790, Phase1 = 0.2761, Phase3 = 4.9101, Weight = 0.2523
+  Step   42: Loss = 4.6443, Phase1 = 0.2682, Phase3 = 4.8998, Weight = 0.2466
+  Step   43: Loss = 4.5136, Phase1 = 0.2604, Phase3 = 4.8895, Weight = 0.2410
+  Step   44: Loss = 4.3868, Phase1 = 0.2526, Phase3 = 4.8792, Weight = 0.2356
+  Step   45: Loss = 4.2638, Phase1 = 0.2450, Phase3 = 4.8688, Weight = 0.2303
+  Step   46: Loss = 4.1445, Phase1 = 0.2374, Phase3 = 4.8585, Weight = 0.2252
+  Step   47: Loss = 4.0289, Phase1 = 0.2299, Phase3 = 4.8482, Weight = 0.2202
+  Step   48: Loss = 3.9167, Phase1 = 0.2225, Phase3 = 4.8379, Weight = 0.2153
+  Step   49: Loss = 3.8079, Phase1 = 0.2151, Phase3 = 4.8276, Weight = 0.2106
+  Step   50: Loss = 3.7025, Phase1 = 0.2078, Phase3 = 4.8173, Weight = 0.2061
+  Step   51: Loss = 3.6005, Phase1 = 0.2006, Phase3 = 4.8070, Weight = 0.2017
+  Step   52: Loss = 3.5013, Phase1 = 0.1935, Phase3 = 4.7968, Weight = 0.1974
+  Step   53: Loss = 3.4054, Phase1 = 0.1865, Phase3 = 4.7865, Weight = 0.1933
+  Step   54: Loss = 3.3124, Phase1 = 0.1795, Phase3 = 4.7763, Weight = 0.1893
+  Step   55: Loss = 3.2223, Phase1 = 0.1727, Phase3 = 4.7661, Weight = 0.1854
+  Step   56: Loss = 3.1350, Phase1 = 0.1659, Phase3 = 4.7560, Weight = 0.1817
+  Step   57: Loss = 3.0504, Phase1 = 0.1592, Phase3 = 4.7458, Weight = 0.1782
+  Step   58: Loss = 2.9684, Phase1 = 0.1525, Phase3 = 4.7357, Weight = 0.1747
+  Step   59: Loss = 2.8891, Phase1 = 0.1460, Phase3 = 4.7257, Weight = 0.1714
+  Step   60: Loss = 2.8122, Phase1 = 0.1395, Phase3 = 4.7156, Weight = 0.1682
+  Step   61: Loss = 2.7378, Phase1 = 0.1331, Phase3 = 4.7056, Weight = 0.1652
+  Step   62: Loss = 2.6658, Phase1 = 0.1268, Phase3 = 4.6957, Weight = 0.1622
+  Step   63: Loss = 2.5960, Phase1 = 0.1205, Phase3 = 4.6858, Weight = 0.1594
+  Step   64: Loss = 2.5285, Phase1 = 0.1144, Phase3 = 4.6759, Weight = 0.1567
+  Step   65: Loss = 2.4631, Phase1 = 0.1083, Phase3 = 4.6661, Weight = 0.1542
+  Step   66: Loss = 2.3999, Phase1 = 0.1023, Phase3 = 4.6563, Weight = 0.1517
+  Step   67: Loss = 2.3387, Phase1 = 0.0963, Phase3 = 4.6466, Weight = 0.1494
+  Step   68: Loss = 2.2795, Phase1 = 0.0905, Phase3 = 4.6370, Weight = 0.1472
+  Step   69: Loss = 2.2222, Phase1 = 0.0847, Phase3 = 4.6274, Weight = 0.1451
+
+Final Parameters:
+  Phase1: 0.0847
+  Phase3: 4.6274
+  Memristor Weight: 0.1451
+
+Training Summary:
+  Initial Loss: 15.1365
+  Final Loss: 2.2222
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 0.0847
+  Phase3: 4.6274
+  Memristor Weight: 0.1451
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2937
+  Mean absolute error: 0.1137
+
+Metrics:
+  accuracy:
+    mae: 0.11366705705432661
+    rmse: 0.13355879576017804
+    mdae: 0.1188579884336972
+    marpd: 110.93997476144646
+    r2: 0.7510427578934362
+    corr: 0.934705721484443
+
+----------------------------------------
+qnn_hp_s70_lr0.01_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 70
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 5.0835
+  Phase3: 4.6020
+  Memristor Weight: 0.5409
+
+Training Progress:
+  Step    0: Loss = 11.2405, Phase1 = 5.0935, Phase3 = 4.6120, Weight = 0.5509
+  Step    1: Loss = 11.1233, Phase1 = 5.1035, Phase3 = 4.6220, Weight = 0.5608
+  Step    2: Loss = 10.8902, Phase1 = 5.1135, Phase3 = 4.6321, Weight = 0.5708
+  Step    3: Loss = 10.6578, Phase1 = 5.1235, Phase3 = 4.6421, Weight = 0.5808
+  Step    4: Loss = 10.4265, Phase1 = 5.1335, Phase3 = 4.6521, Weight = 0.5909
+  Step    5: Loss = 10.1962, Phase1 = 5.1434, Phase3 = 4.6622, Weight = 0.6010
+  Step    6: Loss = 9.9669, Phase1 = 5.1534, Phase3 = 4.6723, Weight = 0.6111
+  Step    7: Loss = 9.7387, Phase1 = 5.1634, Phase3 = 4.6824, Weight = 0.6213
+  Step    8: Loss = 9.5119, Phase1 = 5.1734, Phase3 = 4.6926, Weight = 0.6315
+  Step    9: Loss = 9.2864, Phase1 = 5.1833, Phase3 = 4.7028, Weight = 0.6418
+  Step   10: Loss = 9.0623, Phase1 = 5.1932, Phase3 = 4.7130, Weight = 0.6522
+  Step   11: Loss = 8.8399, Phase1 = 5.2032, Phase3 = 4.7232, Weight = 0.6626
+  Step   12: Loss = 8.6189, Phase1 = 5.2131, Phase3 = 4.7335, Weight = 0.6730
+  Step   13: Loss = 8.3996, Phase1 = 5.2230, Phase3 = 4.7438, Weight = 0.6836
+  Step   14: Loss = 8.1822, Phase1 = 5.2328, Phase3 = 4.7541, Weight = 0.6942
+  Step   15: Loss = 7.9665, Phase1 = 5.2427, Phase3 = 4.7644, Weight = 0.7048
+  Step   16: Loss = 7.7529, Phase1 = 5.2525, Phase3 = 4.7748, Weight = 0.7155
+  Step   17: Loss = 7.5412, Phase1 = 5.2623, Phase3 = 4.7852, Weight = 0.7263
+  Step   18: Loss = 7.3318, Phase1 = 5.2721, Phase3 = 4.7956, Weight = 0.7372
+  Step   19: Loss = 7.1244, Phase1 = 5.2818, Phase3 = 4.8060, Weight = 0.7481
+  Step   20: Loss = 6.9193, Phase1 = 5.2915, Phase3 = 4.8164, Weight = 0.7590
+  Step   21: Loss = 6.7165, Phase1 = 5.3012, Phase3 = 4.8269, Weight = 0.7700
+  Step   22: Loss = 6.5163, Phase1 = 5.3108, Phase3 = 4.8374, Weight = 0.7811
+  Step   23: Loss = 6.3183, Phase1 = 5.3204, Phase3 = 4.8479, Weight = 0.7922
+  Step   24: Loss = 6.1231, Phase1 = 5.3300, Phase3 = 4.8584, Weight = 0.8034
+  Step   25: Loss = 5.9305, Phase1 = 5.3395, Phase3 = 4.8688, Weight = 0.8146
+  Step   26: Loss = 5.7405, Phase1 = 5.3490, Phase3 = 4.8793, Weight = 0.8259
+  Step   27: Loss = 5.5535, Phase1 = 5.3584, Phase3 = 4.8898, Weight = 0.8372
+  Step   28: Loss = 5.3693, Phase1 = 5.3678, Phase3 = 4.9003, Weight = 0.8485
+  Step   29: Loss = 5.1880, Phase1 = 5.3771, Phase3 = 4.9107, Weight = 0.8599
+  Step   30: Loss = 5.0097, Phase1 = 5.3864, Phase3 = 4.9212, Weight = 0.8713
+  Step   31: Loss = 4.8344, Phase1 = 5.3956, Phase3 = 4.9316, Weight = 0.8828
+  Step   32: Loss = 4.6622, Phase1 = 5.4048, Phase3 = 4.9420, Weight = 0.8943
+  Step   33: Loss = 4.4932, Phase1 = 5.4139, Phase3 = 4.9524, Weight = 0.9058
+  Step   34: Loss = 4.3274, Phase1 = 5.4230, Phase3 = 4.9627, Weight = 0.9173
+  Step   35: Loss = 4.1648, Phase1 = 5.4320, Phase3 = 4.9730, Weight = 0.9288
+  Step   36: Loss = 4.0055, Phase1 = 5.4409, Phase3 = 4.9832, Weight = 0.9404
+  Step   37: Loss = 3.8496, Phase1 = 5.4498, Phase3 = 4.9934, Weight = 0.9519
+  Step   38: Loss = 3.6970, Phase1 = 5.4585, Phase3 = 5.0036, Weight = 0.9635
+  Step   39: Loss = 3.5479, Phase1 = 5.4673, Phase3 = 5.0137, Weight = 0.9751
+  Step   40: Loss = 3.4022, Phase1 = 5.4759, Phase3 = 5.0237, Weight = 0.9867
+  Step   41: Loss = 3.2599, Phase1 = 5.4845, Phase3 = 5.0337, Weight = 0.9982
+  Step   42: Loss = 3.1213, Phase1 = 5.4930, Phase3 = 5.0436, Weight = 1.0000
+  Step   43: Loss = 2.9968, Phase1 = 5.5014, Phase3 = 5.0534, Weight = 1.0000
+  Step   44: Loss = 2.8775, Phase1 = 5.5097, Phase3 = 5.0632, Weight = 1.0000
+  Step   45: Loss = 2.7618, Phase1 = 5.5179, Phase3 = 5.0728, Weight = 1.0000
+  Step   46: Loss = 2.6495, Phase1 = 5.5261, Phase3 = 5.0824, Weight = 1.0000
+  Step   47: Loss = 2.5407, Phase1 = 5.5342, Phase3 = 5.0919, Weight = 1.0000
+  Step   48: Loss = 2.4354, Phase1 = 5.5421, Phase3 = 5.1013, Weight = 1.0000
+  Step   49: Loss = 2.3334, Phase1 = 5.5500, Phase3 = 5.1107, Weight = 1.0000
+  Step   50: Loss = 2.2347, Phase1 = 5.5578, Phase3 = 5.1199, Weight = 1.0000
+  Step   51: Loss = 2.1393, Phase1 = 5.5655, Phase3 = 5.1290, Weight = 1.0000
+  Step   52: Loss = 2.0472, Phase1 = 5.5731, Phase3 = 5.1381, Weight = 1.0000
+  Step   53: Loss = 1.9583, Phase1 = 5.5806, Phase3 = 5.1470, Weight = 1.0000
+  Step   54: Loss = 1.8725, Phase1 = 5.5880, Phase3 = 5.1558, Weight = 1.0000
+  Step   55: Loss = 1.7899, Phase1 = 5.5953, Phase3 = 5.1645, Weight = 1.0000
+  Step   56: Loss = 1.7103, Phase1 = 5.6025, Phase3 = 5.1731, Weight = 1.0000
+  Step   57: Loss = 1.6337, Phase1 = 5.6096, Phase3 = 5.1816, Weight = 1.0000
+  Step   58: Loss = 1.5600, Phase1 = 5.6166, Phase3 = 5.1900, Weight = 1.0000
+  Step   59: Loss = 1.4893, Phase1 = 5.6235, Phase3 = 5.1982, Weight = 1.0000
+  Step   60: Loss = 1.4212, Phase1 = 5.6302, Phase3 = 5.2064, Weight = 1.0000
+  Step   61: Loss = 1.3560, Phase1 = 5.6369, Phase3 = 5.2144, Weight = 1.0000
+  Step   62: Loss = 1.2935, Phase1 = 5.6435, Phase3 = 5.2222, Weight = 1.0000
+  Step   63: Loss = 1.2335, Phase1 = 5.6499, Phase3 = 5.2300, Weight = 1.0000
+  Step   64: Loss = 1.1761, Phase1 = 5.6563, Phase3 = 5.2376, Weight = 1.0000
+  Step   65: Loss = 1.1212, Phase1 = 5.6625, Phase3 = 5.2451, Weight = 1.0000
+  Step   66: Loss = 1.0688, Phase1 = 5.6686, Phase3 = 5.2525, Weight = 1.0000
+  Step   67: Loss = 1.0186, Phase1 = 5.6747, Phase3 = 5.2597, Weight = 1.0000
+  Step   68: Loss = 0.9708, Phase1 = 5.6806, Phase3 = 5.2668, Weight = 1.0000
+  Step   69: Loss = 0.9252, Phase1 = 5.6864, Phase3 = 5.2738, Weight = 1.0000
+
+Final Parameters:
+  Phase1: 5.6864
+  Phase3: 5.2738
+  Memristor Weight: 1.0000
+
+Training Summary:
+  Initial Loss: 11.2405
+  Final Loss: 0.9252
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 5.6864
+  Phase3: 5.2738
+  Memristor Weight: 1.0000
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.1693
+  Mean absolute error: 0.0469
+
+Metrics:
+  accuracy:
+    mae: 0.04693193843904666
+    rmse: 0.06627364886002425
+    mdae: 0.025280555349718063
+    marpd: 77.70068295804802
+    r2: 0.9386998496069503
+    corr: 0.995754784558967
+
+----------------------------------------
+qnn_hp_s70_lr0.01_md6_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 70
+  Learning Rate: 0.01
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 6.1160
+  Phase3: 2.4174
+  Memristor Weight: 0.5565
+
+Training Progress:
+  Step    0: Loss = 0.3773, Phase1 = 6.1060, Phase3 = 2.4274, Weight = 0.5665
+  Step    1: Loss = 0.3647, Phase1 = 6.0965, Phase3 = 2.4374, Weight = 0.5765
+  Step    2: Loss = 0.3543, Phase1 = 6.0884, Phase3 = 2.4473, Weight = 0.5866
+  Step    3: Loss = 0.3455, Phase1 = 6.0829, Phase3 = 2.4572, Weight = 0.5966
+  Step    4: Loss = 0.3374, Phase1 = 6.0802, Phase3 = 2.4670, Weight = 0.6067
+  Step    5: Loss = 0.3290, Phase1 = 6.0797, Phase3 = 2.4767, Weight = 0.6168
+  Step    6: Loss = 0.3204, Phase1 = 6.0805, Phase3 = 2.4864, Weight = 0.6268
+  Step    7: Loss = 0.3119, Phase1 = 6.0819, Phase3 = 2.4960, Weight = 0.6368
+  Step    8: Loss = 0.3039, Phase1 = 6.0829, Phase3 = 2.5055, Weight = 0.6468
+  Step    9: Loss = 0.2965, Phase1 = 6.0830, Phase3 = 2.5150, Weight = 0.6567
+  Step   10: Loss = 0.2894, Phase1 = 6.0819, Phase3 = 2.5243, Weight = 0.6665
+  Step   11: Loss = 0.2824, Phase1 = 6.0796, Phase3 = 2.5337, Weight = 0.6763
+  Step   12: Loss = 0.2753, Phase1 = 6.0763, Phase3 = 2.5429, Weight = 0.6859
+  Step   13: Loss = 0.2683, Phase1 = 6.0724, Phase3 = 2.5520, Weight = 0.6955
+  Step   14: Loss = 0.2614, Phase1 = 6.0683, Phase3 = 2.5610, Weight = 0.7051
+  Step   15: Loss = 0.2548, Phase1 = 6.0643, Phase3 = 2.5698, Weight = 0.7146
+  Step   16: Loss = 0.2486, Phase1 = 6.0609, Phase3 = 2.5785, Weight = 0.7241
+  Step   17: Loss = 0.2426, Phase1 = 6.0582, Phase3 = 2.5870, Weight = 0.7335
+  Step   18: Loss = 0.2367, Phase1 = 6.0564, Phase3 = 2.5954, Weight = 0.7430
+  Step   19: Loss = 0.2309, Phase1 = 6.0554, Phase3 = 2.6035, Weight = 0.7524
+  Step   20: Loss = 0.2252, Phase1 = 6.0548, Phase3 = 2.6115, Weight = 0.7617
+  Step   21: Loss = 0.2197, Phase1 = 6.0545, Phase3 = 2.6194, Weight = 0.7710
+  Step   22: Loss = 0.2143, Phase1 = 6.0541, Phase3 = 2.6270, Weight = 0.7803
+  Step   23: Loss = 0.2092, Phase1 = 6.0532, Phase3 = 2.6345, Weight = 0.7894
+  Step   24: Loss = 0.2042, Phase1 = 6.0518, Phase3 = 2.6418, Weight = 0.7985
+  Step   25: Loss = 0.1994, Phase1 = 6.0497, Phase3 = 2.6489, Weight = 0.8075
+  Step   26: Loss = 0.1947, Phase1 = 6.0472, Phase3 = 2.6558, Weight = 0.8164
+  Step   27: Loss = 0.1900, Phase1 = 6.0444, Phase3 = 2.6625, Weight = 0.8252
+  Step   28: Loss = 0.1855, Phase1 = 6.0416, Phase3 = 2.6690, Weight = 0.8339
+  Step   29: Loss = 0.1811, Phase1 = 6.0389, Phase3 = 2.6754, Weight = 0.8426
+  Step   30: Loss = 0.1769, Phase1 = 6.0367, Phase3 = 2.6815, Weight = 0.8512
+  Step   31: Loss = 0.1729, Phase1 = 6.0349, Phase3 = 2.6874, Weight = 0.8598
+  Step   32: Loss = 0.1689, Phase1 = 6.0337, Phase3 = 2.6932, Weight = 0.8683
+  Step   33: Loss = 0.1650, Phase1 = 6.0328, Phase3 = 2.6987, Weight = 0.8767
+  Step   34: Loss = 0.1611, Phase1 = 6.0320, Phase3 = 2.7040, Weight = 0.8851
+  Step   35: Loss = 0.1575, Phase1 = 6.0312, Phase3 = 2.7092, Weight = 0.8934
+  Step   36: Loss = 0.1539, Phase1 = 6.0301, Phase3 = 2.7141, Weight = 0.9017
+  Step   37: Loss = 0.1504, Phase1 = 6.0287, Phase3 = 2.7189, Weight = 0.9098
+  Step   38: Loss = 0.1471, Phase1 = 6.0269, Phase3 = 2.7234, Weight = 0.9179
+  Step   39: Loss = 0.1438, Phase1 = 6.0249, Phase3 = 2.7278, Weight = 0.9259
+  Step   40: Loss = 0.1406, Phase1 = 6.0227, Phase3 = 2.7320, Weight = 0.9337
+  Step   41: Loss = 0.1374, Phase1 = 6.0207, Phase3 = 2.7361, Weight = 0.9416
+  Step   42: Loss = 0.1344, Phase1 = 6.0188, Phase3 = 2.7399, Weight = 0.9493
+  Step   43: Loss = 0.1315, Phase1 = 6.0173, Phase3 = 2.7436, Weight = 0.9570
+  Step   44: Loss = 0.1286, Phase1 = 6.0161, Phase3 = 2.7471, Weight = 0.9647
+  Step   45: Loss = 0.1258, Phase1 = 6.0151, Phase3 = 2.7504, Weight = 0.9723
+  Step   46: Loss = 0.1231, Phase1 = 6.0142, Phase3 = 2.7536, Weight = 0.9798
+  Step   47: Loss = 0.1204, Phase1 = 6.0133, Phase3 = 2.7566, Weight = 0.9872
+  Step   48: Loss = 0.1178, Phase1 = 6.0122, Phase3 = 2.7594, Weight = 0.9946
+  Step   49: Loss = 0.1153, Phase1 = 6.0108, Phase3 = 2.7621, Weight = 1.0000
+  Step   50: Loss = 0.1135, Phase1 = 6.0094, Phase3 = 2.7647, Weight = 1.0000
+  Step   51: Loss = 0.1134, Phase1 = 6.0083, Phase3 = 2.7671, Weight = 1.0000
+  Step   52: Loss = 0.1135, Phase1 = 6.0078, Phase3 = 2.7694, Weight = 1.0000
+  Step   53: Loss = 0.1135, Phase1 = 6.0080, Phase3 = 2.7716, Weight = 1.0000
+  Step   54: Loss = 0.1135, Phase1 = 6.0089, Phase3 = 2.7736, Weight = 1.0000
+  Step   55: Loss = 0.1134, Phase1 = 6.0100, Phase3 = 2.7756, Weight = 1.0000
+  Step   56: Loss = 0.1134, Phase1 = 6.0110, Phase3 = 2.7775, Weight = 1.0000
+  Step   57: Loss = 0.1134, Phase1 = 6.0117, Phase3 = 2.7792, Weight = 1.0000
+  Step   58: Loss = 0.1134, Phase1 = 6.0118, Phase3 = 2.7809, Weight = 1.0000
+  Step   59: Loss = 0.1134, Phase1 = 6.0113, Phase3 = 2.7825, Weight = 1.0000
+  Step   60: Loss = 0.1134, Phase1 = 6.0105, Phase3 = 2.7841, Weight = 1.0000
+  Step   61: Loss = 0.1133, Phase1 = 6.0097, Phase3 = 2.7856, Weight = 1.0000
+  Step   62: Loss = 0.1133, Phase1 = 6.0090, Phase3 = 2.7870, Weight = 1.0000
+  Step   63: Loss = 0.1133, Phase1 = 6.0088, Phase3 = 2.7883, Weight = 1.0000
+  Step   64: Loss = 0.1134, Phase1 = 6.0090, Phase3 = 2.7896, Weight = 1.0000
+  Step   65: Loss = 0.1133, Phase1 = 6.0095, Phase3 = 2.7908, Weight = 1.0000
+  Step   66: Loss = 0.1133, Phase1 = 6.0102, Phase3 = 2.7920, Weight = 1.0000
+  Step   67: Loss = 0.1133, Phase1 = 6.0108, Phase3 = 2.7931, Weight = 1.0000
+  Step   68: Loss = 0.1133, Phase1 = 6.0111, Phase3 = 2.7942, Weight = 1.0000
+  Step   69: Loss = 0.1133, Phase1 = 6.0110, Phase3 = 2.7953, Weight = 1.0000
+
+Final Parameters:
+  Phase1: 6.0110
+  Phase3: 2.7953
+  Memristor Weight: 1.0000
+
+Training Summary:
+  Initial Loss: 0.3773
+  Final Loss: 0.1133
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 6.0110
+  Phase3: 2.7953
+  Memristor Weight: 1.0000
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2119
+  Mean absolute error: 0.0223
+
+Metrics:
+  accuracy:
+    mae: 0.022346784695175623
+    rmse: 0.02831675498688154
+    mdae: 0.020995035758100564
+    marpd: 53.03983284625644
+    r2: 0.9888090555157815
+    corr: 0.9967320562864784
+
+----------------------------------------
+qnn_hp_s70_lr0.05_md5_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 70
+  Learning Rate: 0.05
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 5.2220
+  Phase3: 3.9102
+  Memristor Weight: 0.8631
+
+Training Progress:
+  Step    0: Loss = 8.6434, Phase1 = 5.2720, Phase3 = 3.9602, Weight = 0.9131
+  Step    1: Loss = 7.6360, Phase1 = 5.3220, Phase3 = 4.0102, Weight = 0.9631
+  Step    2: Loss = 6.5996, Phase1 = 5.3718, Phase3 = 4.0602, Weight = 1.0000
+  Step    3: Loss = 5.6257, Phase1 = 5.4215, Phase3 = 4.1100, Weight = 1.0000
+  Step    4: Loss = 4.7531, Phase1 = 5.4708, Phase3 = 4.1597, Weight = 1.0000
+  Step    5: Loss = 3.9465, Phase1 = 5.5197, Phase3 = 4.2093, Weight = 1.0000
+  Step    6: Loss = 3.2116, Phase1 = 5.5681, Phase3 = 4.2585, Weight = 1.0000
+  Step    7: Loss = 2.5529, Phase1 = 5.6156, Phase3 = 4.3072, Weight = 1.0000
+  Step    8: Loss = 1.9747, Phase1 = 5.6623, Phase3 = 4.3552, Weight = 1.0000
+  Step    9: Loss = 1.4797, Phase1 = 5.7077, Phase3 = 4.4022, Weight = 1.0000
+  Step   10: Loss = 1.0687, Phase1 = 5.7518, Phase3 = 4.4480, Weight = 1.0000
+  Step   11: Loss = 0.7413, Phase1 = 5.7940, Phase3 = 4.4921, Weight = 1.0000
+  Step   12: Loss = 0.4944, Phase1 = 5.8343, Phase3 = 4.5341, Weight = 1.0000
+  Step   13: Loss = 0.3227, Phase1 = 5.8721, Phase3 = 4.5737, Weight = 1.0000
+  Step   14: Loss = 0.2187, Phase1 = 5.9073, Phase3 = 4.6104, Weight = 1.0000
+  Step   15: Loss = 0.1731, Phase1 = 5.9394, Phase3 = 4.6437, Weight = 1.0000
+  Step   16: Loss = 0.1748, Phase1 = 5.9683, Phase3 = 4.6733, Weight = 1.0000
+  Step   17: Loss = 0.2121, Phase1 = 5.9936, Phase3 = 4.6989, Weight = 1.0000
+  Step   18: Loss = 0.2726, Phase1 = 6.0152, Phase3 = 4.7203, Weight = 1.0000
+  Step   19: Loss = 0.3450, Phase1 = 6.0330, Phase3 = 4.7373, Weight = 1.0000
+  Step   20: Loss = 0.4189, Phase1 = 6.0470, Phase3 = 4.7500, Weight = 1.0000
+  Step   21: Loss = 0.4858, Phase1 = 6.0573, Phase3 = 4.7584, Weight = 1.0000
+  Step   22: Loss = 0.5396, Phase1 = 6.0639, Phase3 = 4.7627, Weight = 1.0000
+  Step   23: Loss = 0.5763, Phase1 = 6.0671, Phase3 = 4.7631, Weight = 1.0000
+  Step   24: Loss = 0.5940, Phase1 = 6.0671, Phase3 = 4.7599, Weight = 1.0000
+  Step   25: Loss = 0.5929, Phase1 = 6.0642, Phase3 = 4.7535, Weight = 1.0000
+  Step   26: Loss = 0.5748, Phase1 = 6.0588, Phase3 = 4.7443, Weight = 1.0000
+  Step   27: Loss = 0.5425, Phase1 = 6.0510, Phase3 = 4.7325, Weight = 0.9983
+  Step   28: Loss = 0.4990, Phase1 = 6.0414, Phase3 = 4.7187, Weight = 0.9943
+  Step   29: Loss = 0.4485, Phase1 = 6.0303, Phase3 = 4.7031, Weight = 0.9888
+  Step   30: Loss = 0.3955, Phase1 = 6.0180, Phase3 = 4.6862, Weight = 0.9824
+  Step   31: Loss = 0.3442, Phase1 = 6.0049, Phase3 = 4.6685, Weight = 0.9757
+  Step   32: Loss = 0.2980, Phase1 = 5.9914, Phase3 = 4.6502, Weight = 0.9694
+  Step   33: Loss = 0.2589, Phase1 = 5.9777, Phase3 = 4.6318, Weight = 0.9641
+  Step   34: Loss = 0.2283, Phase1 = 5.9643, Phase3 = 4.6135, Weight = 0.9603
+  Step   35: Loss = 0.2062, Phase1 = 5.9514, Phase3 = 4.5958, Weight = 0.9584
+  Step   36: Loss = 0.1920, Phase1 = 5.9391, Phase3 = 4.5788, Weight = 0.9588
+  Step   37: Loss = 0.1845, Phase1 = 5.9278, Phase3 = 4.5629, Weight = 0.9617
+  Step   38: Loss = 0.1819, Phase1 = 5.9176, Phase3 = 4.5482, Weight = 0.9673
+  Step   39: Loss = 0.1826, Phase1 = 5.9086, Phase3 = 4.5348, Weight = 0.9757
+  Step   40: Loss = 0.1847, Phase1 = 5.9009, Phase3 = 4.5229, Weight = 0.9867
+  Step   41: Loss = 0.1868, Phase1 = 5.8946, Phase3 = 4.5125, Weight = 1.0000
+  Step   42: Loss = 0.1878, Phase1 = 5.8896, Phase3 = 4.5036, Weight = 1.0000
+  Step   43: Loss = 0.1950, Phase1 = 5.8859, Phase3 = 4.4963, Weight = 1.0000
+  Step   44: Loss = 0.2010, Phase1 = 5.8836, Phase3 = 4.4905, Weight = 1.0000
+  Step   45: Loss = 0.2052, Phase1 = 5.8826, Phase3 = 4.4861, Weight = 1.0000
+  Step   46: Loss = 0.2072, Phase1 = 5.8828, Phase3 = 4.4831, Weight = 1.0000
+  Step   47: Loss = 0.2071, Phase1 = 5.8842, Phase3 = 4.4813, Weight = 1.0000
+  Step   48: Loss = 0.2050, Phase1 = 5.8865, Phase3 = 4.4807, Weight = 1.0000
+  Step   49: Loss = 0.2013, Phase1 = 5.8896, Phase3 = 4.4810, Weight = 1.0000
+  Step   50: Loss = 0.1963, Phase1 = 5.8935, Phase3 = 4.4821, Weight = 1.0000
+  Step   51: Loss = 0.1908, Phase1 = 5.8980, Phase3 = 4.4838, Weight = 1.0000
+  Step   52: Loss = 0.1850, Phase1 = 5.9028, Phase3 = 4.4860, Weight = 1.0000
+  Step   53: Loss = 0.1795, Phase1 = 5.9079, Phase3 = 4.4884, Weight = 1.0000
+  Step   54: Loss = 0.1747, Phase1 = 5.9132, Phase3 = 4.4909, Weight = 1.0000
+  Step   55: Loss = 0.1708, Phase1 = 5.9183, Phase3 = 4.4933, Weight = 1.0000
+  Step   56: Loss = 0.1680, Phase1 = 5.9234, Phase3 = 4.4955, Weight = 1.0000
+  Step   57: Loss = 0.1662, Phase1 = 5.9282, Phase3 = 4.4973, Weight = 1.0000
+  Step   58: Loss = 0.1653, Phase1 = 5.9325, Phase3 = 4.4987, Weight = 1.0000
+  Step   59: Loss = 0.1653, Phase1 = 5.9365, Phase3 = 4.4994, Weight = 1.0000
+  Step   60: Loss = 0.1659, Phase1 = 5.9399, Phase3 = 4.4996, Weight = 1.0000
+  Step   61: Loss = 0.1668, Phase1 = 5.9428, Phase3 = 4.4990, Weight = 1.0000
+  Step   62: Loss = 0.1679, Phase1 = 5.9451, Phase3 = 4.4977, Weight = 1.0000
+  Step   63: Loss = 0.1688, Phase1 = 5.9467, Phase3 = 4.4957, Weight = 1.0000
+  Step   64: Loss = 0.1696, Phase1 = 5.9478, Phase3 = 4.4930, Weight = 1.0000
+  Step   65: Loss = 0.1701, Phase1 = 5.9484, Phase3 = 4.4896, Weight = 1.0000
+  Step   66: Loss = 0.1702, Phase1 = 5.9484, Phase3 = 4.4855, Weight = 1.0000
+  Step   67: Loss = 0.1699, Phase1 = 5.9480, Phase3 = 4.4808, Weight = 1.0000
+  Step   68: Loss = 0.1693, Phase1 = 5.9471, Phase3 = 4.4756, Weight = 1.0000
+  Step   69: Loss = 0.1685, Phase1 = 5.9459, Phase3 = 4.4700, Weight = 1.0000
+
+Final Parameters:
+  Phase1: 5.9459
+  Phase3: 4.4700
+  Memristor Weight: 1.0000
+
+Training Summary:
+  Initial Loss: 8.6434
+  Final Loss: 0.1685
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 5.9459
+  Phase3: 4.4700
+  Memristor Weight: 1.0000
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2147
+  Mean absolute error: 0.0270
+
+Metrics:
+  accuracy:
+    mae: 0.027032221803372516
+    rmse: 0.03414708523440292
+    mdae: 0.024146740894400692
+    marpd: 57.714365412237456
+    r2: 0.9837262720189046
+    corr: 0.9950624945571105
+
+----------------------------------------
+qnn_hp_s70_lr0.05_md5_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 5
+  Training Steps: 70
+  Learning Rate: 0.05
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 3.6542
+  Phase3: 4.4455
+  Memristor Weight: 0.0554
+
+Training Progress:
+  Step    0: Loss = 41.2532, Phase1 = 3.7042, Phase3 = 4.4955, Weight = 0.0100
+  Step    1: Loss = 39.8409, Phase1 = 3.7541, Phase3 = 4.5453, Weight = 0.0100
+  Step    2: Loss = 38.9541, Phase1 = 3.8040, Phase3 = 4.5942, Weight = 0.0100
+  Step    3: Loss = 38.1003, Phase1 = 3.8539, Phase3 = 4.6413, Weight = 0.0100
+  Step    4: Loss = 37.2795, Phase1 = 3.9038, Phase3 = 4.6852, Weight = 0.0100
+  Step    5: Loss = 36.4862, Phase1 = 3.9537, Phase3 = 4.7243, Weight = 0.0100
+  Step    6: Loss = 35.7078, Phase1 = 4.0037, Phase3 = 4.7566, Weight = 0.0100
+  Step    7: Loss = 34.9261, Phase1 = 4.0538, Phase3 = 4.7805, Weight = 0.0100
+  Step    8: Loss = 34.1197, Phase1 = 4.1040, Phase3 = 4.7952, Weight = 0.0100
+  Step    9: Loss = 33.2696, Phase1 = 4.1545, Phase3 = 4.8009, Weight = 0.0100
+  Step   10: Loss = 32.3626, Phase1 = 4.2052, Phase3 = 4.7985, Weight = 0.0100
+  Step   11: Loss = 31.3929, Phase1 = 4.2562, Phase3 = 4.7889, Weight = 0.0100
+  Step   12: Loss = 30.3604, Phase1 = 4.3076, Phase3 = 4.7734, Weight = 0.0100
+  Step   13: Loss = 29.2691, Phase1 = 4.3594, Phase3 = 4.7531, Weight = 0.0100
+  Step   14: Loss = 28.1256, Phase1 = 4.4115, Phase3 = 4.7289, Weight = 0.0100
+  Step   15: Loss = 26.9380, Phase1 = 4.4639, Phase3 = 4.7017, Weight = 0.0100
+  Step   16: Loss = 25.7151, Phase1 = 4.5167, Phase3 = 4.6723, Weight = 0.0100
+  Step   17: Loss = 24.4664, Phase1 = 4.5698, Phase3 = 4.6414, Weight = 0.0100
+  Step   18: Loss = 23.2011, Phase1 = 4.6232, Phase3 = 4.6096, Weight = 0.0100
+  Step   19: Loss = 21.9282, Phase1 = 4.6768, Phase3 = 4.5776, Weight = 0.0100
+  Step   20: Loss = 20.6563, Phase1 = 4.7306, Phase3 = 4.5459, Weight = 0.0100
+  Step   21: Loss = 19.3933, Phase1 = 4.7845, Phase3 = 4.5152, Weight = 0.0100
+  Step   22: Loss = 18.1459, Phase1 = 4.8385, Phase3 = 4.4860, Weight = 0.0100
+  Step   23: Loss = 16.9204, Phase1 = 4.8924, Phase3 = 4.4589, Weight = 0.0100
+  Step   24: Loss = 15.7218, Phase1 = 4.9463, Phase3 = 4.4344, Weight = 0.0100
+  Step   25: Loss = 14.5545, Phase1 = 5.0000, Phase3 = 4.4130, Weight = 0.0100
+  Step   26: Loss = 13.4218, Phase1 = 5.0536, Phase3 = 4.3949, Weight = 0.0100
+  Step   27: Loss = 12.3270, Phase1 = 5.1068, Phase3 = 4.3804, Weight = 0.0100
+  Step   28: Loss = 11.2726, Phase1 = 5.1596, Phase3 = 4.3698, Weight = 0.0100
+  Step   29: Loss = 10.2611, Phase1 = 5.2119, Phase3 = 4.3631, Weight = 0.0100
+  Step   30: Loss = 9.2951, Phase1 = 5.2637, Phase3 = 4.3602, Weight = 0.0100
+  Step   31: Loss = 8.3770, Phase1 = 5.3149, Phase3 = 4.3610, Weight = 0.0100
+  Step   32: Loss = 7.5094, Phase1 = 5.3653, Phase3 = 4.3654, Weight = 0.0100
+  Step   33: Loss = 6.6946, Phase1 = 5.4150, Phase3 = 4.3730, Weight = 0.0100
+  Step   34: Loss = 5.9350, Phase1 = 5.4636, Phase3 = 4.3836, Weight = 0.0100
+  Step   35: Loss = 5.2326, Phase1 = 5.5113, Phase3 = 4.3968, Weight = 0.0100
+  Step   36: Loss = 4.5887, Phase1 = 5.5578, Phase3 = 4.4122, Weight = 0.0100
+  Step   37: Loss = 4.0045, Phase1 = 5.6031, Phase3 = 4.4295, Weight = 0.0100
+  Step   38: Loss = 3.4801, Phase1 = 5.6471, Phase3 = 4.4482, Weight = 0.0100
+  Step   39: Loss = 3.0149, Phase1 = 5.6896, Phase3 = 4.4680, Weight = 0.0103
+  Step   40: Loss = 2.6071, Phase1 = 5.7306, Phase3 = 4.4885, Weight = 0.0115
+  Step   41: Loss = 2.2534, Phase1 = 5.7699, Phase3 = 4.5094, Weight = 0.0136
+  Step   42: Loss = 1.9512, Phase1 = 5.8076, Phase3 = 4.5304, Weight = 0.0164
+  Step   43: Loss = 1.6972, Phase1 = 5.8434, Phase3 = 4.5510, Weight = 0.0200
+  Step   44: Loss = 1.4878, Phase1 = 5.8775, Phase3 = 4.5711, Weight = 0.0243
+  Step   45: Loss = 1.3191, Phase1 = 5.9096, Phase3 = 4.5904, Weight = 0.0291
+  Step   46: Loss = 1.1867, Phase1 = 5.9397, Phase3 = 4.6086, Weight = 0.0345
+  Step   47: Loss = 1.0863, Phase1 = 5.9679, Phase3 = 4.6255, Weight = 0.0403
+  Step   48: Loss = 1.0137, Phase1 = 5.9940, Phase3 = 4.6411, Weight = 0.0465
+  Step   49: Loss = 0.9645, Phase1 = 6.0181, Phase3 = 4.6551, Weight = 0.0529
+  Step   50: Loss = 0.9347, Phase1 = 6.0402, Phase3 = 4.6675, Weight = 0.0597
+  Step   51: Loss = 0.9205, Phase1 = 6.0603, Phase3 = 4.6782, Weight = 0.0666
+  Step   52: Loss = 0.9183, Phase1 = 6.0783, Phase3 = 4.6872, Weight = 0.0737
+  Step   53: Loss = 0.9248, Phase1 = 6.0944, Phase3 = 4.6944, Weight = 0.0809
+  Step   54: Loss = 0.9373, Phase1 = 6.1086, Phase3 = 4.6998, Weight = 0.0881
+  Step   55: Loss = 0.9533, Phase1 = 6.1209, Phase3 = 4.7035, Weight = 0.0954
+  Step   56: Loss = 0.9707, Phase1 = 6.1314, Phase3 = 4.7055, Weight = 0.1026
+  Step   57: Loss = 0.9877, Phase1 = 6.1402, Phase3 = 4.7058, Weight = 0.1097
+  Step   58: Loss = 1.0030, Phase1 = 6.1472, Phase3 = 4.7046, Weight = 0.1168
+  Step   59: Loss = 1.0155, Phase1 = 6.1528, Phase3 = 4.7018, Weight = 0.1238
+  Step   60: Loss = 1.0244, Phase1 = 6.1568, Phase3 = 4.6977, Weight = 0.1307
+  Step   61: Loss = 1.0294, Phase1 = 6.1594, Phase3 = 4.6922, Weight = 0.1375
+  Step   62: Loss = 1.0301, Phase1 = 6.1607, Phase3 = 4.6855, Weight = 0.1442
+  Step   63: Loss = 1.0265, Phase1 = 6.1608, Phase3 = 4.6776, Weight = 0.1507
+  Step   64: Loss = 1.0188, Phase1 = 6.1597, Phase3 = 4.6687, Weight = 0.1571
+  Step   65: Loss = 1.0074, Phase1 = 6.1577, Phase3 = 4.6589, Weight = 0.1634
+  Step   66: Loss = 0.9925, Phase1 = 6.1548, Phase3 = 4.6482, Weight = 0.1697
+  Step   67: Loss = 0.9747, Phase1 = 6.1510, Phase3 = 4.6368, Weight = 0.1758
+  Step   68: Loss = 0.9545, Phase1 = 6.1465, Phase3 = 4.6248, Weight = 0.1818
+  Step   69: Loss = 0.9324, Phase1 = 6.1414, Phase3 = 4.6123, Weight = 0.1878
+
+Final Parameters:
+  Phase1: 6.1414
+  Phase3: 4.6123
+  Memristor Weight: 0.1878
+
+Training Summary:
+  Initial Loss: 41.2532
+  Final Loss: 0.9324
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 5
+  Phase1: 6.1414
+  Phase3: 4.6123
+  Memristor Weight: 0.1878
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2367
+  Mean absolute error: 0.0646
+
+Metrics:
+  accuracy:
+    mae: 0.06458580730989365
+    rmse: 0.0815293431376239
+    mdae: 0.06386865904744335
+    marpd: 87.61303176748717
+    r2: 0.9072299775151157
+    corr: 0.967985565325188
+
+----------------------------------------
+qnn_hp_s70_lr0.05_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 70
+  Learning Rate: 0.05
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 1.4804
+  Phase3: 1.8629
+  Memristor Weight: 0.0890
+
+Training Progress:
+  Step    0: Loss = 24.9122, Phase1 = 1.4304, Phase3 = 1.8129, Weight = 0.0390
+  Step    1: Loss = 22.6365, Phase1 = 1.3805, Phase3 = 1.7632, Weight = 0.0100
+  Step    2: Loss = 20.7615, Phase1 = 1.3307, Phase3 = 1.7147, Weight = 0.0100
+  Step    3: Loss = 19.5972, Phase1 = 1.2810, Phase3 = 1.6692, Weight = 0.0100
+  Step    4: Loss = 18.4722, Phase1 = 1.2313, Phase3 = 1.6290, Weight = 0.0100
+  Step    5: Loss = 17.3825, Phase1 = 1.1818, Phase3 = 1.5961, Weight = 0.0100
+  Step    6: Loss = 16.3221, Phase1 = 1.1324, Phase3 = 1.5721, Weight = 0.0100
+  Step    7: Loss = 15.2864, Phase1 = 1.0831, Phase3 = 1.5573, Weight = 0.0100
+  Step    8: Loss = 14.2731, Phase1 = 1.0340, Phase3 = 1.5518, Weight = 0.0100
+  Step    9: Loss = 13.2827, Phase1 = 0.9851, Phase3 = 1.5546, Weight = 0.0100
+  Step   10: Loss = 12.3168, Phase1 = 0.9364, Phase3 = 1.5650, Weight = 0.0100
+  Step   11: Loss = 11.3781, Phase1 = 0.8880, Phase3 = 1.5818, Weight = 0.0100
+  Step   12: Loss = 10.4697, Phase1 = 0.8399, Phase3 = 1.6041, Weight = 0.0100
+  Step   13: Loss = 9.5949, Phase1 = 0.7922, Phase3 = 1.6310, Weight = 0.0100
+  Step   14: Loss = 8.7571, Phase1 = 0.7449, Phase3 = 1.6619, Weight = 0.0100
+  Step   15: Loss = 7.9589, Phase1 = 0.6982, Phase3 = 1.6960, Weight = 0.0100
+  Step   16: Loss = 7.2029, Phase1 = 0.6520, Phase3 = 1.7329, Weight = 0.0100
+  Step   17: Loss = 6.4915, Phase1 = 0.6065, Phase3 = 1.7720, Weight = 0.0100
+  Step   18: Loss = 5.8258, Phase1 = 0.5618, Phase3 = 1.8129, Weight = 0.0100
+  Step   19: Loss = 5.2076, Phase1 = 0.5178, Phase3 = 1.8553, Weight = 0.0100
+  Step   20: Loss = 4.6373, Phase1 = 0.4748, Phase3 = 1.8988, Weight = 0.0100
+  Step   21: Loss = 4.1153, Phase1 = 0.4327, Phase3 = 1.9430, Weight = 0.0100
+  Step   22: Loss = 3.6412, Phase1 = 0.3917, Phase3 = 1.9879, Weight = 0.0100
+  Step   23: Loss = 3.2145, Phase1 = 0.3518, Phase3 = 2.0330, Weight = 0.0100
+  Step   24: Loss = 2.8338, Phase1 = 0.3132, Phase3 = 2.0781, Weight = 0.0100
+  Step   25: Loss = 2.4976, Phase1 = 0.2758, Phase3 = 2.1231, Weight = 0.0100
+  Step   26: Loss = 2.2038, Phase1 = 0.2399, Phase3 = 2.1677, Weight = 0.0100
+  Step   27: Loss = 1.9501, Phase1 = 0.2053, Phase3 = 2.2118, Weight = 0.0100
+  Step   28: Loss = 1.7339, Phase1 = 0.1723, Phase3 = 2.2552, Weight = 0.0100
+  Step   29: Loss = 1.5523, Phase1 = 0.1409, Phase3 = 2.2979, Weight = 0.0100
+  Step   30: Loss = 1.4021, Phase1 = 0.1110, Phase3 = 2.3396, Weight = 0.0100
+  Step   31: Loss = 1.2801, Phase1 = 0.0829, Phase3 = 2.3805, Weight = 0.0100
+  Step   32: Loss = 1.1832, Phase1 = 0.0564, Phase3 = 2.4204, Weight = 0.0100
+  Step   33: Loss = 1.1081, Phase1 = 0.0317, Phase3 = 2.4593, Weight = 0.0100
+  Step   34: Loss = 1.0517, Phase1 = 0.0087, Phase3 = 2.4972, Weight = 0.0100
+  Step   35: Loss = 1.0110, Phase1 = 0.0000, Phase3 = 2.5342, Weight = 0.0100
+  Step   36: Loss = 0.9906, Phase1 = 0.0000, Phase3 = 2.5702, Weight = 0.0100
+  Step   37: Loss = 0.9786, Phase1 = 0.0000, Phase3 = 2.6051, Weight = 0.0100
+  Step   38: Loss = 0.9682, Phase1 = 0.0000, Phase3 = 2.6388, Weight = 0.0100
+  Step   39: Loss = 0.9593, Phase1 = 0.0000, Phase3 = 2.6711, Weight = 0.0100
+  Step   40: Loss = 0.9517, Phase1 = 0.0000, Phase3 = 2.7021, Weight = 0.0100
+  Step   41: Loss = 0.9454, Phase1 = 0.0000, Phase3 = 2.7316, Weight = 0.0100
+  Step   42: Loss = 0.9402, Phase1 = 0.0000, Phase3 = 2.7596, Weight = 0.0100
+  Step   43: Loss = 0.9360, Phase1 = 0.0000, Phase3 = 2.7861, Weight = 0.0100
+  Step   44: Loss = 0.9327, Phase1 = 0.0000, Phase3 = 2.8111, Weight = 0.0100
+  Step   45: Loss = 0.9302, Phase1 = 0.0000, Phase3 = 2.8344, Weight = 0.0101
+  Step   46: Loss = 0.9282, Phase1 = 0.0000, Phase3 = 2.8562, Weight = 0.0108
+  Step   47: Loss = 0.9262, Phase1 = 0.0000, Phase3 = 2.8763, Weight = 0.0119
+  Step   48: Loss = 0.9243, Phase1 = 0.0000, Phase3 = 2.8949, Weight = 0.0134
+  Step   49: Loss = 0.9223, Phase1 = 0.0000, Phase3 = 2.9119, Weight = 0.0152
+  Step   50: Loss = 0.9205, Phase1 = 0.0000, Phase3 = 2.9274, Weight = 0.0174
+  Step   51: Loss = 0.9185, Phase1 = 0.0000, Phase3 = 2.9413, Weight = 0.0198
+  Step   52: Loss = 0.9165, Phase1 = 0.0000, Phase3 = 2.9537, Weight = 0.0225
+  Step   53: Loss = 0.9144, Phase1 = 0.0000, Phase3 = 2.9647, Weight = 0.0255
+  Step   54: Loss = 0.9123, Phase1 = 0.0000, Phase3 = 2.9743, Weight = 0.0286
+  Step   55: Loss = 0.9100, Phase1 = 0.0000, Phase3 = 2.9826, Weight = 0.0319
+  Step   56: Loss = 0.9077, Phase1 = 0.0000, Phase3 = 2.9895, Weight = 0.0353
+  Step   57: Loss = 0.9053, Phase1 = 0.0000, Phase3 = 2.9952, Weight = 0.0389
+  Step   58: Loss = 0.9027, Phase1 = 0.0000, Phase3 = 2.9997, Weight = 0.0426
+  Step   59: Loss = 0.9001, Phase1 = 0.0000, Phase3 = 3.0030, Weight = 0.0464
+  Step   60: Loss = 0.8973, Phase1 = 0.0000, Phase3 = 3.0053, Weight = 0.0503
+  Step   61: Loss = 0.8945, Phase1 = 0.0000, Phase3 = 3.0065, Weight = 0.0543
+  Step   62: Loss = 0.8916, Phase1 = 0.0000, Phase3 = 3.0068, Weight = 0.0583
+  Step   63: Loss = 0.8885, Phase1 = 0.0000, Phase3 = 3.0061, Weight = 0.0624
+  Step   64: Loss = 0.8855, Phase1 = 0.0000, Phase3 = 3.0046, Weight = 0.0665
+  Step   65: Loss = 0.8823, Phase1 = 0.0000, Phase3 = 3.0024, Weight = 0.0707
+  Step   66: Loss = 0.8791, Phase1 = 0.0000, Phase3 = 2.9994, Weight = 0.0749
+  Step   67: Loss = 0.8758, Phase1 = 0.0000, Phase3 = 2.9957, Weight = 0.0791
+  Step   68: Loss = 0.8726, Phase1 = 0.0000, Phase3 = 2.9914, Weight = 0.0833
+  Step   69: Loss = 0.8692, Phase1 = 0.0000, Phase3 = 2.9866, Weight = 0.0875
+
+Final Parameters:
+  Phase1: 0.0000
+  Phase3: 2.9866
+  Memristor Weight: 0.0875
+
+Training Summary:
+  Initial Loss: 24.9122
+  Final Loss: 0.8692
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 0.0000
+  Phase3: 2.9866
+  Memristor Weight: 0.0875
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2359
+  Mean absolute error: 0.0648
+
+Metrics:
+  accuracy:
+    mae: 0.06482997143127757
+    rmse: 0.08014911106838188
+    mdae: 0.06477181918070626
+    marpd: 94.30977567314773
+    r2: 0.9103444466935706
+    corr: 0.97153776708889
+
+----------------------------------------
+qnn_hp_s70_lr0.05_md6_cd5
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 70
+  Learning Rate: 0.05
+  Cutoff Dimension: 5
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 1.5109
+  Phase3: 0.6911
+  Memristor Weight: 0.2852
+
+Training Progress:
+  Step    0: Loss = 31.5523, Phase1 = 1.4609, Phase3 = 0.7411, Weight = 0.2352
+  Step    1: Loss = 29.0151, Phase1 = 1.4109, Phase3 = 0.7910, Weight = 0.1853
+  Step    2: Loss = 26.3344, Phase1 = 1.3610, Phase3 = 0.8409, Weight = 0.1355
+  Step    3: Loss = 23.7836, Phase1 = 1.3112, Phase3 = 0.8906, Weight = 0.0859
+  Step    4: Loss = 21.3686, Phase1 = 1.2616, Phase3 = 0.9400, Weight = 0.0366
+  Step    5: Loss = 19.0944, Phase1 = 1.2123, Phase3 = 0.9890, Weight = 0.0100
+  Step    6: Loss = 17.4386, Phase1 = 1.1633, Phase3 = 1.0376, Weight = 0.0100
+  Step    7: Loss = 16.3924, Phase1 = 1.1146, Phase3 = 1.0861, Weight = 0.0100
+  Step    8: Loss = 15.3584, Phase1 = 1.0660, Phase3 = 1.1346, Weight = 0.0100
+  Step    9: Loss = 14.3412, Phase1 = 1.0176, Phase3 = 1.1833, Weight = 0.0100
+  Step   10: Loss = 13.3438, Phase1 = 0.9695, Phase3 = 1.2323, Weight = 0.0100
+  Step   11: Loss = 12.3706, Phase1 = 0.9216, Phase3 = 1.2815, Weight = 0.0100
+  Step   12: Loss = 11.4251, Phase1 = 0.8740, Phase3 = 1.3310, Weight = 0.0100
+  Step   13: Loss = 10.5113, Phase1 = 0.8267, Phase3 = 1.3807, Weight = 0.0100
+  Step   14: Loss = 9.6324, Phase1 = 0.7798, Phase3 = 1.4307, Weight = 0.0100
+  Step   15: Loss = 8.7918, Phase1 = 0.7333, Phase3 = 1.4808, Weight = 0.0100
+  Step   16: Loss = 7.9921, Phase1 = 0.6873, Phase3 = 1.5310, Weight = 0.0100
+  Step   17: Loss = 7.2359, Phase1 = 0.6419, Phase3 = 1.5812, Weight = 0.0100
+  Step   18: Loss = 6.5248, Phase1 = 0.5972, Phase3 = 1.6313, Weight = 0.0100
+  Step   19: Loss = 5.8607, Phase1 = 0.5531, Phase3 = 1.6813, Weight = 0.0100
+  Step   20: Loss = 5.2444, Phase1 = 0.5099, Phase3 = 1.7310, Weight = 0.0100
+  Step   21: Loss = 4.6764, Phase1 = 0.4676, Phase3 = 1.7804, Weight = 0.0100
+  Step   22: Loss = 4.1568, Phase1 = 0.4262, Phase3 = 1.8293, Weight = 0.0100
+  Step   23: Loss = 3.6853, Phase1 = 0.3859, Phase3 = 1.8777, Weight = 0.0100
+  Step   24: Loss = 3.2610, Phase1 = 0.3467, Phase3 = 1.9254, Weight = 0.0100
+  Step   25: Loss = 2.8824, Phase1 = 0.3087, Phase3 = 1.9724, Weight = 0.0100
+  Step   26: Loss = 2.5481, Phase1 = 0.2720, Phase3 = 2.0184, Weight = 0.0100
+  Step   27: Loss = 2.2558, Phase1 = 0.2367, Phase3 = 2.0636, Weight = 0.0100
+  Step   28: Loss = 2.0032, Phase1 = 0.2028, Phase3 = 2.1077, Weight = 0.0100
+  Step   29: Loss = 1.7877, Phase1 = 0.1704, Phase3 = 2.1507, Weight = 0.0100
+  Step   30: Loss = 1.6063, Phase1 = 0.1395, Phase3 = 2.1926, Weight = 0.0100
+  Step   31: Loss = 1.4560, Phase1 = 0.1102, Phase3 = 2.2334, Weight = 0.0100
+  Step   32: Loss = 1.3337, Phase1 = 0.0826, Phase3 = 2.2729, Weight = 0.0100
+  Step   33: Loss = 1.2361, Phase1 = 0.0567, Phase3 = 2.3113, Weight = 0.0100
+  Step   34: Loss = 1.1602, Phase1 = 0.0325, Phase3 = 2.3485, Weight = 0.0100
+  Step   35: Loss = 1.1028, Phase1 = 0.0100, Phase3 = 2.3846, Weight = 0.0100
+  Step   36: Loss = 1.0610, Phase1 = 0.0000, Phase3 = 2.4195, Weight = 0.0100
+  Step   37: Loss = 1.0372, Phase1 = 0.0000, Phase3 = 2.4533, Weight = 0.0100
+  Step   38: Loss = 1.0221, Phase1 = 0.0000, Phase3 = 2.4860, Weight = 0.0100
+  Step   39: Loss = 1.0086, Phase1 = 0.0000, Phase3 = 2.5175, Weight = 0.0100
+  Step   40: Loss = 0.9965, Phase1 = 0.0000, Phase3 = 2.5478, Weight = 0.0100
+  Step   41: Loss = 0.9859, Phase1 = 0.0000, Phase3 = 2.5770, Weight = 0.0100
+  Step   42: Loss = 0.9765, Phase1 = 0.0000, Phase3 = 2.6049, Weight = 0.0100
+  Step   43: Loss = 0.9682, Phase1 = 0.0000, Phase3 = 2.6317, Weight = 0.0100
+  Step   44: Loss = 0.9610, Phase1 = 0.0000, Phase3 = 2.6572, Weight = 0.0100
+  Step   45: Loss = 0.9548, Phase1 = 0.0000, Phase3 = 2.6815, Weight = 0.0100
+  Step   46: Loss = 0.9495, Phase1 = 0.0000, Phase3 = 2.7047, Weight = 0.0104
+  Step   47: Loss = 0.9444, Phase1 = 0.0000, Phase3 = 2.7266, Weight = 0.0113
+  Step   48: Loss = 0.9396, Phase1 = 0.0000, Phase3 = 2.7474, Weight = 0.0126
+  Step   49: Loss = 0.9349, Phase1 = 0.0000, Phase3 = 2.7670, Weight = 0.0142
+  Step   50: Loss = 0.9304, Phase1 = 0.0000, Phase3 = 2.7855, Weight = 0.0162
+  Step   51: Loss = 0.9262, Phase1 = 0.0000, Phase3 = 2.8028, Weight = 0.0185
+  Step   52: Loss = 0.9221, Phase1 = 0.0000, Phase3 = 2.8190, Weight = 0.0210
+  Step   53: Loss = 0.9182, Phase1 = 0.0000, Phase3 = 2.8341, Weight = 0.0237
+  Step   54: Loss = 0.9145, Phase1 = 0.0000, Phase3 = 2.8482, Weight = 0.0266
+  Step   55: Loss = 0.9109, Phase1 = 0.0000, Phase3 = 2.8612, Weight = 0.0297
+  Step   56: Loss = 0.9074, Phase1 = 0.0000, Phase3 = 2.8731, Weight = 0.0330
+  Step   57: Loss = 0.9041, Phase1 = 0.0000, Phase3 = 2.8841, Weight = 0.0364
+  Step   58: Loss = 0.9008, Phase1 = 0.0000, Phase3 = 2.8941, Weight = 0.0398
+  Step   59: Loss = 0.8977, Phase1 = 0.0000, Phase3 = 2.9032, Weight = 0.0434
+  Step   60: Loss = 0.8946, Phase1 = 0.0000, Phase3 = 2.9113, Weight = 0.0471
+  Step   61: Loss = 0.8916, Phase1 = 0.0000, Phase3 = 2.9186, Weight = 0.0508
+  Step   62: Loss = 0.8887, Phase1 = 0.0000, Phase3 = 2.9250, Weight = 0.0546
+  Step   63: Loss = 0.8858, Phase1 = 0.0000, Phase3 = 2.9306, Weight = 0.0585
+  Step   64: Loss = 0.8829, Phase1 = 0.0000, Phase3 = 2.9355, Weight = 0.0623
+  Step   65: Loss = 0.8801, Phase1 = 0.0000, Phase3 = 2.9396, Weight = 0.0662
+  Step   66: Loss = 0.8773, Phase1 = 0.0000, Phase3 = 2.9429, Weight = 0.0702
+  Step   67: Loss = 0.8746, Phase1 = 0.0000, Phase3 = 2.9457, Weight = 0.0741
+  Step   68: Loss = 0.8719, Phase1 = 0.0000, Phase3 = 2.9477, Weight = 0.0780
+  Step   69: Loss = 0.8692, Phase1 = 0.0000, Phase3 = 2.9492, Weight = 0.0819
+
+Final Parameters:
+  Phase1: 0.0000
+  Phase3: 2.9492
+  Memristor Weight: 0.0819
+
+Training Summary:
+  Initial Loss: 31.5523
+  Final Loss: 0.8692
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 0.0000
+  Phase3: 2.9492
+  Memristor Weight: 0.0819
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2349
+  Mean absolute error: 0.0645
+
+Metrics:
+  accuracy:
+    mae: 0.06448989862490861
+    rmse: 0.07989738960110802
+    mdae: 0.06423387604320552
+    marpd: 94.12700181770208
+    r2: 0.9109067183772339
+    corr: 0.9717691218771258
+
+================================================================================
+Hyperparameter Optimization Results
+Date: 2024-12-02 18:09:02
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [50, 70]
+Learning Rate Range: [0.01, 0.05]
+Memory Depth Range: [5, 6]
+Cutoff Dimension Range: [4, 5]
+
+========================================
+Best Parameters
+========================================
+
+Hyperparameters:
+  steps: 70
+  learning_rate: 0.010000
+  memory_depth: 6
+  cutoff_dim: 5
+  best_rmse: 0.028317
+
+Metrics:
+  accuracy:
+    mae: 0.022346784695175623
+    rmse: 0.02831675498688154
+    mdae: 0.020995035758100564
+    marpd: 53.03983284625644
+    r2: 0.9888090555157815
+    corr: 0.9967320562864784
+
+Parameters:
+  phase 1: 6.0110
+  phase 3: 2.7953
+  memristor weight: 1.0000
+

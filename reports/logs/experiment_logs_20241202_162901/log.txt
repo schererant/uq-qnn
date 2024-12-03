@@ -1,0 +1,70 @@
+================================================================================
+Hyperparameter Optimization Log
+Date: 2024-12-02 16:29:01
+================================================================================
+
+Hyperparameter Ranges:
+Steps Range: [10]
+Learning Rate Range: [0.01, 0.05]
+Memory Depth Range: [4]
+Cutoff Dimension Range: [4]
+
+----------------------------------------
+qnn_hp_s10_lr0.01_md4_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 4
+  Training Steps: 10
+  Learning Rate: 0.01
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 41.0107, Phase1 = 4.0503, Phase3 = 0.2084, Weight = 0.2723
+  Step    1: Loss = 41.2626, Phase1 = 4.0603, Phase3 = 0.1985, Weight = 0.2623
+  Step    2: Loss = 40.8997, Phase1 = 4.0703, Phase3 = 0.1885, Weight = 0.2523
+  Step    3: Loss = 40.5388, Phase1 = 4.0803, Phase3 = 0.1786, Weight = 0.2423
+  Step    4: Loss = 40.1801, Phase1 = 4.0903, Phase3 = 0.1686, Weight = 0.2324
+  Step    5: Loss = 39.8234, Phase1 = 4.1003, Phase3 = 0.1586, Weight = 0.2224
+  Step    6: Loss = 39.4687, Phase1 = 4.1104, Phase3 = 0.1487, Weight = 0.2125
+  Step    7: Loss = 39.1160, Phase1 = 4.1204, Phase3 = 0.1386, Weight = 0.2026
+  Step    8: Loss = 38.7653, Phase1 = 4.1304, Phase3 = 0.1286, Weight = 0.1928
+  Step    9: Loss = 38.4166, Phase1 = 4.1404, Phase3 = 0.1186, Weight = 0.1830
+
+Final Parameters:
+  Phase1: 4.1404
+  Phase3: 0.1186
+  Memristor Weight: 0.1830
+
+Training Summary:
+  Initial Loss: 41.0107
+  Final Loss: 38.4166
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 4
+  Phase1: 4.1404
+  Phase3: 0.1186
+  Memristor Weight: 0.1830
+  Stochastic: False
+
+Prediction Progress:
+
+  Sample 1/1:
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2709
+  Mean absolute error: 0.3953
