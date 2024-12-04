@@ -42,8 +42,8 @@ class Config:
     
     # Hyperparameter Optimization
     HYPERPARAMETER_OPTIMIZATION = True
-    HYPER_STEPS_RANGE = [5, 5, 5]
-    HYPER_LEARNING_RATE_RANGE = [0.01]
+    HYPER_STEPS_RANGE = [5, 10]
+    HYPER_LEARNING_RATE_RANGE = [0.01, 0.05]
     HYPER_MEMORY_DEPTH_RANGE = [6]
     HYPER_CUTOFF_DIM_RANGE = [5]
 
@@ -69,7 +69,7 @@ class Config:
     TRAINING_LEARNING_RATE = 0.01
 
     PREDICT_STOCHASTIC = False
-    PREDICT_SAMPLES = 2
+    PREDICT_SAMPLES = 1
     PREDICT_VARIANCE = 0.1
 
     GET_DATA_N_DATA = 200
@@ -184,6 +184,9 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
 
     # log_file_name = Config.LOG_PATH + Config.LOG_FILE_NAME
 
+    if Config.PREDICT_STOCHASTIC:
+        Config.PREDICT_SAMPLES = 1
+
     best_loss = float('inf')
     best_params = None
     best_metrics = None
@@ -252,7 +255,7 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
             phase1=phase1, 
             phase3=phase3, 
             memristor_weight=memristor_weight, 
-            stochastic=False, 
+            stochastic=Config.PREDICT_STOCHASTIC, 
             samples=Config.PREDICT_SAMPLES, 
             var=Config.PREDICT_VARIANCE, 
             cutoff_dim=Config.CUTOFF_DIM,
@@ -269,6 +272,36 @@ def hyperparameter_optimization(X_train, y_train, X_test, y_test):
                                                           Config.LOG_FILE_NAME,
                                                           Config.PARAM_ID
                                                           )
+        
+        
+        if Config.PREDICT_STOCHASTIC:
+            # Apply selective prediction
+            sel_predictions, sel_targets, sel_uncertainty, remaining_fraction = selective_prediction(predictions, 
+                                                                                                    targets, 
+                                                                                                    predictive_uncertainty, 
+                                                                                                    threshold=Config.SELECTIVE_PREDICTION_THRESHOLD
+                                                                                                    )
+
+            # Compute evaluation metrics for selective predictions
+            sel_metrics, sel_metric_categories = compute_eval_metrics(sel_predictions, 
+                                                                    sel_targets, 
+                                                                    sel_uncertainty,
+                                                                    Config.LOG_FILE_NAME,
+                                                                    Config.PARAM_ID,
+                                                                    name="Selective Prediction"
+                                                                    )
+            
+            # Save results to log file
+            with open(Config.LOG_FILE_NAME, "a") as f:
+                f.write(f"Selective Prediction Fraction: {remaining_fraction}\n")
+                f.write("\n\n")
+
+            # Plotting the results
+            plot_predictions(
+                X_train.numpy(), y_train.numpy(), X_test.numpy(), y_test.numpy(),
+                predictions, pred_std=predictive_uncertainty, epistemic=predictive_uncertainty,
+                aleatoric=None, title="Memristor Model Predictions vs Targets", save_path=Config.LOG_PATH+f"prediction_uncertainty_{Config.PARAM_ID}.png"
+            )
 
         
 
