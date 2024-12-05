@@ -1,0 +1,111 @@
+================================================================================
+Experiment_logs_20241204_142604
+Date: 2024-12-04 14:26:37
+================================================================================
+
+----------------------------------------
+qnn_hp_s10_lr0.2_md2_cd2
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 2
+  Training Steps: 10
+  Learning Rate: 0.2
+  Cutoff Dimension: 2
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 41.2813, Phase1 = 4.2403, Phase3 = 0.0184, Weight = 0.0823
+  Step    1: Loss = 34.5663, Phase1 = 4.4404, Phase3 = 0.0000, Weight = 0.0100
+  Step    2: Loss = 28.8946, Phase1 = 4.6409, Phase3 = 0.0000, Weight = 0.0100
+  Step    3: Loss = 23.2000, Phase1 = 4.8420, Phase3 = 0.0000, Weight = 0.0100
+  Step    4: Loss = 17.4972, Phase1 = 5.0431, Phase3 = 0.0000, Weight = 0.0100
+  Step    5: Loss = 12.2899, Phase1 = 5.2429, Phase3 = 0.0000, Weight = 0.0100
+  Step    6: Loss = 7.9776, Phase1 = 5.4389, Phase3 = 0.0000, Weight = 0.0100
+  Step    7: Loss = 4.7892, Phase1 = 5.6279, Phase3 = 0.0000, Weight = 0.0100
+  Step    8: Loss = 2.7561, Phase1 = 5.8060, Phase3 = 0.0000, Weight = 0.0100
+  Step    9: Loss = 1.7422, Phase1 = 5.9696, Phase3 = 0.0000, Weight = 0.0100
+
+Final Parameters:
+  Phase1: 5.9696
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+
+Training Summary:
+  Initial Loss: 41.2813
+  Final Loss: 1.7422
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 2
+  Phase1: 5.9696
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+  Stochastic: True
+  Number of Samples: 20
+  Variance: 0.1
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2002
+  Mean predictive uncertainty: 0.0258
+  Mean absolute error: 0.0592
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 2
+  Phase1: 5.9696
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+  Stochastic: True
+  Number of Samples: 20
+  Variance: 0.1
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2002
+  Mean predictive uncertainty: 0.0256
+  Mean absolute error: 0.0589
+Metrics for Full Prediction:
+  accuracy:
+    mae: 0.05892032406786048
+    rmse: 0.09339865609667629
+    mdae: 0.0408643732671579
+    marpd: 73.97598994894513
+    r2: 0.8782522259263366
+    corr: 0.9617196363735023
+  avg_calibration:
+    rms_cal: 0.2966640896494588
+    ma_cal: 0.2713400000000001
+    miscal_area: 0.27408080808080815
+  adv_group_calibration:
+    ma_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.3070
+      adv_group_cali_stderr: 0.0083
+    rms_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.3389
+      adv_group_cali_stderr: 0.0102
+  sharpness:
+    sharp: 0.029305147007107735
+  scoring_rule:
+    nll: 3.0898776634561744
+    crps: 0.047318025228180884
+    check: 0.023816858926841062
+    interval: 0.32712419478375837
+

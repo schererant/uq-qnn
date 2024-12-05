@@ -49,11 +49,15 @@ def plot_predictions_new(X_test, y_test, predictions, uncertainties=None, save_p
     plt.legend()
     plt.grid(True)
     
-    if save_path:
+    if save_path is not None:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
+        plt.close()
+
+    else:
+        plt.show()
+    
 
 def plot_eval_metrics(metrics, metric_categories, save_path=None):
     """Plot evaluation metrics from compute_eval_metrics output.
@@ -102,13 +106,15 @@ def plot_eval_metrics(metrics, metric_categories, save_path=None):
     
     plt.tight_layout()
     
-    if save_path:
+    if save_path is not None:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
+        plt.close()
+    else:
+        plt.show()
 
     return fig
 
-def plot_training_results(res_mem, filepath):
+def plot_training_results(res_mem, filepath=None):
     """
     Plots and saves the training results including loss and parameters over iterations.
     
@@ -156,8 +162,14 @@ def plot_training_results(res_mem, filepath):
     ax4.grid(True)
     
     plt.tight_layout()
-    plt.savefig(filepath)
-    plt.close(fig)
+    
+    if filepath is not None:
+        plt.savefig(filepath)
+        plt.close(fig)
+    else:
+        plt.show()
+
+    
 
 def plot_toy_data(X_train, 
                   y_train, 
@@ -249,11 +261,13 @@ def plot_predictions(X_train,
         ax2.legend()
 
     plt.tight_layout()
-    if save_path:
+    if save_path is not None:
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
+        plt.close()
+    else:
+        plt.show()
 
 
 def plot_all_predictions(X_train, y_train, X_test, y_test, memristor_predictions, mlp_predictions, poly_predictions, predictive_uncertainty):

@@ -56,7 +56,8 @@ def train_memristor(X_train,
                     log_path: str = None,
                     param_id: str = None, 
                     log = True, 
-                    plot = True):
+                    plot = True,
+                    pickle = False):
     """
     Trains the memristor model using the training data.
 
@@ -205,6 +206,22 @@ def train_memristor(X_train,
     if plot:
         plot_training_results(res_mem, log_path+f"training_results_{param_id}.png")
     
+    if pickle:
+        # Prepare data to be saved
+        trained_params = {
+            'res_mem': res_mem,
+            'phase1': phase1.numpy(),
+            'phase3': phase3.numpy(),
+            'memristor_weight': memristor_weight.numpy()
+        }
+
+        # Define the filename
+        pickle_filename = f"{log_path}trained_params_{param_id}.pkl"
+
+        # Save the data to a pickle file
+        with open(pickle_filename, 'wb') as f:
+            pickle.dump(trained_params, f)
+            
     return res_mem, phase1, phase3, memristor_weight
 
 def predict_memristor(X_test: np.ndarray, 

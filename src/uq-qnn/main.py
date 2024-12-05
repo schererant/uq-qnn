@@ -41,11 +41,11 @@ class Config:
     LOG_PATH = f"reports/logs/experiment_{LOG_NAME}/"
     
     # Hyperparameter Optimization
-    HYPERPARAMETER_OPTIMIZATION = True
-    HYPER_STEPS_RANGE = [5, 10]
-    HYPER_LEARNING_RATE_RANGE = [0.01, 0.05]
-    HYPER_MEMORY_DEPTH_RANGE = [6]
-    HYPER_CUTOFF_DIM_RANGE = [5]
+    HYPERPARAMETER_OPTIMIZATION = False
+    HYPER_STEPS_RANGE = [70]
+    HYPER_LEARNING_RATE_RANGE = [0.1]
+    HYPER_MEMORY_DEPTH_RANGE = [1, 2, 3, 4]
+    HYPER_CUTOFF_DIM_RANGE = [4]
 
     # Model Comparison
     MODEL_COMPARISON = False
@@ -64,7 +64,7 @@ class Config:
 
     # QNN Hyperparameters
     MEMORY_DEPTH = 6
-    CUTOFF_DIM = 5
+    CUTOFF_DIM = 4
     TRAINING_STEPS = 5
     TRAINING_LEARNING_RATE = 0.01
 
