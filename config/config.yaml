@@ -1,12 +1,12 @@
 hyperparameter_optimization:
-  enabled: false
+  enabled: False
   steps_range: [2]
   learning_rate_range: [0.01]
   memory_depth_range: [3]
   cutoff_dim_range: [4, 5]
 
 model_comparison:
-  enabled: true
+  enabled: False
   n_samples: [2]
 
 mlp:
@@ -26,8 +26,8 @@ prediction:
 training:
   memory_depth: 5
   cutoff_dim: 4
-  steps: 5
-  learning_rate: 0.05
+  steps: 70
+  learning_rate: 0.01
 
 data:
   n_data: 200

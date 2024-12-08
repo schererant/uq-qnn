@@ -1,0 +1,55 @@
+================================================================================
+Selective Prediction Sample_hp_s5_lr0.05_md5_cd4
+Date: 2024-12-06 12:27:41
+================================================================================
+
+----------------------------------------
+qnn_hp_s2_lr0.1_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 2
+  Learning Rate: 0.1
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 40.7420, Phase1 = 4.1403, Phase3 = 0.1184, Weight = 0.1823
+  Step    1: Loss = 38.1864, Phase1 = 4.2404, Phase3 = 0.0188, Weight = 0.0833
+
+Final Parameters:
+  Phase1: 4.2404
+  Phase3: 0.0188
+  Memristor Weight: 0.0833
+
+Training Summary:
+  Initial Loss: 40.7420
+  Final Loss: 38.1864
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 4.2404
+  Phase3: 0.0188
+  Memristor Weight: 0.0833
+  Stochastic: True
+  Number of Samples: 2
+  Variance: 0.1
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2428
+  Mean predictive uncertainty: 0.0184
+  Mean absolute error: 0.3708
