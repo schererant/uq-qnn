@@ -5,7 +5,60 @@ import numpy as np
 
 # src/plotting.py
 # src/plotting.py
-def plot_predictions_new(X_test, y_test, predictions, uncertainties=None, save_path=None):
+
+def plot_selective_predictions(predictions, targets, uncertainties, remaining_fraction, save_path=None, plot_title='Selective Prediction Results'):
+    """Plot selective prediction results with uncertainty bands.
+    
+    Args:
+        predictions: Selected predictions after thresholding
+        targets: Selected true targets after thresholding
+        uncertainties: Selected uncertainties after thresholding
+        remaining_fraction: Fraction of data points retained
+        save_path: Path to save the plot (str)
+    """
+    plt.figure(figsize=(12, 6))
+    
+    # Convert to numpy arrays if needed
+    predictions = predictions.numpy() if hasattr(predictions, 'numpy') else np.array(predictions)
+    targets = targets.numpy() if hasattr(targets, 'numpy') else np.array(targets)
+    
+    # Create indices for x-axis
+    x_points = np.arange(len(predictions))
+    
+    # Sort by predictions for cleaner visualization
+    sort_idx = np.argsort(predictions.ravel())
+    pred_sorted = predictions.ravel()[sort_idx]
+    targets_sorted = targets.ravel()[sort_idx]
+    
+    # Plot data points
+    plt.scatter(x_points, targets_sorted, c='blue', label='True', alpha=0.7, s=30)
+    plt.scatter(x_points, pred_sorted, c='red', label='Predicted', alpha=0.7, s=30)
+    plt.plot(x_points, pred_sorted, 'r-', alpha=0.3)
+    
+    # Plot uncertainty bands
+    if uncertainties is not None and len(uncertainties) > 0:
+        uncert_sorted = uncertainties.ravel()[sort_idx]
+        plt.fill_between(
+            x_points,
+            pred_sorted - 2*uncert_sorted,
+            pred_sorted + 2*uncert_sorted,
+            color='red', alpha=0.2, label='±2σ'
+        )
+    
+    plt.xlabel('Sample Index')
+    plt.ylabel('Value')
+    plt.title(f'{plot_title}\nRetained Fraction: {remaining_fraction:.2%}')
+    plt.legend()
+    plt.grid(True)
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+        
+def plot_predictions_new(X_test, y_test, predictions, uncertainties=None, save_path=None, plot_title='Quantum Neural Network Predictions'):
     """Plot prediction results with uncertainty bands.
     
     Args:
@@ -44,8 +97,8 @@ def plot_predictions_new(X_test, y_test, predictions, uncertainties=None, save_p
         )
     
     plt.xlabel('Input')
-    plt.ylabel('Output')
-    plt.title('Quantum Neural Network Predictions')
+    plt.ylabel('RMSE')
+    plt.title(plot_title)
     plt.legend()
     plt.grid(True)
     
@@ -142,7 +195,7 @@ def plot_training_results(res_mem, filepath=None):
     ax2.scatter(steps, phase1_values, c='red', s=30, zorder=2)
     ax2.set_title('Phase 1')
     ax2.set_xlabel('Step')
-    ax2.set_ylabel('Value')
+    ax2.set_ylabel('Phase')
     ax2.grid(True)
 
     # Phase 3 plot
@@ -150,7 +203,7 @@ def plot_training_results(res_mem, filepath=None):
     ax3.scatter(steps, phase3_values, c='green', s=30, zorder=2)
     ax3.set_title('Phase 3')
     ax3.set_xlabel('Step')
-    ax3.set_ylabel('Value')
+    ax3.set_ylabel('Phase')
     ax3.grid(True)
 
     # Memristor Weight plot
@@ -158,7 +211,7 @@ def plot_training_results(res_mem, filepath=None):
     ax4.scatter(steps, weights, c='magenta', s=30, zorder=2)
     ax4.set_title('Memristor Weight')
     ax4.set_xlabel('Step')
-    ax4.set_ylabel('Value')
+    ax4.set_ylabel('Phase')
     ax4.grid(True)
     
     plt.tight_layout()
@@ -333,3 +386,6 @@ def plot_data(X_train, y_train, X_test, y_test, save_path=None):
         plt.close()
     else:
         plt.show()
+
+
+

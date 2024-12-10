@@ -5,47 +5,13 @@ from strawberryfields.ops import *
 import random as rd
 from datetime import datetime
 from tqdm import tqdm, trange
+import pickle
+
 
 from src.plotting import plot_training_results, plot_predictions_new
 from src.utils import log_training_loss
-from src.logger import save_predictions, load_predictions
-
-# Set random seeds for reproducibility
-# np.random.seed(42)
-# tf.random.set_seed(42)
-# rd.seed(42)
-
-
-def build_circuit(phase1, memristor_weight, phase3, encoded_phases):
-    """
-    Constructs the quantum circuit with the given parameters.
-    """
-    circuit = sf.Program(3)
-    with circuit.context as q:
-        Vac     | q[0]
-        Fock(1) | q[1]
-        Vac     | q[2]
-        
-        # Input encoding MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(encoded_phases)           | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        
-        # First MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phase1)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        
-        # Memristor (Second MZI)
-        BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        Rgate(memristor_weight)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-        
-        # Third MZI
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        Rgate(phase3)             | q[1]
-        BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-    return circuit
+from src.logger import ExperimentLogger
+from src.quantum import MemristorCircuit
 
 
 def train_memristor(X_train, 
@@ -54,12 +20,11 @@ def train_memristor(X_train,
                     training_steps, 
                     learning_rate, 
                     cutoff_dim, 
+                    logger: ExperimentLogger,
                     log_filepath: str = None,
                     log_path: str = None,
                     param_id: str = None, 
-                    log = True, 
                     plot = True,
-                    pickle = False,
                     plot_path: str = None):
     """
     Trains the memristor model using the training data.
@@ -75,26 +40,6 @@ def train_memristor(X_train,
         phase3: Trained phase parameter 3.
         memristor_weight: Trained weight parameter for the memristor update function.
     """
-    # Create log file with timestamp
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    # log_filepath = f"memristor_training_{timestamp}.txt"
-
-    if log:
-        with open(log_filepath, "a") as f:
-                f.write("-" * 40 + "\n")
-                f.write(f"qnn_hp_s{training_steps}_lr{learning_rate}_md{memory_depth}_cd{cutoff_dim}\n")
-                f.write("-" * 40 + "\n\n")
-                f.write("Hyperparameters:\n")
-                f.write(" " * 2 + f"Memory Depth: {memory_depth}\n")
-                f.write(" " * 2 + f"Training Steps: {training_steps}\n")
-                f.write(" " * 2 + f"Learning Rate: {learning_rate}\n")
-                f.write(" " * 2 + f"Cutoff Dimension: {cutoff_dim}\n")
-
-                f.write("\n")
-                f.write("-" * 20 + "\n")
-                f.write("Training Log\n")
-                f.write("-" * 20 + "\n")
-
 
     # Initialize variables and optimizer
     np.random.seed(42)
@@ -107,17 +52,10 @@ def train_memristor(X_train,
                        constraint=lambda z: tf.clip_by_value(z, 0, 2 * np.pi))
     memristor_weight = tf.Variable(rd.uniform(0.01, 1), dtype=tf.float32,
                       constraint=lambda z: tf.clip_by_value(z, 0.01, 1))  # Memristor parameter
-    
-    # Write header
-    if log:
-        with open(log_filepath, 'a') as f:
-            f.write("\nInitial Parameters:\n")
-            f.write(" " * 2 + f"Phase1: {float(phase1):.4f}\n")
-            f.write(" " * 2 + f"Phase3: {float(phase3):.4f}\n")
-            f.write(" " * 2 + f"Memristor Weight: {float(memristor_weight):.4f}\n")
-            f.write("\nTraining Progress:\n")
 
-        
+    
+    logger.log_initial_training_phase(phase1, phase3, memristor_weight)
+    
         
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": cutoff_dim})
@@ -151,15 +89,19 @@ def train_memristor(X_train,
 
                 if i == 0:
                     memristor_phase = tf.acos(tf.sqrt(0.5))
-                    circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-                    results = eng.run(circuit)
+
+                    # Init Memristor Circuit
+                    memristor_circuit = MemristorCircuit(phase1, memristor_phase, phase3, encoded_phases[i])
+                    results = eng.run(
+                        memristor_circuit.build_circuit())
                 else:
                     memristor_phase = tf.acos(tf.sqrt(
                         tf.reduce_sum(memory_p1) / memory_depth +
                         memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
                     ))
-                    circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases[i])
-                    results = eng.run(circuit)
+                    memristor_circuit = MemristorCircuit(phase1, memristor_phase, phase3, encoded_phases[i])
+                    results = eng.run(
+                        memristor_circuit.build_circuit())
 
                 # Get probabilities from the circuit results
                 prob = results.state.all_fock_probs()
@@ -179,52 +121,41 @@ def train_memristor(X_train,
 
             # Update progress bar with current loss
             pbar.set_postfix({'loss': f'{float(loss):.4f}'})
-
-            # Log results every step
-            # log_training_loss(log_filepath, step, loss, phase1, phase3, memristor_weight)
-            if log:
-                with open(log_filepath, 'a') as f:
-                    f.write(" " * 2 + f"Step {step:4d}: Loss = {loss:.4f}, "
-                        f"Phase1 = {float(phase1):.4f}, "
-                        f"Phase3 = {float(phase3):.4f}, "
-                        f"Weight = {float(memristor_weight):.4f}\n")
+                    
+            logger.log_training_step(step, loss, phase1, phase3, memristor_weight)
 
 
             res_mem[('loss', 'tr', step)] = [loss.numpy(), phase1.numpy(), phase3.numpy(), memristor_weight.numpy()]
-            # print(f"Loss at step {step + 1}: {loss.numpy()}")
 
-    # print(f"Final loss: {loss.numpy()}")
-    # print(f"Optimal parameters: phase1={phase1.numpy()}, phase3={phase3.numpy()}, memristor_weight={memristor_weight.numpy()}")
 
-    if log:
-        with open(log_filepath, 'a') as f:
-            f.write("\nFinal Parameters:\n") 
-            f.write(" " * 2 + f"Phase1: {float(phase1):.4f}\n")
-            f.write(" " * 2 + f"Phase3: {float(phase3):.4f}\n")
-            f.write(" " * 2 + f"Memristor Weight: {float(memristor_weight):.4f}\n")
-            f.write("\nTraining Summary:\n")
-            f.write(" " * 2 + f"Initial Loss: {res_mem[('loss', 'tr', 0)][0]:.4f}\n")
-            f.write(" " * 2 + f"Final Loss: {loss:.4f}\n")
+    final_metrics = {
+        'final_loss': float(loss),
+        'final_phase1': float(phase1),
+        'final_phase3': float(phase3),
+        'final_memristor_weight': float(memristor_weight),
+        'memory_depth': memory_depth,
+        'training_steps': training_steps,
+        'learning_rate': learning_rate,
+        'cutoff_dim': cutoff_dim
+    }
+    logger.log_final_results(final_metrics)
 
-    if plot:
-        plot_training_results(res_mem, log_path+f"training_results_{param_id}.png")
+    # Save trained model parameters
+    trained_params = {
+        'phase1': phase1.numpy(),
+        'phase3': phase3.numpy(),
+        'memristor_weight': memristor_weight.numpy(),
+        'final_loss': loss.numpy(),
+        'memory_depth': memory_depth,
+        'training_steps': training_steps,
+        'res_mem': res_mem
+    }
+    logger.save_model_artifact(trained_params, 'trained_parameters.pkl')
+
+    # Plot training results
+    plot_training_results(res_mem, f"{logger.base_dir}/plots/training_results_+{param_id}.png")
     
-    if pickle:
-        # Prepare data to be saved
-        trained_params = {
-            'res_mem': res_mem,
-            'phase1': phase1.numpy(),
-            'phase3': phase3.numpy(),
-            'memristor_weight': memristor_weight.numpy()
-        }
-
-        # Define the filename
-        pickle_filename = f"{log_path}trained_params_{param_id}.pkl"
-
-        # Save the data to a pickle file
-        with open(pickle_filename, 'wb') as f:
-            pickle.dump(trained_params, f)
-            
+        
     return res_mem, phase1, phase3, memristor_weight
 
 def predict_memristor(X_test: np.ndarray, 
@@ -237,50 +168,11 @@ def predict_memristor(X_test: np.ndarray,
                       samples: int, 
                       var: float, 
                       cutoff_dim: int, 
-                      log_filepath: str = None,
-                      log_path: str = None,
-                      param_id: str = None,
-                      log = True,
-                      plot = True,
-                      pickle = True,
-                      plot_path: str = None):
+                      logger: ExperimentLogger,
+                      param_id: str = None):
     """
     Uses the trained memristor model to make predictions on test data.
     """
-
-    if log:
-        with open(log_filepath, "a") as f:
-                f.write("\n")
-                f.write("-" * 20 + "\n")
-                f.write("Prediction Log\n")
-                f.write("-" * 20 + "\n")
-
-    if log:
-        with open(log_filepath, "a") as f:
-                f.write("\n")
-                f.write("-" * 20 + "\n")
-                f.write("Random Check\n")
-                f.write(f"Phase1: {np.random.normal(phase1, var)}\n")
-                f.write(f"Phase3: {np.random.normal(phase3, var)}\n")
-                f.write(f"Memristor Weight: {np.random.normal(memristor_weight, var)}\n")
-                f.write(f"Phase1: {np.random.normal(phase1, var)}\n")
-                f.write(f"Phase3: {np.random.normal(phase3, var)}\n")
-                f.write(f"Memristor Weight: {np.random.normal(memristor_weight, var)}\n")
-                f.write("-" * 20 + "\n")
-
-    # Write header and initial parameters
-    if log:
-        with open(log_filepath, 'a') as f:
-            f.write("\nPrediction Parameters:\n")
-            f.write(" " * 2 + f"Memory Depth: {memory_depth}\n")
-            f.write(" " * 2 + f"Phase1: {float(phase1):.4f}\n")
-            f.write(" " * 2 + f"Phase3: {float(phase3):.4f}\n")
-            f.write(" " * 2 + f"Memristor Weight: {float(memristor_weight):.4f}\n")
-            f.write(" " * 2 + f"Stochastic: {stochastic}\n")
-            if stochastic:
-                f.write(" " * 2 + f"Number of Samples: {samples}\n")
-                f.write(" " * 2 + f"Variance: {var}\n")
-            
 
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": cutoff_dim})
     encoded_phases = tf.constant(2 * np.arccos(X_test), dtype=tf.float64)
@@ -293,6 +185,12 @@ def predict_memristor(X_test: np.ndarray,
     memory_p1 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
     memory_p2 = tf.Variable(np.zeros(memory_depth), dtype=tf.float32)
     cycle_index = 0
+
+    if stochastic:
+        print(f"Running {samples} samples with variance {var}...")
+    else:
+        print("Running deterministic prediction...")
+        samples = 1
 
     # print("Predicting on test data...")
     sample_pbar = trange(samples, desc='Prediction Samples', unit='sample')
@@ -327,8 +225,9 @@ def predict_memristor(X_test: np.ndarray,
                     memristor_weight * tf.reduce_sum(memory_p2) / memory_depth
                 ))
 
-            circuit = build_circuit(phase1_sample, memristor_phase, phase3_sample, encoded_phases[i])
-            results = eng.run(circuit)
+
+            memristor_circuit = MemristorCircuit(phase1_sample, memristor_phase, phase3_sample, encoded_phases[i])
+            results = eng.run(memristor_circuit.build_circuit())
 
             # Get probabilities from the circuit results
             prob = results.state.all_fock_probs()
@@ -348,6 +247,10 @@ def predict_memristor(X_test: np.ndarray,
                 'prob_001': f'{float(prob_state_001):.4f}',
                 'prob_010': f'{float(prob_state_010):.4f}'
             })
+            # Compute the loss
+            prob_state_001 = tf.cast(prob_state_001, dtype=tf.float64)
+            loss = tf.square(tf.abs(y_test[i] - prob_state_001))
+            logger.log_prediction_step(i, loss, phase1_sample, phase3_sample, memristor_weight)
 
         all_predictions.append(sample_predictions)
 
@@ -358,29 +261,17 @@ def predict_memristor(X_test: np.ndarray,
         # Calculate mean and standard deviation along the column axis
         final_predictions = np.mean(all_predictions, axis=0)
         predictive_uncertainty = np.std(all_predictions, axis=0)
+        logger.log_prediction(final_predictions, predictive_uncertainty, samples)
+        plot_predictions_new(X_test, y_test, final_predictions, predictive_uncertainty, f"{logger.base_dir}/plots/prediction_results_sample{samples}_{param_id}.png")
     else:
         final_predictions = all_predictions[0]
         predictive_uncertainty = np.array([])
         targets = np.array(targets)
+        logger.log_prediction(final_predictions)
+        plot_predictions_new(X_test, y_test, final_predictions, predictive_uncertainty, f"{logger.base_dir}/plots/prediction_results_deterministic_{param_id}.png")
 
-    # Log final results
-    if log:
-        with open(log_filepath, 'a') as f:
-            f.write("\nPrediction Summary:\n")
-            f.write(" " * 2 + f"Number of test samples: {len(X_test)}\n")
-            f.write(" " * 2 + f"Mean prediction: {np.mean(final_predictions):.4f}\n")
-            if stochastic:
-                f.write(" " * 2 + f"Mean predictive uncertainty: {np.mean(predictive_uncertainty):.4f}\n")
-            f.write(" " * 2 + f"Mean absolute error: {np.mean(np.abs(final_predictions - targets)):.4f}\n")
+    
 
-    if plot:
-        plot_predictions_new(X_test, y_test, final_predictions, predictive_uncertainty, plot_path+f"prediction_results_sample{samples}_{param_id}.png")
-
-    # if pickle:
-    #     pickle_filename = f"{log_path}prediction_results_{param_id}.pkl"
-    #     print(pickle_filename)
-    #     with open(pickle_filename, 'wb') as f:
-    #         pickle.dump(all_predictions, f)
 
     return final_predictions, targets, predictive_uncertainty, all_predictions
 

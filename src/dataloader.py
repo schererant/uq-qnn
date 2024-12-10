@@ -86,7 +86,7 @@ def get_data(n_data: int =100, sigma_noise_1: float = 0.0, datafunction: Callabl
     y_train = y_train[~train_idx]
 
     # test over the whole line
-    X_test = tf.linspace(x_min, x_max, 500)
+    X_test = tf.linspace(x_min, x_max, 500) #TODO: @nina: why 500?
     y_test = datafunction(X_test)
 
 

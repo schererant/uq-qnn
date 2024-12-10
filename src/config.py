@@ -57,10 +57,6 @@ class Config:
     prediction: PredictionConfig
     training: TrainingConfig
     data: DataConfig
-    log_file_name: str
-    log_path: str
-    plot_path: str
-    param_id: str
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> 'Config':
@@ -74,11 +70,7 @@ class Config:
             polynomial=PolynomialConfig(**config_dict['polynomial']),
             prediction=PredictionConfig(**config_dict['prediction']),
             training=TrainingConfig(**config_dict['training']),
-            data=DataConfig(**config_dict['data']),
-            log_file_name=f"logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            plot_path=f"reports/baseline_{datetime.now().strftime('%Y%m%d_%H%M%S')}/plots",
-            param_id="param_id",
-            log_path="logs"
+            data=DataConfig(**config_dict['data'])
         )
 
     def save(self, path: str) -> None:
@@ -95,6 +87,3 @@ class Config:
         with open(path, 'w') as f:
             yaml.dump(config_dict, f)
 
-# Create default config
-DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), '../config/config.yaml')
-Config = Config.from_yaml(DEFAULT_CONFIG_PATH)

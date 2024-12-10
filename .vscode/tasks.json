@@ -10,6 +10,29 @@
           "isDefault": true
         },
         "problemMatcher": []
+      },
+      {
+        "label": "Run tests",
+        "type": "shell",
+        "command": "/Users/anani/Code/uq-qnn/.venv/bin/python -m unittest discover -s tests",
+        "group": {
+          "kind": "test",
+          "isDefault": true
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run training",
+        "type": "shell",
+        "command": "/Users/anani/Code/uq-qnn/.venv/bin/python /Users/anani/Code/uq-qnn/scripts/training.py",
+        "group": {
+          "kind": "test",
+          "isDefault": true
+        },
+        "problemMatcher": []
+
       }
     ]
   }
+
+  

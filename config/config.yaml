@@ -19,17 +19,17 @@ polynomial:
 
 prediction:
   selective_threshold: 0.8
-  stochastic: false
-  samples: 1
+  stochastic: True
+  samples: 5
   variance: 0.1
 
 training:
   memory_depth: 5
   cutoff_dim: 4
   steps: 70
-  learning_rate: 0.01
+  learning_rate: 0.1
 
 data:
   n_data: 200
-  sigma_noise_1: 0.1
+  sigma_noise_1: 0.05
   datafunction: "quartic_data"
