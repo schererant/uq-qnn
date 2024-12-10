@@ -1,0 +1,53 @@
+{
+    "hyperparameter": {
+        "enabled": false,
+        "steps_range": [
+            2
+        ],
+        "learning_rate_range": [
+            0.01
+        ],
+        "memory_depth_range": [
+            3
+        ],
+        "cutoff_dim_range": [
+            4,
+            5
+        ]
+    },
+    "model_comparison": {
+        "enabled": false,
+        "n_samples": [
+            2
+        ]
+    },
+    "mlp": {
+        "hidden_layers": [
+            64,
+            64
+        ],
+        "epochs": 100,
+        "learning_rate": 0.01
+    },
+    "polynomial": {
+        "degree": 3
+    },
+    "prediction": {
+        "selective_threshold": 0.8,
+        "stochastic": true,
+        "samples": 5,
+        "variance": 0.1
+    },
+    "training": {
+        "memory_depth": 5,
+        "cutoff_dim": 4,
+        "steps": 70,
+        "learning_rate": 0.1
+    },
+    "data": {
+        "n_data": 200,
+        "sigma_noise_1": 0.1,
+        "datafunction": "quartic_data"
+    },
+    "timestamp": "2024-12-09 12:11:33"
+}

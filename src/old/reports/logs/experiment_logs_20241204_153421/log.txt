@@ -1,0 +1,150 @@
+================================================================================
+Experiment_logs_20241204_153421
+Date: 2024-12-04 15:34:24
+================================================================================
+
+================================================================================
+Experiment_logs_20241204_153421
+Date: 2024-12-04 15:34:30
+================================================================================
+
+----------------------------------------
+qnn_hp_s70_lr0.1_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 70
+  Learning Rate: 0.1
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 40.7420, Phase1 = 4.1403, Phase3 = 0.1184, Weight = 0.1823
+================================================================================
+Experiment_logs_20241204_153421
+Date: 2024-12-04 15:35:25
+================================================================================
+
+----------------------------------------
+qnn_hp_s5_lr0.1_md6_cd4
+----------------------------------------
+
+Hyperparameters:
+  Memory Depth: 6
+  Training Steps: 5
+  Learning Rate: 0.1
+  Cutoff Dimension: 4
+
+--------------------
+Training Log
+--------------------
+
+Initial Parameters:
+  Phase1: 4.0403
+  Phase3: 0.2184
+  Memristor Weight: 0.2823
+
+Training Progress:
+  Step    0: Loss = 40.7420, Phase1 = 4.1403, Phase3 = 0.1184, Weight = 0.1823
+  Step    1: Loss = 38.1864, Phase1 = 4.2404, Phase3 = 0.0188, Weight = 0.0833
+  Step    2: Loss = 34.7792, Phase1 = 4.3406, Phase3 = 0.0000, Weight = 0.0100
+  Step    3: Loss = 31.7090, Phase1 = 4.4409, Phase3 = 0.0000, Weight = 0.0100
+  Step    4: Loss = 28.9577, Phase1 = 4.5414, Phase3 = 0.0000, Weight = 0.0100
+
+Final Parameters:
+  Phase1: 4.5414
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+
+Training Summary:
+  Initial Loss: 40.7420
+  Final Loss: 28.9577
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 4.5414
+  Phase3: 0.0000
+  Memristor Weight: 0.0100
+  Stochastic: True
+  Number of Samples: 2
+  Variance: 0.1
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.1802
+  Mean predictive uncertainty: 0.0169
+  Mean absolute error: 0.3104
+Metrics for Full Prediction:
+  accuracy:
+    mae: 0.31039351288000866
+    rmse: 0.3628637396836748
+    mdae: 0.3088775594290709
+    marpd: 157.28855932165334
+    r2: -0.8376674353025884
+    corr: -0.45558520888688325
+  avg_calibration:
+    rms_cal: 0.5456611127488654
+    ma_cal: 0.46925999999999995
+    miscal_area: 0.47400000000000003
+  adv_group_calibration:
+    ma_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.4783
+      adv_group_cali_stderr: 0.0020
+    rms_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.5560
+      adv_group_cali_stderr: 0.0023
+  sharpness:
+    sharp: 0.0233626589179039
+  scoring_rule:
+    nll: 977269.2918511069
+    crps: 0.30123494349273156
+    check: 0.15080527308412
+    interval: 2.9920472019883113
+
+Metrics for Selective Prediction:
+  accuracy:
+    mae: 0.3115822730036834
+    rmse: 0.3654678779526177
+    mdae: 0.305353779148819
+    marpd: 156.5379328822766
+    r2: -0.8673108256955879
+    corr: -0.44647229732515853
+  avg_calibration:
+    rms_cal: 0.5557280990896943
+    ma_cal: 0.4776
+    miscal_area: 0.4824242424242424
+  adv_group_calibration:
+    ma_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.4846
+      adv_group_cali_stderr: 0.0015
+    rms_adv_group_cal:
+      group_sizes: 0.5000
+      adv_group_cali_mean: 0.5636
+      adv_group_cali_stderr: 0.0017
+  sharpness:
+    sharp: 0.013259390369057655
+  scoring_rule:
+    nll: 1221576.2345605288
+    crps: 0.3058042692769078
+    check: 0.15302282229451938
+    interval: 3.097483439101589
+
+Selective Prediction Fraction: 0.8
+
+

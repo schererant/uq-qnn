@@ -1,0 +1,19 @@
+
+--------------------
+Prediction Log
+--------------------
+
+Prediction Parameters:
+  Memory Depth: 6
+  Phase1: 5.8715
+  Phase3: 0.0000
+  Memristor Weight: 1.0000
+  Stochastic: True
+  Number of Samples: 2
+  Variance: 0.1
+
+Prediction Summary:
+  Number of test samples: 500
+  Mean prediction: 0.2157
+  Mean predictive uncertainty: 0.0155
+  Mean absolute error: 0.0305

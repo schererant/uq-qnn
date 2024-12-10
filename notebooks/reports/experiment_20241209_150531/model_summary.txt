@@ -1,0 +1,10 @@
+=== Final Model Summary ===
+
+final_loss: 28.934784138513212
+final_phase1: 4.5413618087768555
+final_phase3: 0.0
+final_memristor_weight: 0.009999999776482582
+memory_depth: 5
+training_steps: 5
+learning_rate: 0.1
+cutoff_dim: 4
