@@ -1,3 +1,23 @@
+data:
+  n_data: 200
+  sigma_noise_1: 0.05
+  datafunction: "quartic_data"
+
+training:
+  memory_depth: 5
+  cutoff_dim: 4
+  steps: 2
+  learning_rate: 0.1
+
+prediction:
+  selective_threshold: 0.8
+  stochastic: True
+  samples: 2
+  variance: 0.1
+
+
+###############################################
+
 hyperparameter_optimization:
   enabled: False
   steps_range: [2]
@@ -16,20 +36,3 @@ mlp:
 
 polynomial:
   degree: 3
-
-prediction:
-  selective_threshold: 0.8
-  stochastic: True
-  samples: 5
-  variance: 0.1
-
-training:
-  memory_depth: 5
-  cutoff_dim: 4
-  steps: 70
-  learning_rate: 0.1
-
-data:
-  n_data: 200
-  sigma_noise_1: 0.05
-  datafunction: "quartic_data"
