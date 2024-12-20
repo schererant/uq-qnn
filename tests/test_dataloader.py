@@ -2,7 +2,6 @@ import unittest
 import tensorflow as tf
 import numpy as np
 import os
-import shutils
 
 from src.dataloader import get_data
 
@@ -133,11 +132,11 @@ class TestGetData(unittest.TestCase):
             self.assertEqual(len(X_test), self.test_size,
                            "Test set size should always be 500")
 
-    def tearDown(self):
-        """Clean up after each test method."""
-        # Clean up the entire reports directory for the test experiment
-        if os.path.exists(self.logger.base_dir):
-            shutil.rmtree(self.logger.base_dir)
+    # def tearDown(self):
+    #     """Clean up after each test method."""
+    #     # Clean up the entire reports directory for the test experiment
+    #     if os.path.exists(self.logger.base_dir):
+    #         shutil.rmtree(self.logger.base_dir)
         
 
 if __name__ == '__main__':
