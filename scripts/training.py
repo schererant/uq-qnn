@@ -14,6 +14,7 @@ from src.dataloader import get_data, quartic_data
 from src.logger import ExperimentLogger
 from src.config import Config, HyperparameterConfig, ModelComparisonConfig, MLPConfig, PolynomialConfig, PredictionConfig, TrainingConfig, DataConfig
 from src.model import train_memristor
+from src.modelmegabigding import train_megabigmemristor
 
 tf.get_logger().setLevel('ERROR')
 warnings.filterwarnings("ignore")
@@ -29,8 +30,9 @@ X_train, y_train, X_test, y_test, _ = get_data(n_data=config.data.n_data,
                                                 datafunction=quartic_data
                                                 )
 
+# when running training creation of experiment report does not work yet. Haven't managed to find the bug
 # Train model
-res_mem, phase1, phase3, memristor_weight = train_memristor(
+res_mem, phase1, phase2, phase4, phase8, phase9, phase10, phase11, phase12 = train_megabigmemristor(
     X_train=X_train,
     y_train=y_train,
     memory_depth=config.training.memory_depth,

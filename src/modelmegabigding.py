@@ -63,7 +63,6 @@ def train_megabigmemristor(X_train,
                     memory_depth, 
                     training_steps, 
                     learning_rate, 
-                    cutoff_dmegabigim, 
                     cutoff_dim,
                     logger: ExperimentLogger,
                     log_filepath: str = None,
@@ -119,7 +118,8 @@ def train_megabigmemristor(X_train,
                       constraint=lambda z: tf.clip_by_value(z, 0.01, 1))  # Memristor parameter
 
     
-    logger.log_initial_training_phase(phase1, phase2, phase3, phase4, phase5, phase6, phase7, phase8, phase9, phase10, phase11, phase12)
+    #just log 4 weights (as somewhere else only 4 positional arguments are allowed)
+    logger.log_initial_training_phase(phase1, phase2, phase4) #, phase8 ,phase9, phase10, phase11, phase12)
     
         
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -210,6 +210,7 @@ def train_megabigmemristor(X_train,
                     
             logger.log_training_step(step, loss, phase1, phase2, phase4, phase8, phase9, phase10, phase11, phase12, memristor_weight)
 
+            print(loss)
 
             res_mem[('loss', 'tr', step)] = [loss.numpy()] #, phase1.numpy(), phase2.numpy(), phase4.numpy(), phase8.numpy(), phase9.numpy(), phase10.numpy(), phase11.numpy(), phase12.numpy(), memristor_weight.numpy()]
 
