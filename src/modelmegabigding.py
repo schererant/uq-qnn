@@ -177,13 +177,18 @@ def train_megabigmemristor(X_train,
                     phase7 = tf.acos(tf.sqrt(
                         memristor_weight * tf.reduce_sum(memory_p7) / memory_depth
                     ))
+                    #import pdb
+
+                    #pdb.set_trace()
 
                     memristor_circuit = MemristorMegaBigCircuit(phase1, phase2, phase3, phase4, phase5, phase6, phase7, phase8, phase9, phase10, phase11, phase12, encoded_phases[i])
                     results = eng.run(
                         memristor_circuit.build_circuit())
 
+
                 # Get probabilities from the circuit results
                 prob = results.state.all_fock_probs()
+                #print(prob)
                 prob_state_000100 = tf.cast(tf.math.real(prob[0, 0, 0, 1, 0, 0]), dtype=tf.float64)
                 # prob_state_001000 can be used for training with NLL
                 prob_state_001000 = tf.cast(tf.math.real(prob[0, 0, 1, 0, 0, 0]), dtype=tf.float64)
@@ -200,6 +205,7 @@ def train_megabigmemristor(X_train,
 
                 # Compute the loss
                 loss += MSEloss(y_train[i],prob_state_000100)
+                print(loss)
 
             # Compute gradients and update variables
             gradients = tape.gradient(loss, [phase1, phase2, phase4, phase8, phase9, phase10, phase11, phase12, memristor_weight])
@@ -208,9 +214,8 @@ def train_megabigmemristor(X_train,
             # Update progress bar with current loss
             pbar.set_postfix({'loss': f'{float(loss):.4f}'})
                     
-            logger.log_training_step(step, loss, phase1, phase2, phase4, phase8, phase9, phase10, phase11, phase12, memristor_weight)
-
-            print(loss)
+            # we need a logger that can take arbitrary numbers of inputs - it seems like yes, as otherwise after training step two the loss becomes nan      
+            logger.log_training_step(step, loss, phase1, phase2, memristor_weight) #phase4, phase8, phase9, phase10, phase11, phase12,
 
             res_mem[('loss', 'tr', step)] = [loss.numpy()] #, phase1.numpy(), phase2.numpy(), phase4.numpy(), phase8.numpy(), phase9.numpy(), phase10.numpy(), phase11.numpy(), phase12.numpy(), memristor_weight.numpy()]
 
@@ -243,7 +248,7 @@ def train_megabigmemristor(X_train,
     plot_training_results(res_mem, f"{logger.base_dir}/plots/training_results_+{param_id}.png")
     
         
-    return res_mem, phase1, phase2, phase4, phase8, phase9, phase10, phase11, phase12
+    return res_mem, phase1, phase2, phase4, phase8, phase9, phase10, phase11, phase12, memristor_weight
 
 def predict_megabigmemristor(X_test: np.ndarray, 
                       y_test: np.ndarray, 
