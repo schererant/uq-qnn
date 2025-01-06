@@ -92,6 +92,7 @@ class ExperimentLogger:
             # Initialize metrics CSV with headers
             with open(self.metrics_file, 'w', newline='') as f:
                 writer = csv.writer(f)
+                # need to log arbitrary numbers of phases and weights (maybe make these to be in arbitrary types?)
                 writer.writerow(['timestamp', 'phase', 'step', 'loss', 'phase1', 'phase3', 'memristor_weight'])
 
             # Log experiment ID
@@ -127,11 +128,13 @@ class ExperimentLogger:
             f.write("\n")
 
 
+    # should take a circuit parameter whatever (list?) as an input with parameters to log
     def log_initial_training_phase(self, phase1, phase3, memristor_weight):
         """Log the initial training phase parameters."""
         with open(self.log_file, 'a') as f:
             f.write(f"Initial Training Phase: Phase1={float(phase1)}, Phase3={float(phase3)}, Weight={float(memristor_weight)}\n")
         
+    # this should take a list of phases or something that allows arbitrary amounts of phases for larger circuits    
     def log_training_step(self, step, loss, phase1, phase3, memristor_weight):
         """Log training metrics to both experiment.log and metrics.csv."""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
