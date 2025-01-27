@@ -96,8 +96,8 @@ def plot_predictions_new(X_test, y_test, predictions, uncertainties=None, save_p
             color='red', alpha=0.2, label='±2σ'
         )
     
-    plt.xlabel('Input')
-    plt.ylabel('RMSE')
+    plt.xlabel('Input values for circuit simulation')
+    plt.ylabel('RMSE between targets and circuit predictions')
     plt.title(plot_title)
     plt.legend()
     plt.grid(True)
