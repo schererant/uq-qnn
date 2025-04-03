@@ -59,10 +59,12 @@ def create_experiment_dir():
     os.makedirs(f"{log_path}/plots", exist_ok=False)
 
 class ExperimentLogger:
-    def __init__(self, experiment_name=None, load_existing=None):
-        """Initialize experiment logger with timestamp and create directory structure."""
+    def __init__(self, experiment_name=None, load_existing=None, phases=None, weights=None):
+        """Initialize experiment logger with timestamp and dynamic directory structure."""
+        self.phases = phases or []
+        self.weights = weights or []
+
         if load_existing:
-            # Load existing experiment directory
             self.base_dir = load_existing
             self.experiment_name = os.path.basename(self.base_dir)
         else:
@@ -73,105 +75,76 @@ class ExperimentLogger:
             os.makedirs(f"{self.base_dir}/plots", exist_ok=False)
             os.makedirs(f"{self.base_dir}/artifacts", exist_ok=False)
 
-            
-            # Initialize log files
             self.log_file = f"{self.base_dir}/experiment.log"
             self.params_file = f"{self.base_dir}/parameters.json"
             self.metrics_file = f"{self.base_dir}/metrics.csv"
             self.model_summary = f"{self.base_dir}/model_summary.txt"
             self.trained_model = f"{self.base_dir}/trained_model.pkl"
 
-            # Initialize log files
             with open(self.log_file, 'w') as f:
                 f.write(f"=== {self.experiment_name} Experiment ===\n\n")
 
-            # Initialize model summary file
             with open(self.model_summary, 'w') as f:
                 f.write("=== Model Summary ===\n\n")
-            
-            # Initialize metrics CSV with headers
+
+            # Dynamic CSV headers
+            headers = ['timestamp', 'phase', 'step', 'loss']
+            headers += [f"phase_{i+1}" for i in range(len(self.phases))]
+            headers += [f"memristor_weight_{i+1}" for i in range(len(self.weights))]
+
             with open(self.metrics_file, 'w', newline='') as f:
                 writer = csv.writer(f)
-                # need to log arbitrary numbers of phases and weights (maybe make these to be in arbitrary types?)
-                writer.writerow(['timestamp', 'phase', 'step', 'loss', 'phase1', 'phase3', 'memristor_weight'])
+                writer.writerow(headers)
 
-            # Log experiment ID
             log_experiment_id(self.log_file, timestamp, name=self.experiment_name)
 
     def log_parameters(self, config):
-        """Log experiment parameters to JSON file."""
-        params = {
-            'hyperparameter': config.hyperparameter.__dict__,
-            'model_comparison': config.model_comparison.__dict__,
-            'mlp': config.mlp.__dict__,
-            'polynomial': config.polynomial.__dict__,
-            'prediction': config.prediction.__dict__,
-            'training': config.training.__dict__,
-            'data': config.data.__dict__,
-            # 'paths': config.paths.__dict__,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
+        params = {section: getattr(config, section).__dict__ for section in dir(config) if not section.startswith('_')}
+        params['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         with open(self.params_file, 'w') as f:
             json.dump(params, f, indent=4)
 
-        # Write them to the log file
         with open(self.log_file, 'a') as f:
             f.write("=== Experiment Parameters ===\n")
             for section, section_params in params.items():
-                if isinstance(section_params, dict):
-                    f.write(f"{section}:\n")
-                    for key, value in section_params.items():
-                        f.write(f"  {key}: {value}\n")
-                else:
-                    f.write(f"{section}: {section_params}\n")
+                f.write(f"{section}: {section_params}\n")
             f.write("\n")
 
+    def log_initial_training_phase(self, phases, weights):
+        with open(self.log_file, 'a') as f:
+            phase_str = ', '.join([f"Phase{i+1}={phase:.4f}" for i, phase in enumerate(phases)])
+            weight_str = ', '.join([f"Weight{i+1}={weight:.4f}" for i, weight in enumerate(weights)])
+            f.write(f"Initial Training Phase: {phase_str}, {weight_str}\n")
 
-    # should take a circuit parameter whatever (list?) as an input with parameters to log
-    def log_initial_training_phase(self, phase1, phase3, memristor_weight):
-        """Log the initial training phase parameters."""
-        with open(self.log_file, 'a') as f:
-            f.write(f"Initial Training Phase: Phase1={float(phase1)}, Phase3={float(phase3)}, Weight={float(memristor_weight)}\n")
-        
-    # this should take a list of phases or something that allows arbitrary amounts of phases for larger circuits    
-    def log_training_step(self, step, loss, phase1, phase3, memristor_weight):
-        """Log training metrics to both experiment.log and metrics.csv."""
+    def log_training_step(self, step, loss, phases, weights):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Log to experiment.log
+
         with open(self.log_file, 'a') as f:
-            f.write(f"[{timestamp}] Training Step {step}: Loss={float(loss):.4f}, "
-                   f"Phase1={float(phase1):.4f}, Phase3={float(phase3):.4f}, "
-                   f"Weight={float(memristor_weight):.4f}\n")
-        
-        # Log to metrics.csv
+            phase_str = ', '.join([f"Phase{i+1}={phase:.4f}" for i, phase in enumerate(phases)])
+            weight_str = ', '.join([f"Weight{i+1}={weight:.4f}" for i, weight in enumerate(weights)])
+            f.write(f"[{timestamp}] Training Step {step}: Loss={loss:.4f}, {phase_str}, {weight_str}\n")
+
         with open(self.metrics_file, 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([timestamp, 'training', step, float(loss), float(phase1), 
-                           float(phase3), float(memristor_weight)])
+            row = [timestamp, 'training', step, loss] + phases + weights
+            writer.writerow(row)
 
-    def log_final_training_phase(self, phase1, phase3, memristor_weight, loss):
-        """Log the final training phase parameters."""
+    def log_final_training_phase(self, phases, weights, loss):
         with open(self.log_file, 'a') as f:
-            f.write(f"Final Training Phase: Phase1={phase1}, Phase3={phase3}, Weight={memristor_weight}\n")
+            phase_str = ', '.join([f"Phase{i+1}={phase}" for i, phase in enumerate(phases)])
+            weight_str = ', '.join([f"Weight{i+1}={weight}" for i, weight in enumerate(weights)])
+            f.write(f"Final Training Phase: {phase_str}, {weight_str}\n")
             f.write(f"Final Loss: {loss:.4f}\n")
 
-    def log_prediction_step(self, step, loss, phase1, phase3, memristor_weight):
-        """Log prediction metrics to both experiment.log and metrics.csv."""
+    def log_prediction_step(self, step, loss, phases, weights):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Log to experiment.log
-        # with open(self.log_file, 'a') as f:
-        #     f.write(f"[{timestamp}] Prediction Sample {step}: Loss={float(loss):.4f}, "
-        #            f"Phase1={float(phase1):.4f}, Phase3={float(phase3):.4f}, "
-        #            f"Weight={float(memristor_weight):.4f}\n")
-        
-        # Log to metrics.csv
+
         with open(self.metrics_file, 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([timestamp, 'prediction', step, float(loss), float(phase1), 
-                           float(phase3), float(memristor_weight)])
+            row = [timestamp, 'prediction', step, loss] + phases + weights
+            writer.writerow(row)
+
 
     def log_prediction(self, predictions, uncertainty=None, samples=1):
         """Log prediction results."""
