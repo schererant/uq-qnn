@@ -1,3 +1,7 @@
+model:
+  num_modes: 3
+  initial_state: [(0, 1, 0)]
+
 data:
   n_data: 200
   sigma_noise_1: 0.05
