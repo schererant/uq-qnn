@@ -1,36 +1,12 @@
 import strawberryfields as sf
 from strawberryfields.ops import *
 import numpy as np
-from abc import ABC, abstractmethod
 
-class QuantumCircuit(ABC):
-    """Abstract base class for quantum circuits."""
-    
-    def __init__(self, encoded_phases):
-        self.encoded_phases = encoded_phases
+import strawberryfields as sf
+from strawberryfields.ops import *
+import numpy as np
 
-    def set_encoded_phases(self, encoded_phases):
-        """Set the encoded phases for input encoding."""
-        self.encoded_phases = encoded_phases
-
-    @abstractmethod
-    def build_circuit(self):
-        """Build the quantum circuit. Must be implemented by child classes."""
-        pass
-
-    def _add_encoding_mzi(self, circuit, q, input_mode, target_mode):
-        """Helper method to add input encoding MZI to a circuit."""
-        BSgate(np.pi/4, np.pi/2) | (q[input_mode], q[target_mode])
-        Rgate(self.encoded_phases) | q[target_mode]
-        BSgate(np.pi/4, np.pi/2) | (q[input_mode], q[target_mode])
-
-    def _add_mzi(self, circuit, q, input_mode, target_mode, phase):
-        """Helper method to add a standard MZI to a circuit."""
-        BSgate(np.pi/4, np.pi/2) | (q[input_mode], q[target_mode])
-        Rgate(phase) | q[target_mode]
-        BSgate(np.pi/4, np.pi/2) | (q[input_mode], q[target_mode])
-
-class ClementCircuit:
+class MemristorCircuit:
     @staticmethod
     def fock_basis(state_list, cutoff_dim, modes, dtype=np.complex64, multiplex=False):
         """
@@ -231,243 +207,23 @@ class ClementCircuit:
         """
         # Execute the program.
         state = self.engine.run(self.program).state
+        print(self.program.draw_circuit())
         probabilities = state.all_fock_probs()
         self.engine.reset()
         return probabilities
 
-# # Example usage:
-# if __name__ == "__main__":
-#     # Example configuration (in practice, load from a config file)
-#     config = {
-#         "num_modes": 3,
-#         "initial_state": [(1, 0, 0)],
-#         # "memristor_positions": ...  # Positions of memristors provided by the config; implementation follows later.
-#         # Flat list of phases for two gates: [theta_0, phi_0, theta_1, phi_1]
-#         "initial_phases": [0.1, 0.2, 0.3, 0.4]
-#         # Alternatively, for continuous variables one might provide:
-#         # "initial_phases": [[0.1, 0.15, 0.2], [0.25, 0.2, 0.15], [0.3, 0.35, 0.4], [0.45, 0.4, 0.35]]
-#     }
-#     circuit = MemristorCircuit(config=config)
-#     probs = circuit.run()
-#     print("Fock probabilities:\n", probs)
-
-
-class MemristorCircuit:
-    def __init__(self, phase1, memristor_weight, phase3, encoded_phases):
-        self.phase1 = phase1
-        self.memristor_weight = memristor_weight
-        self.phase3 = phase3
-        self.encoded_phases = encoded_phases
-
-    def set_phase1(self, phase1):
-        self.phase1 = phase1
-
-    def set_memristor_weight(self, memristor_weight):
-        self.memristor_weight = memristor_weight
-
-    def set_phase3(self, phase3):
-        self.phase3 = phase3
-
-    def set_encoded_phases(self, encoded_phases):
-        self.encoded_phases = encoded_phases
-
-    def build_circuit(self):
-        """
-        Constructs the quantum circuit with the given parameters.
-        """
-        circuit = sf.Program(3)
-        with circuit.context as q:
-            Vac     | q[0]
-            Fock(1) | q[1]
-            Vac     | q[2]
-
-            # Input encoding MZI
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-            Rgate(self.encoded_phases)           | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-
-            # First MZI
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-            Rgate(self.phase1)             | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-
-            # Memristor (Second MZI)
-            BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-            Rgate(self.memristor_weight)             | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-
-            # Third MZI
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-            Rgate(self.phase3)             | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-        return circuit
-    
-
-class MemristorMegaCircuit(QuantumCircuit):
-    def __init__(self, phase1, memristor_weight, phase3, phase4, memristor2_weight, phase6, encoded_phases):
-        super().__init__(encoded_phases)
-        self.phase1 = phase1
-        self.memristor_weight = memristor_weight
-        self.phase3 = phase3
-        self.phase4 = phase4
-        self.memristor2_weight = memristor2_weight
-        self.phase6 = phase6
-
-    def set_phase1(self, phase1):
-        self.phase1 = phase1
-
-    def set_memristor_weight(self, memristor_weight):
-        self.memristor_weight = memristor_weight
-
-    def set_phase3(self, phase3):
-        self.phase3 = phase3
-    
-    def set_phase4(self, phase4):
-        self.phase4 = phase4
-
-    def set_memristor2_weight(self, memristor2_weight):
-        self.memristor2_weight = memristor2_weight
-
-    def set_phase6(self, phase6):
-        self.phase6 = phase6
-
-    def build_circuit(self):
-        """
-        Constructs the longer quantum circuit with the given parameters.
-        """
-        circuit = sf.Program(3)
-        with circuit.context as q:
-            Vac     | q[0]
-            Fock(1) | q[1]
-            Vac     | q[2]
-        
-            # Input encoding MZI
-            self._add_encoding_mzi(circuit, q, 0, 1)
-        
-            # First MZI
-            self._add_mzi(circuit, q, 0, 1, self.phase1)
-        
-            # First Memristor (Second MZI)
-            self._add_mzi(circuit, q, 1, 2, self.memristor_weight)
-        
-            # Third MZI
-            self._add_mzi(circuit, q, 0, 1, self.phase3)
-
-            # Fourth MZI
-            self._add_mzi(circuit, q, 0, 1, self.phase4)
-        
-            # Second Memristor (Fifth MZI)
-            self._add_mzi(circuit, q, 1, 2, self.memristor2_weight)
-        
-            # Sixth MZI
-            self._add_mzi(circuit, q, 0, 1, self.phase6)
-
-        return circuit
-
-
-class MemristorMegaBigCircuit(QuantumCircuit):
-    def __init__(self, phase1, phase2, phase3, phase4, phase5, phase6, phase7, phase8, phase9, phase10, phase11, phase12, encoded_phases):
-        super().__init__(encoded_phases)
-        self.phase1 = phase1
-        self.phase2 = phase2
-        self.phase3 = phase3
-        self.phase4 = phase4
-        self.phase5 = phase5
-        self.phase6 = phase6
-        self.phase7 = phase7
-        self.phase8 = phase8
-        self.phase9 = phase9
-        self.phase10 = phase10
-        self.phase11 = phase11
-        self.phase12 = phase12
-
-    def set_phase1(self, phase1):
-        self.phase1 = phase1
-
-    def set_phase2(self, phase2):
-        self.phase2 = phase2
-
-    def set_phase3(self, phase3):
-        self.phase3 = phase3
-    
-    def set_phase4(self, phase4):
-        self.phase4 = phase4
-
-    def set_phase5(self, phase5):
-        self.phase5 = phase5
-    
-    def set_phase6(self, phase6):
-        self.phase6 = phase6
-
-    def set_phase7(self, phase7):
-        self.phase7 = phase7
-    
-    def set_phase8(self, phase8):
-        self.phase8 = phase8
-
-    def set_phase9(self, phase9):
-        self.phase9 = phase9
-
-    def set_phase10(self, phase10):
-        self.phase10 = phase10
-    
-    def set_phase11(self, phase11):
-        self.phase11 = phase11
-
-    def set_phase12(self, phase12):
-        self.phase12 = phase12
-
-    def build_circuit(self):
-        """
-        Constructs the longer quantum circuit with the given parameters.
-        """
-        circuit = sf.Program(6)
-        with circuit.context as q:
-            Vac     | q[0]
-            Vac     | q[1]
-            Fock(1) | q[2]
-            Vac     | q[3]
-            Vac     | q[4]
-            Vac     | q[5]
-        
-
-            # Input encoding MZI
-            self._add_encoding_mzi(circuit, q, 2, 3)
-        
-            # First MZI
-            self._add_mzi(circuit, q, 0, 2, self.phase1)
-
-            # Second MZI
-            self._add_mzi(circuit, q, 4, 2, self.phase2)
-        
-            # Third MZI
-            self._add_mzi(circuit, q, 0, 2, self.phase3)
-
-            # Fourth MZI
-            self._add_mzi(circuit, q, 2, 3, self.phase4)
-        
-            # Fifth MZI
-            self._add_mzi(circuit, q, 2, 5, self.phase5)
-
-            # Sixth MZI
-            self._add_mzi(circuit, q, 1, 2, self.phase6)
-
-            # Seventh MZI
-            self._add_mzi(circuit, q, 2, 4, self.phase7)
-
-            # Eighth MZI
-            self._add_mzi(circuit, q, 0, 2, self.phase8)
-
-            # Ninth MZI
-            self._add_mzi(circuit, q, 2, 3, self.phase9)
-
-            # Tenth MZI
-            self._add_mzi(circuit, q, 2, 5, self.phase10)
-
-            # Eleventh MZI
-            self._add_mzi(circuit, q, 1, 2, self.phase11)
-
-            # Twelth MZI
-            self._add_mzi(circuit, q, 2, 4, self.phase12)
-
-        return circuit
+# Example usage:
+if __name__ == "__main__":
+    # Example configuration (in practice, load from a config file)
+    config = {
+        "num_modes": 3,
+        "initial_state": [(1, 0, 0)],
+        # "memristor_positions": ...  # Positions of memristors provided by the config; implementation follows later.
+        # Flat list of phases for two gates: [theta_0, phi_0, theta_1, phi_1]
+        "initial_phases": [0.1, 0.2, 0.3, 0.4]
+        # Alternatively, for continuous variables one might provide:
+        # "initial_phases": [[0.1, 0.15, 0.2], [0.25, 0.2, 0.15], [0.3, 0.35, 0.4], [0.45, 0.4, 0.35]]
+    }
+    circuit = MemristorCircuit(config=config)
+    probs = circuit.run()
+    print("Fock probabilities:\n", probs)

@@ -100,7 +100,7 @@ def train_memristor(X_train,
     
     logger.log_initial_training_phase(phase1, phase3, memristor_weight)
     
-        
+    
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": cutoff_dim})
     res_mem = {}
