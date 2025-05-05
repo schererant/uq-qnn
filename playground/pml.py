@@ -7,7 +7,7 @@ class PhotonicMachineLearning:
         size = size # M for M X M circuit
         circuit = None
 
-    def build_circuit(phases, circuit_type="Clements") -> pcvl.Circuit:
+    def build_circuit(size, phases, circuit_type="Clements") -> pcvl.Circuit:
         
         if circuit_type == "Clements":
             """
