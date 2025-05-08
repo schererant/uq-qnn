@@ -105,6 +105,8 @@ def train_memristor(X_train,
     eng = sf.Engine(backend="tf", backend_options={"cutoff_dim": cutoff_dim})
     res_mem = {}
 
+    # we encode the phases like before, but to approximate the continuous variable encoding in
+    # the experiment we sample around 
     encoded_phases = tf.constant(2 * np.arccos(X_train), dtype=tf.float64)
     num_samples = len(encoded_phases)
 
