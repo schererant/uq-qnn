@@ -16,8 +16,8 @@ param_idx = 0
 #TODO: Add noise
 
 # Add a single-photon source to the circuit
-source = pcvl.Source(emission_probability=1.0, indistinguishability=0.95)
-circuit.add_source(source, [2])  # Adding the source to mode 2
+# source = pcvl.Source(emission_probability=1.0, indistinguishability=0.95)
+# circuit.add_source(source, [2])  # Adding the source to mode 2
 
 # Implement the rectangular mesh (Clements layout)
 for layer in range(SIZE):
