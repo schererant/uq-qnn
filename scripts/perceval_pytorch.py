@@ -44,10 +44,10 @@ config = {
     'init_theta': None,  # Will be set in trainer
 
     # Plotting
-    'do_plot': False,
+    'do_plot': True,
 
     # Sampler
-    'n_samples': 100
+    'n_samples': 10000
 }
 # =========================================================
 
@@ -121,6 +121,52 @@ def get_cont_swipe_data(
     enc_swipe = np.concatenate([enc + offsets for enc in enc_base])
     y_swipe = np.repeat(y, n_swipe)
     return enc_swipe, y_swipe
+
+#TODO: Check if this is correct
+def get_measured_swipe_data(
+    encoded_phases: np.ndarray,
+    measured_phases: np.ndarray,
+    n_swipe: int
+) -> np.ndarray:
+    """
+    For each encoded phase, find the closest measured phase and select a window of n_swipe measured phases
+    centered around it. Handles edge cases at the boundaries.
+    Args:
+        encoded_phases (np.ndarray): 1D array of encoded phases (e.g., 2*arccos(X)).
+        measured_phases (np.ndarray): 1D array of measured phase values.
+        n_swipe (int): Number of phase points per data point (should be odd).
+    Returns:
+        np.ndarray: 2D array of shape (len(encoded_phases), n_swipe) with measured phase values for each swipe.
+    """
+    if n_swipe < 1 or n_swipe % 2 == 0:
+        raise ValueError(f"n_swipe must be a positive odd integer (got {n_swipe})")
+    n_data = len(encoded_phases)
+    n_meas = len(measured_phases)
+    enc_samples = np.empty((n_data, n_swipe), dtype=measured_phases.dtype)
+    n2 = n_swipe // 2
+    for i in range(n_data):
+        # Find the index of the measured phase closest to the encoded phase
+        diffs = np.abs(measured_phases - encoded_phases[i])
+        k = np.argmin(diffs)
+        # Compute window bounds, handle boundaries
+        start = max(0, k - n2)
+        end = min(n_meas, k + n2 + 1)
+        # If at the left edge, pad right
+        if end - start < n_swipe:
+            if start == 0:
+                end = min(n_meas, start + n_swipe)
+            else:
+                start = max(0, end - n_swipe)
+        # Fill the row
+        window = measured_phases[start:end]
+        # If window is too short (at edges), pad with edge values
+        if len(window) < n_swipe:
+            if start == 0:
+                window = np.pad(window, (0, n_swipe - len(window)), mode='edge')
+            else:
+                window = np.pad(window, (n_swipe - len(window), 0), mode='edge')
+        enc_samples[i, :] = window
+    return enc_samples
 
 ###############################################################################
 # 1.  Data generator                                                          #
@@ -309,6 +355,74 @@ def run_simulation_sequence_np(
     return preds
 
 ###############################################################################
+# 3b.  Continuous-Swipe Simulation (Averaging over swipes)                   #
+###############################################################################
+def run_simulation_sequence_continuous_np(
+    params: np.ndarray,
+    X: np.ndarray,
+    y: np.ndarray,
+    n_swipe: int,
+    swipe_span: float,
+    memory_depth: int,
+    n_samples: int,
+) -> np.ndarray:
+    """
+    For each original data point, generate n_swipe phase-encoded samples, run the circuit for each,
+    and average the results for prediction and memory update.
+    Args:
+        params (np.ndarray): [phi1, phi3, w]
+        X (np.ndarray): Original input data (not expanded)
+        y (np.ndarray): Original target data (not expanded)
+        n_swipe (int): Number of phase points per data point
+        swipe_span (float): Total phase span for swiping
+        memory_depth (int): Memory buffer depth
+        n_samples (int): Number of samples for the Sampler
+    Returns:
+        np.ndarray: Averaged predictions for each original data point
+    """
+    start_time = time.perf_counter()
+    phi1, phi3, w = params
+    num_samples = len(X)
+    input_state = pcvl.BasicState([0, 1, 0])
+    state_001 = pcvl.BasicState([0, 0, 1])
+    state_010 = pcvl.BasicState([0, 1, 0])
+    memory_p1 = np.zeros(memory_depth, dtype=np.float64)
+    memory_p2 = np.zeros(memory_depth, dtype=np.float64)
+    predictions_001 = np.zeros(num_samples, dtype=np.float64)
+    # Generate swipe phases for each data point
+    enc_base = 2 * np.arccos(X)
+    offsets = np.linspace(-swipe_span / 2, swipe_span / 2, n_swipe, dtype=enc_base.dtype)
+    for i in range(num_samples):
+        t = i % memory_depth
+        if i == 0:
+            mem_phi = np.pi / 4
+        else:
+            mem_term1 = np.sum(memory_p1) / memory_depth
+            mem_term2 = w * np.sum(memory_p2) / memory_depth
+            sqrt_arg = np.clip(mem_term1 + mem_term2, 1e-9, 1.0 - 1e-9)
+            mem_phi = np.arccos(np.sqrt(sqrt_arg))
+        # For each swipe
+        prob_state_001 = np.empty(n_swipe)
+        prob_state_010 = np.empty(n_swipe)
+        for k, offset in enumerate(offsets):
+            enc_phi = enc_base[i] + offset
+            circ = build_circuit(phi1, mem_phi, phi3, enc_phi)
+            proc = pcvl.Processor("SLOS", circ)
+            proc.with_input(input_state)
+            circuit_start = time.perf_counter()
+            probs = Sampler(proc).probs(n_samples)["results"]
+            circuit_elapsed = time.perf_counter() - circuit_start
+            sim_logger.log_circuit(circuit_elapsed)
+            prob_state_001[k] = probs.get(state_001, 0.0)
+            prob_state_010[k] = probs.get(state_010, 0.0)
+        predictions_001[i] = prob_state_001.mean()
+        memory_p1[t] = prob_state_010.mean()
+        memory_p2[t] = prob_state_001.mean()
+    elapsed = time.perf_counter() - start_time
+    sim_logger.log(elapsed, n_samples)
+    return predictions_001
+
+###############################################################################
 # 4.  Corrected PSR‑Coefficients (Torch)                                       #
 ###############################################################################
 
@@ -386,6 +500,62 @@ class MemristorLossPSR(torch.autograd.Function):
             th_minus[idx] = np.clip(th_minus[idx], 0.01, 1)
             loss_p = 0.5 * ((run_simulation_sequence_np(th_plus, enc_np, ctx.memory_depth, n_samples=ctx.n_samples) - y_np) ** 2).mean()
             loss_m = 0.5 * ((run_simulation_sequence_np(th_minus, enc_np, ctx.memory_depth, n_samples=ctx.n_samples) - y_np) ** 2).mean()
+            grads[idx] = (loss_p - loss_m) / (2 * eps)
+        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None
+
+# Patch for continuous-swipe loss: custom autograd function for continuous mode
+class MemristorLossPSRContinuous(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, theta: Tensor, X: Tensor, y: Tensor,
+                n_swipe: int, swipe_span: float, memory_depth: int, n_samples: int) -> Tensor:
+        # Logging for the whole loss computation
+        start_time = time.perf_counter()
+        theta_np = theta.detach().cpu().double().numpy()
+        X_np = X.detach().cpu().double().numpy()
+        y_np = y.detach().cpu().double().numpy()
+        preds = run_simulation_sequence_continuous_np(
+            theta_np, X_np, y_np, n_swipe, swipe_span, memory_depth, n_samples
+        )
+        loss = 0.5 * ((preds - y_np) ** 2).mean()
+        ctx.save_for_backward(theta.detach(), X.detach(), y.detach())
+        ctx.n_swipe = n_swipe
+        ctx.swipe_span = swipe_span
+        ctx.memory_depth = memory_depth
+        ctx.n_samples = n_samples
+        ctx.preds_np = preds
+        elapsed = time.perf_counter() - start_time
+        # Log the loss computation as a sequence (for transparency)
+        sim_logger.log(elapsed, n_samples)
+        return torch.tensor(loss, dtype=theta.dtype, device=theta.device)
+
+    @staticmethod
+    def backward(ctx, g_out: Tensor):
+        theta, X, y = ctx.saved_tensors
+        N = y.numel()
+        theta_np = theta.cpu().double().numpy()
+        X_np = X.cpu().double().numpy()
+        y_np = y.cpu().double().numpy()
+        preds = ctx.preds_np
+        dL_df = (preds - y_np) / N
+        grads = np.zeros_like(theta_np)
+        eps = 1e-3
+        for idx in range(len(theta_np)):
+            th_plus, th_minus = theta_np.copy(), theta_np.copy()
+            th_plus[idx] += eps; th_minus[idx] -= eps
+            if idx == 2:  # weight param
+                th_plus[idx] = np.clip(th_plus[idx], 0.01, 1)
+                th_minus[idx] = np.clip(th_minus[idx], 0.01, 1)
+            # Logging for each finite-diff gradient computation
+            start_time = time.perf_counter()
+            loss_p = 0.5 * ((run_simulation_sequence_continuous_np(
+                th_plus, X_np, y_np, ctx.n_swipe, ctx.swipe_span, ctx.memory_depth, ctx.n_samples
+            ) - y_np) ** 2).mean()
+            loss_m = 0.5 * ((run_simulation_sequence_continuous_np(
+                th_minus, X_np, y_np, ctx.n_swipe, ctx.swipe_span, ctx.memory_depth, ctx.n_samples
+            ) - y_np) ** 2).mean()
+            elapsed = time.perf_counter() - start_time
+            # Log each finite-diff sequence as a separate run
+            sim_logger.log(elapsed, ctx.n_samples)
             grads[idx] = (loss_p - loss_m) / (2 * eps)
         return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None
 
@@ -511,22 +681,49 @@ def train_pytorch_cont(
     n_swipe: int,
     swipe_span: float,
     n_samples: int,
-    **kwargs
+    memory_depth: int = 2,
+    lr: float = 0.03,
+    epochs: int = 150,
+    phase_idx: Sequence[int] = (0, 1),
+    n_photons: Sequence[int] = (1, 1),
+    seed: int = 42,
 ) -> Tuple[np.ndarray, List[float]]:
     """
-    Continuous-swipe training path. Expands each (X, y) into n_swipe neighboring phase points.
+    Continuous-swipe training path. For each data point, averages over n_swipe phase samples.
     Args:
         X (np.ndarray): Input data array.
         y (np.ndarray): Output data array.
         n_swipe (int): Number of phase points per data point.
         swipe_span (float): Total phase span for swiping.
         n_samples (int): Number of samples for the Sampler.
-        **kwargs: Additional arguments for training.
+        memory_depth (int): Memory buffer depth.
+        lr (float): Learning rate.
+        epochs (int): Number of training epochs.
+        phase_idx (Sequence[int]): Indices of phase parameters.
+        n_photons (Sequence[int]): Number of photons for each phase.
+        seed (int): Random seed for reproducibility.
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
-    enc_swipe, y_swipe = get_cont_swipe_data(X, y, n_swipe=n_swipe, swipe_span=swipe_span)
-    return train_pytorch_generic(enc_swipe, y_swipe, n_samples=n_samples, **kwargs)
+    rng = np.random.default_rng(seed)
+    init_theta = _init_theta(rng)
+    theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
+    X_t = torch.from_numpy(X).double()
+    y_t = torch.from_numpy(y).double()
+    optim = torch.optim.Adam([theta], lr=lr)
+    hist = []
+    for _ in tqdm(range(epochs), desc="Training", ncols=100):
+        optim.zero_grad()
+        loss = MemristorLossPSRContinuous.apply(
+            theta, X_t, y_t, n_swipe, swipe_span, memory_depth, n_samples
+        )
+        loss.backward()
+        optim.step()
+        with torch.no_grad():
+            theta.data[2].clamp_(0.01, 1.0)        # w ∈ [0.01,1]
+            theta.data[:2].remainder_(2 * np.pi)   # Phasen ∈ [0,2π)
+        hist.append(loss.item())
+    return theta.detach().cpu().numpy(), hist
 
 ###############################################################################
 # 8.  Gradient‑Check (unchanged)                                               #
@@ -608,11 +805,12 @@ def _run_training(
     Returns:
         None
     """
-    n_swipe = _resolve_n_swipe()
-    config['n_swipe'] = n_swipe  # freeze for the rest of the run
+    
 
     # ── choose path ──
     if cont:
+        n_swipe = _resolve_n_swipe()
+        config['n_swipe'] = n_swipe  # freeze for the rest of the run
         theta_opt, history = train_pytorch_cont(
             X_train, y_train,
             memory_depth=config['memory_depth'],
@@ -638,8 +836,13 @@ def _run_training(
     print("Optimized θ:", theta_opt)
 
     # ── predictions on dense grid ──
-    enc_test = 2 * np.arccos(X_test)
-    preds = run_simulation_sequence_np(theta_opt, enc_test, memory_depth=config['memory_depth'], n_samples=n_samples)
+    if cont:
+        preds = run_simulation_sequence_continuous_np(
+            theta_opt, X_test, y_test, config['n_swipe'], config['swipe_span'], config['memory_depth'], n_samples
+        )
+    else:
+        enc_test = 2 * np.arccos(X_test)
+        preds = run_simulation_sequence_np(theta_opt, enc_test, memory_depth=config['memory_depth'], n_samples=n_samples)
 
     if config['do_plot']:
         # ————————————————————————————————————————————————————————————————
@@ -658,7 +861,7 @@ def _run_training(
         if cont:
             enc_swipe, _ = get_cont_swipe_data(X_train, y_train, n_swipe=config['n_swipe'], swipe_span=config['swipe_span'])
             X_swipe = np.cos(enc_swipe / 2)
-            plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config["n_swipe"]})', zorder=2)
+            plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config['n_swipe']})', zorder=2)
 
         plt.plot(X_test, y_test, label='Quartic', ls='--', zorder=1)
         plt.plot(X_test, preds, label='Model', c='red', zorder=4)
