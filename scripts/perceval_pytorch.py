@@ -1,3 +1,23 @@
+"""
+memristor_pytorch_revc.py  ·  Continuous‑Swipe Edition (2025‑05‑11)
+============================================================
+This file extends the original *memristor_pytorch_revc.py* with a quasi‑
+continuous training path that mirrors the changes introduced in the
+`*_scipycontinuousloopsugs` Jupyter notebook series.
+
+Key additions
+-------------
+1.  **Measured traces loader** – `load_measurement_pickle(path)`
+2.  **Phase‑swipe generator** – `get_cont_swipe_data(X, y, ...)`
+3.  **Generic training loop** – `train_pytorch_generic(enc, y, ...)`
+4.  **Continuous wrapper** – `train_pytorch_cont(...)` → mirrors the
+    discrete version while operating on the dense swipe data.
+5.  **CLI toggle** – run *continuous* training with the `--cont` flag.
+
+The discrete workflow is kept completely intact.  Use `--check` for the
+existing gradient check, `--cont` for the new continuous‑swipe path, or
+run without flags for the classical discrete training.
+"""
 
 from __future__ import annotations
 
@@ -25,19 +45,38 @@ def load_measurement_pickle(path: str) -> Tuple[np.ndarray, np.ndarray]:
     return np.asarray(X), np.asarray(y)
 
 
+def compute_n_swipe(
+    t_phase_ms: float,
+    f_laser_khz: float,
+    det_window_us: float,
+    max_swipe: int = 201,
+) -> int:
+    """Derive an odd `n_swipe` from timing constants.
+
+    * `t_phase_ms`   – heater settle time (ms)
+    * `f_laser_khz`  – laser repetition (kHz)
+    * `det_window_us`– detector integration (µs)
+    * `max_swipe`    – upper safety cap to keep RAM/compile time sane
+    """
+    if t_phase_ms <= 0 or f_laser_khz <= 0 or det_window_us <= 0:
+        raise ValueError("Timing inputs must be positive.")
+
+    period_laser_us = 1_000 / f_laser_khz  # µs
+    slot_us = max(period_laser_us, det_window_us)
+    slots_total = int((t_phase_ms * 1_000) // slot_us)  # integer slots
+    n_swipe = max(1, 2 * (slots_total // 2) + 1)        # force odd
+    return min(n_swipe, max_swipe)
+
+
 def get_cont_swipe_data(
     X: np.ndarray,
     y: np.ndarray,
-    n_swipe: int = 11,
+    n_swipe: int,
     swipe_span: float = np.pi / 20,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Fan out every (X, y) into *n_swipe* neighbouring phase points.
-
-    Each original *encoded* phase ϕ is replaced by a small linear segment
-    [ϕ − Δ/2, …, ϕ + Δ/2] with *n_swipe* points.  Targets *y* are simply
-    repeated.  Works well when the underlying function varies slowly in
-    the local neighbourhood (as is typical for phase responses).
-    """
+    """Expand every (X[i], y[i]) into *n_swipe* neighbouring phase points."""
+    if n_swipe < 1 or n_swipe % 2 == 0:
+        raise ValueError("n_swipe must be a positive odd integer (got %d)" % n_swipe)
     enc_base = 2 * np.arccos(X)
     offsets = np.linspace(-swipe_span / 2, swipe_span / 2, n_swipe, dtype=enc_base.dtype)
     enc_swipe = np.concatenate([enc + offsets for enc in enc_base])
@@ -326,10 +365,22 @@ config = {
 }
 # =========================================================
 
+def _resolve_n_swipe() -> int:
+    if config['n_swipe'] is not None:
+        return config['n_swipe']
+    auto = compute_n_swipe(
+        config['t_phase_ms'],
+        config['f_laser_khz'],
+        config['det_window_us'],
+        config['max_swipe'],
+    )
+    print(f"[timing] computed n_swipe = {auto}")
+    return auto
 
 
 def _run_training(X_train, y_train, X_test, y_test, *, cont: bool):
-    """Train model and produce three diagnostic plots."""
+    n_swipe = _resolve_n_swipe()
+    config['n_swipe'] = n_swipe  # freeze for the rest of the run
 
     # ── choose path ──
     if cont:
@@ -375,7 +426,7 @@ def _run_training(X_train, y_train, X_test, y_test, *, cont: bool):
     if cont:
         enc_swipe, _ = get_cont_swipe_data(X_train, y_train, n_swipe=config['n_swipe'], swipe_span=config['swipe_span'])
         X_swipe = np.cos(enc_swipe / 2)
-        plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config["n_swipe"]})', zorder=2)
+        plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config['n_swipe']})', zorder=2)
 
     plt.plot(X_test, y_test, label='Quartic', ls='--', zorder=1)
     plt.plot(X_test, preds, label='Model', c='red', zorder=4)
