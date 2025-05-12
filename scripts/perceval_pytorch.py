@@ -1,24 +1,3 @@
-"""
-memristor_pytorch_revc.py  ·  Continuous‑Swipe Edition (2025‑05‑11)
-============================================================
-This file extends the original *memristor_pytorch_revc.py* with a quasi‑
-continuous training path that mirrors the changes introduced in the
-`*_scipycontinuousloopsugs` Jupyter notebook series.
-
-Key additions
--------------
-1.  **Measured traces loader** – `load_measurement_pickle(path)`
-2.  **Phase‑swipe generator** – `get_cont_swipe_data(X, y, ...)`
-3.  **Generic training loop** – `train_pytorch_generic(enc, y, ...)`
-4.  **Continuous wrapper** – `train_pytorch_cont(...)` → mirrors the
-    discrete version while operating on the dense swipe data.
-5.  **CLI toggle** – run *continuous* training with the `--cont` flag.
-
-The discrete workflow is kept completely intact.  Use `--check` for the
-existing gradient check, `--cont` for the new continuous‑swipe path, or
-run without flags for the classical discrete training.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -51,7 +30,12 @@ def compute_n_swipe(
     det_window_us: float,
     max_swipe: int = 201,
 ) -> int:
-    """Derive an odd `n_swipe` from timing constants.
+    """
+    Translates hardware-timing limits into a safe, odd swipe count. 
+    It divides the heater’s settle time by the slower of the laser 
+    period and detector window to see how many optical “slots” fit, 
+    then forces the result to be odd (so the original point stays centered) 
+    and caps it at `max_swipe` to keep memory footprint reasonable.
 
     * `t_phase_ms`   – heater settle time (ms)
     * `f_laser_khz`  – laser repetition (kHz)
