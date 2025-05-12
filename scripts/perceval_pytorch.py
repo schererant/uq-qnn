@@ -15,6 +15,42 @@ from perceval.algorithm import Sampler
 from torch import Tensor
 from tqdm import tqdm
 
+# ===================== CONFIGURATION =====================
+config = {
+    # Data generation
+    'n_data': 100,
+    'sigma_noise': 0.1,
+    'datafunction': 'quartic_data',
+    'memory_depth': 2,
+
+    # Timing (defaults: 10 ms heater, 50 kHz laser, 10 µs detector)
+    't_phase_ms': 10.0,
+    'f_laser_khz': 50.0,
+    'det_window_us': 10.0,
+    'max_swipe': 21,
+
+    # Continuous swipe
+    'use_continuous': True,
+    'n_swipe': None,
+    'swipe_span': np.pi / 20,
+
+    # Training
+    'lr': 0.03,
+    'epochs': 1,
+    'phase_idx': (0, 1),
+    'n_photons': (1, 1),
+    
+    # Model initialization
+    'init_theta': None,  # Will be set in trainer
+
+    # Plotting
+    'do_plot': False,
+
+    # Sampler
+    'n_samples': 100
+}
+# =========================================================
+
 ###############################################################################
 # 0.  Helpers for measured data & phase swipes                                 #
 ###############################################################################
@@ -104,25 +140,33 @@ def quartic_data(x: np.ndarray) -> np.ndarray:
 def get_data(
     n_data: int = 100,
     sigma_noise: float = 0.0,
-    datafunction: Callable[[np.ndarray], np.ndarray] = quartic_data,
+    datafunction: str = 'quartic_data',
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generates synthetic training and test data, with a gap in the training set.
     Args:
         n_data (int): Number of training data points.
         sigma_noise (float): Standard deviation of Gaussian noise added to y.
-        datafunction (Callable): Function to generate y from X.
+        datafunction (str): Name of the function to generate y from X.
     Returns:
         Tuple: (X_train, y_train, X_test, y_test) arrays.
     """
     x_min, x_max = 0.0, 1.0
     X = np.linspace(x_min, x_max, n_data)
-    y = datafunction(X) + np.random.normal(0, sigma_noise, size=n_data)
+    # Explicit mapping of string to function
+    datafunction_map = {
+        'quartic_data': quartic_data,
+        # Add more mappings here as needed
+    }
+    if datafunction not in datafunction_map:
+        raise ValueError(f"Unknown datafunction: {datafunction}")
+    datafunc = datafunction_map[datafunction]
+    y = datafunc(X) + np.random.normal(0, sigma_noise, size=n_data)
     gap = (x_min + 0.35 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))
     mask = ~((X > gap[0]) & (X < gap[1]))
     X_train, y_train = X[mask], y[mask]
     X_test = np.linspace(x_min, x_max, 500)
-    y_test = datafunction(X_test)
+    y_test = datafunc(X_test)
     return X_train, y_train, X_test, y_test
 
 ###############################################################################
@@ -221,7 +265,7 @@ def run_simulation_sequence_np(
     params: np.ndarray,
     encoded_phases: np.ndarray,
     memory_depth: int,
-    n_samples: int = 1000,
+    n_samples: int,
 ) -> np.ndarray:
     """
     Runs a sequence of photonic circuit simulations and returns p(001) for each encoded phase.
@@ -233,6 +277,8 @@ def run_simulation_sequence_np(
     Returns:
         np.ndarray: Array of predicted p(001) values for each phase.
     """
+    if not isinstance(n_samples, int) or n_samples <= 0:
+        raise ValueError(f"n_samples must be a positive int, got {n_samples!r}")
     start_time = time.perf_counter()
     phi1, phi3, w = params
     input_state = pcvl.BasicState([0, 1, 0])
@@ -304,7 +350,7 @@ class MemristorLossPSR(torch.autograd.Function):
     """
     @staticmethod
     def forward(ctx, theta: Tensor, enc_phases: Tensor, y: Tensor,
-                memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int], n_samples: int = 1000) -> Tensor:
+                memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int], n_samples: int) -> Tensor:
         theta_np, enc_np, y_np = map(lambda t: t.detach().cpu().double().numpy(),
                                      (theta, enc_phases, y))
         preds = run_simulation_sequence_np(theta_np, enc_np, memory_depth, n_samples=n_samples)
@@ -366,7 +412,7 @@ class PhotonicModel(torch.nn.Module):
         self.register_buffer("y", torch.from_numpy(y_np).double())
         self.memory_depth, self.phase_idx, self.n_photons = memory_depth, phase_idx, n_photons
 
-    def forward(self, n_samples: int = 1000) -> Tensor:
+    def forward(self, n_samples: int) -> Tensor:
         """
         Computes the loss using the custom autograd function.
         Args:
@@ -406,7 +452,7 @@ def train_pytorch_generic(
     phase_idx: Sequence[int] = (0, 1),
     n_photons: Sequence[int] = (1, 1),
     seed: int = 42,
-    n_samples: int = 1000
+    n_samples: int
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -462,9 +508,9 @@ def train_pytorch_cont(
     X: np.ndarray,
     y: np.ndarray,
     *,
-    n_swipe: int = 11,
-    swipe_span: float = np.pi / 20,
-    n_samples: int = 1000,
+    n_swipe: int,
+    swipe_span: float,
+    n_samples: int,
     **kwargs
 ) -> Tuple[np.ndarray, List[float]]:
     """
@@ -497,9 +543,9 @@ def gradient_check() -> None:
     enc = 2 * np.arccos(X)
     theta0 = np.array([1.2, 2.3, 0.5])
     mem_depth = 2
+    n_samples = 5
     def L(params):
-        return 0.5 * ((run_simulation_sequence_np(params, enc, mem_depth) - y) ** 2).mean()
-    
+        return 0.5 * ((run_simulation_sequence_np(params, enc, mem_depth, n_samples=n_samples) - y) ** 2).mean()
     # Finite Difference
     eps = 1e-5
     num_grad = np.zeros_like(theta0)
@@ -510,7 +556,7 @@ def gradient_check() -> None:
         num_grad[k] = (L(p_plus) - L(p_minus)) / (2 * eps)
     th_t = torch.tensor(theta0, dtype=torch.float64, requires_grad=True)
     loss = MemristorLossPSR.apply(th_t, torch.from_numpy(enc).double(), torch.from_numpy(y).double(),
-                                  mem_depth, (0, 1), (1, 1))
+                                  mem_depth, (0, 1), (1, 1), n_samples)
     loss.backward()
     psr_grad = th_t.grad.detach().cpu().numpy()
     print("Finite‑diff  :", num_grad)
@@ -522,38 +568,6 @@ def gradient_check() -> None:
 # 9.  Main                                                                     #
 ###############################################################################
 
-# ===================== CONFIGURATION =====================
-config = {
-    # Data generation
-    'n_data': 100,
-    'sigma_noise': 0.1,
-    'datafunction': quartic_data,
-    'memory_depth': 2,
-
-    # Timing (defaults: 10 ms heater, 50 kHz laser, 10 µs detector)
-    't_phase_ms': 10.0,
-    'f_laser_khz': 50.0,
-    'det_window_us': 10.0,
-    'max_swipe': 21,
-
-    # Continuous swipe
-    'use_continuous': True,
-    'n_swipe': None,
-    'swipe_span': np.pi / 20,
-
-    # Training
-    'lr': 0.03,
-    'epochs': 1,
-    'phase_idx': (0, 1),
-    'n_photons': (1, 1),
-    
-    # Model initialization
-    'init_theta': None,  # Will be set in trainer
-
-    # Plotting
-    'do_plot': True,
-}
-# =========================================================
 
 def _resolve_n_swipe() -> int:
     """
@@ -580,7 +594,7 @@ def _run_training(
     y_test: np.ndarray,
     *,
     cont: bool,
-    n_samples: int = 1000
+    n_samples: int
 ) -> None:
     """
     Runs the training process and plots results for both discrete and continuous modes.
@@ -673,16 +687,18 @@ def _run_training(
         plt.show()
 
 
-def main(measured_data: str | None = None, use_continuous: bool = False, n_samples: int = 1000) -> None:
+def main(n_samples: int, measured_data: str | None = None, use_continuous: bool = False) -> None:
     """
     Main entry point for running the training and evaluation pipeline.
     Args:
+        n_samples (int): Number of samples for the Sampler.
         measured_data (str | None): Path to measured data pickle file, or None for synthetic data.
         use_continuous (bool): Whether to use continuous-swipe training.
-        n_samples (int): Number of samples for the Sampler.
     Returns:
         None
     """
+    if not isinstance(n_samples, int) or n_samples <= 0:
+        raise ValueError(f"n_samples must be a positive int, got {n_samples!r}")
     if measured_data is not None:
         X_train, y_train = load_measurement_pickle(measured_data)
         # Synthetic test set: densify full phase range
@@ -703,7 +719,7 @@ if __name__ == "__main__":
     argp.add_argument("--check", action="store_true", help="Run gradient check and exit")
     argp.add_argument("--cont", action="store_true", help="Use continuous‑swipe training")
     argp.add_argument("--data", type=str, help="Pickle file with measured (X, y) traces")
-    argp.add_argument("--n_samples", type=int, default=1000, help="Number of samples for the Sampler")
+    argp.add_argument("--n_samples", type=int, default=config['n_samples'], help="Number of samples for the Sampler")
     args, _ = argp.parse_known_args()
     if args.check:
         gradient_check()
