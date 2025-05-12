@@ -658,7 +658,7 @@ def _run_training(
         if cont:
             enc_swipe, _ = get_cont_swipe_data(X_train, y_train, n_swipe=config['n_swipe'], swipe_span=config['swipe_span'])
             X_swipe = np.cos(enc_swipe / 2)
-            plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config['n_swipe']})', zorder=2)
+            plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config["n_swipe"]})', zorder=2)
 
         plt.plot(X_test, y_test, label='Quartic', ls='--', zorder=1)
         plt.plot(X_test, preds, label='Model', c='red', zorder=4)
