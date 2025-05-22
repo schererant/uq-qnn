@@ -510,7 +510,7 @@ class MemristorLossPSR(torch.autograd.Function):
         y_np     = y.cpu().double().numpy()
         preds    = ctx.preds_np
         N        = y.numel()
-        dL_df    = (preds - y_np) / N
+        dL_df    = (preds - y_np) / N # For quadratic loss
 
         grads = np.zeros_like(theta_np)
         eps   = 1e-3
