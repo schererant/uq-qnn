@@ -130,6 +130,64 @@ def quartic_data(x: np.ndarray) -> np.ndarray:
     return np.power(x, 4)
 
 
+def sinusoid_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes a sinusoidal function of the input array.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with sin(2πx) * 0.5 + 0.5
+    """
+    return np.sin(2 * np.pi * x) * 0.5 + 0.5
+
+
+def multi_modal_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes a multi-modal function (sum of Gaussians) of the input array.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with multiple Gaussian peaks
+    """
+    g1 = np.exp(-((x - 0.2) ** 2) / 0.02) * 0.5
+    g2 = np.exp(-((x - 0.6) ** 2) / 0.04) * 0.8
+    g3 = np.exp(-((x - 0.9) ** 2) / 0.01) * 0.3
+    return g1 + g2 + g3
+
+
+def step_function_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes a step function with smooth transitions.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with step function values
+    """
+    return 0.5 * (np.tanh((x - 0.3) * 10) + 1) * 0.5 + 0.25
+
+
+def oscillating_poly_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes an oscillating polynomial function.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with oscillating polynomial values
+    """
+    return x**3 - 0.5 * x**2 + 0.1 * np.sin(15 * x)
+
+
+def damped_cosine_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes a damped cosine function.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with damped cosine values
+    """
+    return np.exp(-2 * x) * np.cos(10 * np.pi * x) * 0.5 + 0.5
+
+
 def get_data(
     n_data: int = 100,
     sigma_noise: float = 0.0,
@@ -149,10 +207,14 @@ def get_data(
     # Explicit mapping of string to function
     datafunction_map = {
         'quartic_data': quartic_data,
-        # Add more mappings here as needed
+        'sinusoid_data': sinusoid_data,
+        'multi_modal_data': multi_modal_data,
+        'step_function_data': step_function_data,
+        'oscillating_poly_data': oscillating_poly_data,
+        'damped_cosine_data': damped_cosine_data,
     }
     if datafunction not in datafunction_map:
-        raise ValueError(f"Unknown datafunction: {datafunction}")
+        raise ValueError(f"Unknown datafunction: {datafunction}. Available functions: {list(datafunction_map.keys())}")
     datafunc = datafunction_map[datafunction]
     y = datafunc(X) + np.random.normal(0, sigma_noise, size=n_data)
     gap = (x_min + 0.35 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))
