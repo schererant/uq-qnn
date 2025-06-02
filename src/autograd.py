@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Optional
 import numpy as np
 import torch
 from torch import Tensor
 
 from .simulation import run_simulation_sequence_np
+from .circuits import CircuitType
 
 
 @lru_cache(maxsize=None)
@@ -61,6 +62,10 @@ class MemristorLossPSR(torch.autograd.Function):
         n_samples: int,
         n_swipe: int = 0,
         swipe_span: float = 0.0,
+        circuit_type: CircuitType = CircuitType.MEMRISTOR,
+        n_modes: int = 3,
+        encoding_mode: int = 0,
+        target_mode: Optional[Tuple[int, ...]] = None,
     ) -> Tensor:
         discrete = (n_swipe == 0)
         theta_np = theta.detach().cpu().double().numpy()
@@ -70,12 +75,20 @@ class MemristorLossPSR(torch.autograd.Function):
         if discrete:
             preds = run_simulation_sequence_np(
                 theta_np, memory_depth, n_samples,
-                encoded_phases=enc_np
+                encoded_phases=enc_np,
+                circuit_type=circuit_type,
+                n_modes=n_modes,
+                encoding_mode=encoding_mode,
+                target_mode=target_mode
             )
         else:
             preds = run_simulation_sequence_np(
                 theta_np, memory_depth, n_samples,
-                encoded_phases=enc_np, n_swipe=n_swipe, swipe_span=swipe_span
+                encoded_phases=enc_np, n_swipe=n_swipe, swipe_span=swipe_span,
+                circuit_type=circuit_type,
+                n_modes=n_modes,
+                encoding_mode=encoding_mode,
+                target_mode=target_mode
             )
 
         loss_val = 0.5 * np.mean((preds - y_np) ** 2)
@@ -91,6 +104,10 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.memory_depth = memory_depth
         ctx.n_samples    = n_samples
         ctx.preds_np     = preds
+        ctx.circuit_type = circuit_type
+        ctx.n_modes      = n_modes
+        ctx.encoding_mode = encoding_mode
+        ctx.target_mode  = target_mode
 
         return torch.tensor(loss_val, dtype=theta.dtype, device=theta.device)
 
@@ -117,12 +134,20 @@ class MemristorLossPSR(torch.autograd.Function):
                 if ctx.discrete:
                     out = run_simulation_sequence_np(
                         θ_shift, ctx.memory_depth, ctx.n_samples,
-                        encoded_phases=enc_np
+                        encoded_phases=enc_np,
+                        circuit_type=ctx.circuit_type,
+                        n_modes=ctx.n_modes,
+                        encoding_mode=ctx.encoding_mode,
+                        target_mode=ctx.target_mode
                     )
                 else:
                     out = run_simulation_sequence_np(
                         θ_shift, ctx.memory_depth, ctx.n_samples,
-                        encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span
+                        encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
+                        circuit_type=ctx.circuit_type,
+                        n_modes=ctx.n_modes,
+                        encoding_mode=ctx.encoding_mode,
+                        target_mode=ctx.target_mode
                     )
                 df_dθ += c * out
             grads[p_idx] = np.real(np.dot(dL_df, df_dθ))
@@ -132,30 +157,51 @@ class MemristorLossPSR(torch.autograd.Function):
         for idx in weight_idxs:
             θ_p = theta_np.copy(); θ_m = theta_np.copy()
             θ_p[idx] += eps; θ_m[idx] -= eps
-            θ_p[idx] = np.clip(θ_p[idx], 0.01, 1)
-            θ_m[idx] = np.clip(θ_m[idx], 0.01, 1)
+            # Only clip the weight parameter (index 2), not the phases
+            if idx == 2:  # weight parameter
+                θ_p[idx] = np.clip(θ_p[idx], 0.01, 1)
+                θ_m[idx] = np.clip(θ_m[idx], 0.01, 1)
+            else:  # phase parameters can wrap around
+                θ_p[idx] = θ_p[idx] % (2 * np.pi)
+                θ_m[idx] = θ_m[idx] % (2 * np.pi)
 
             if ctx.discrete:
                 pred_p = run_simulation_sequence_np(
                     θ_p, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np
+                    encoded_phases=enc_np,
+                    circuit_type=ctx.circuit_type,
+                    n_modes=ctx.n_modes,
+                    encoding_mode=ctx.encoding_mode,
+                    target_mode=ctx.target_mode
                 )
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np
+                    encoded_phases=enc_np,
+                    circuit_type=ctx.circuit_type,
+                    n_modes=ctx.n_modes,
+                    encoding_mode=ctx.encoding_mode,
+                    target_mode=ctx.target_mode
                 )
             else:
                 pred_p = run_simulation_sequence_np(
                     θ_p, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span
+                    encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
+                    circuit_type=ctx.circuit_type,
+                    n_modes=ctx.n_modes,
+                    encoding_mode=ctx.encoding_mode,
+                    target_mode=ctx.target_mode
                 )
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span
+                    encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
+                    circuit_type=ctx.circuit_type,
+                    n_modes=ctx.n_modes,
+                    encoding_mode=ctx.encoding_mode,
+                    target_mode=ctx.target_mode
                 )
 
             loss_p = 0.5 * np.mean((pred_p - y_np) ** 2)
             loss_m = 0.5 * np.mean((pred_m - y_np) ** 2)
             grads[idx] = (loss_p - loss_m) / (2 * eps)
 
-        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None, None, None
+        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None, None, None, None, None, None, None

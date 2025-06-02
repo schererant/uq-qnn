@@ -14,7 +14,7 @@ This repository implements a modular framework for training photonic quantum neu
 The codebase is organized into the following modules:
 
 - `src/autograd.py`: Implements parameter-shift rule (PSR) for photonic circuits
-- `src/circuits.py`: Circuit construction for encoding and memristor components
+- `src/circuits.py`: Circuit construction for encoding and memristor components (array-based parameter design)
 - `src/data.py`: Data generation and processing utilities (multiple synthetic functions)
 - `src/loss.py`: Custom loss functions and PyTorch model implementations
 - `src/simulation.py`: Circuit simulation with discrete and continuous modes
@@ -48,6 +48,11 @@ python main.py --n-samples 1000
 - `--lr`: Learning rate
 - `--measured-data`: Path to measured data pickle file
 - `--datafunction`: Synthetic data function to use (see below)
+- `--n-phases`: Number of phase parameters in the memristor circuit (default: 2)
+- `--circuit-type`: Circuit architecture to use ('memristor' or 'clements')
+- `--n-modes`: Number of modes for Clements architecture (default: 3)
+- `--encoding-mode`: Mode to apply encoding to (default: 0)
+- `--target-mode`: Target output mode(s) as comma-separated list (e.g., '2,3')
 
 See `python main.py --help` for all available options.
 
@@ -63,6 +68,58 @@ The framework includes multiple synthetic data functions for regression tasks:
 - `damped_cosine_data`: Damped cosine wave
 
 Run the `examples/function_comparison.py` script to compare model performance across all functions.
+
+### Example Scripts
+
+The repository includes several example scripts:
+
+1. `examples/simple_regression.py` - Basic regression with uncertainty quantification
+2. `examples/function_comparison.py` - Compare performance across different synthetic functions
+3. `examples/circuit_comparison.py` - Compare memristor vs. Clements circuit architectures
+
+For the Clements architecture example, run:
+```bash
+python examples/circuit_comparison.py
+```
+
+This script demonstrates how to use both architectures on the same dataset and compares their performance.
+
+### Circuit Architectures
+
+The framework supports two distinct circuit architectures:
+
+#### 1. Memristor Architecture
+
+The photonic memristor circuit implementation uses an array-based approach:
+
+- `encoding_circuit`: Builds a 2-mode encoding circuit with a phase shifter
+- `memristor_circuit`: Takes an array of phases instead of individual parameters
+- `build_circuit`: Combines encoding and memristor circuits with array-based parameters
+
+Parameter structure for memristor circuit:
+```
+params = [phi1, phi3, w]
+```
+where `phi1` and `phi3` are phase parameters and `w` is the memory weight parameter.
+
+#### 2. Clements (Rectangular) Architecture
+
+The Clements architecture provides a more flexible, scalable approach:
+
+- Configurable number of modes (use `--n-modes` option)
+- Mesh of Mach-Zehnder Interferometers (MZIs) in a rectangular grid pattern
+- Each MZI has two phase shifters (internal and external)
+- Supports arbitrary-sized photonic neural networks
+
+Parameter structure for Clements circuit:
+```
+params = [phi1_int, phi1_ext, phi2_int, phi2_ext, ..., phiN_int, phiN_ext, w]
+```
+where each MZI has an internal phase (`phi_int`) and external phase (`phi_ext`), and `w` is the memory weight parameter.
+
+The number of phase parameters is automatically calculated as `n_modes * (n_modes - 1)` based on the number of modes.
+
+> **Note:** For Clements architecture, you must ensure that `n_modes` ≥ 2 and `encoding_mode` < `n_modes`. The target mode(s) must also be valid for the given number of modes.
 
 ## Tasks
 

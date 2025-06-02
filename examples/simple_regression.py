@@ -38,9 +38,10 @@ def main():
     config['lr'] = 0.03
     config['epochs'] = 30
     config['memory_depth'] = 2
-    config['phase_idx'] = (0, 1)
-    config['n_photons'] = (1, 1)
+    config['phase_idx'] = (0, 1)  # Indices of phase parameters (excluding weight)
+    config['n_photons'] = (1, 1)  # Number of photons for each phase
     n_samples = 500
+    n_phases = 2  # Number of external phase parameters (excluding memory phase)
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -60,7 +61,8 @@ def main():
         phase_idx=config['phase_idx'],
         n_photons=config['n_photons'],
         n_swipe=0,
-        n_samples=n_samples
+        n_samples=n_samples,
+        n_phases=n_phases
     )
     
     # Generate predictions
@@ -87,8 +89,13 @@ def main():
         sample_count = n_samples + np.random.randint(-100, 100)
         sample_count = max(100, sample_count)  # Ensure at least 100 samples
         
+        # Small random perturbation to parameters to simulate quantum noise
+        perturbed_theta = theta_discrete.copy()
+        # Only perturb phases slightly, not the weight
+        perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
+        
         preds = run_simulation_sequence_np(
-            theta_discrete, 
+            perturbed_theta, 
             config['memory_depth'], 
             sample_count, 
             encoded_phases=enc_test
@@ -133,8 +140,8 @@ def main():
     
     # Plot 3: Uncertainty visualization
     plt.subplot(2, 2, 3)
-    plt.scatter(X_test, std_preds, c=np.abs(mean_preds - y_test), cmap='viridis')
-    plt.colorbar(label='Absolute error')
+    scatter = plt.scatter(X_test, std_preds, c=np.abs(mean_preds - y_test), cmap='viridis')
+    plt.colorbar(scatter, label='Absolute error')
     plt.xlabel('x')
     plt.ylabel('Standard deviation')
     plt.title('Uncertainty vs. Input')
