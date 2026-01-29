@@ -4,6 +4,9 @@ reports/
 # OS specific
 .DS_Store
 
+# documentation
+docs/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

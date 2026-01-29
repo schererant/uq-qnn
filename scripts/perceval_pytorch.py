@@ -433,19 +433,35 @@ def run_simulation_sequence_np(
 @lru_cache(maxsize=None)
 def photonic_psr_coeffs_torch(n: int) -> Tuple[Tensor, Tensor]:
     """
-    Computes phase-shift rule (PSR) coefficients for photonic gradients.
+    Compute the shift angles and coefficients for the photonic parameter-shift rule (PSR).
+
+    The photonic PSR allows the exact calculation of gradients with respect to phase parameters
+    in linear optical (photonic) quantum circuits. For a phase shifter acting on n photons, the
+    gradient of an expectation value can be written as a weighted sum of expectation values at
+    shifted parameter values:
+
+        d/dθ f(θ) = sum_p c_p * f(θ + shift_p)
+
+    where the number of terms is 2n, and the shifts and coefficients are determined by the photon number.
+
     Args:
-        n (int): Number of photons.
+        n (int): Number of photons passing through the phase shifter.
+
     Returns:
-        Tuple[Tensor, Tensor]: Tuple of (shifts, c_p) tensors for PSR.
+        Tuple[Tensor, Tensor]:
+            - psr_shifts (Tensor): 1D tensor of length 2n containing the shift angles (in radians) to apply to the phase parameter.
+            - psr_coeffs (Tensor): 1D tensor of length 2n containing the real coefficients for each shift, to be used in the weighted sum.
+
+    References:
+        - A Photonic Parameter-shift Rule: Enabling Gradient Computation for Photonic Quantum Computers (arXiv:2410.02726)
     """
-    P = 2 * n
-    shifts = 2 * np.pi * np.arange(1, P + 1) / (2 * n + 1)
-    grad_vec = -1j * np.concatenate((np.arange(1, n + 1), -np.arange(n, 0, -1)))
-    cp_full = np.fft.ifft(np.concatenate(([0], grad_vec)))
-    shifts_t = torch.from_numpy(shifts).double()
-    cp_t = torch.from_numpy(np.real_if_close(cp_full[1:])).double()
-    return shifts_t, cp_t
+    num_psr_terms = 2 * n
+    psr_shifts = 2 * np.pi * np.arange(1, num_psr_terms + 1) / (2 * n + 1)
+    grad_vector = -1j * np.concatenate((np.arange(1, n + 1), -np.arange(n, 0, -1)))
+    psr_coeffs_full = np.fft.ifft(np.concatenate(([0], grad_vector)))
+    psr_shifts_t = torch.from_numpy(psr_shifts).double()
+    psr_coeffs_t = torch.from_numpy(np.real_if_close(psr_coeffs_full[1:])).double()
+    return psr_shifts_t, psr_coeffs_t
 
 ###############################################################################
 # 5.  Autograd Function   (PSR  +  Chain rule)                                 #
@@ -510,7 +526,7 @@ class MemristorLossPSR(torch.autograd.Function):
         y_np     = y.cpu().double().numpy()
         preds    = ctx.preds_np
         N        = y.numel()
-        dL_df    = (preds - y_np) / N
+        dL_df    = (preds - y_np) / N # For quadratic loss
 
         grads = np.zeros_like(theta_np)
         eps   = 1e-3

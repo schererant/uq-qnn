@@ -1,137 +1,227 @@
-from datetime import datetime
+from __future__ import annotations
+
+import argparse
+from typing import Optional
 import numpy as np
-import tensorflow as tf
+import matplotlib.pyplot as plt
 
-def log_training_loss(filepath, step, loss, phase1, phase3, memristor_weight):
-    """Log training step results to file"""
-    with open(filepath, 'a') as f:
-        f.write(f"Step {step:4d}: Loss = {loss:.4f}, "
-                f"Phase1 = {float(phase1):.4f}, "
-                f"Phase3 = {float(phase3):.4f}, "
-                f"Weight = {float(memristor_weight):.4f}\n")
-        
-def log_prediction_results(x_test, y_test, memory_depth, phase1, phase3, memristor_weight, stochastic, samples, var, cutoff_dim):
-    """Create log file for prediction results"""
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_filepath = f"memristor_prediction_{timestamp}.txt"
+from .data import get_data, load_measurement_pickle, quartic_data, get_cont_swipe_data, compute_n_swipe
+from .training import train_pytorch
+from .simulation import run_simulation_sequence_np, sim_logger
+
+# ===================== CONFIGURATION =====================
+config = {
+    # Data generation
+    'n_data': 100,
+    'sigma_noise': 0.1,
+    'datafunction': 'quartic_data',
+    'memory_depth': 2,
+
+    # Timing (defaults: 10 ms heater, 50 kHz laser, 10 µs detector)
+    't_phase_ms': 10.0,
+    'f_laser_khz': 50.0,
+    'det_window_us': 10.0,
+    'max_swipe': 21,
+
+    # Continuous swipe
+    'use_continuous': False,
+    'n_swipe': None,
+    'swipe_span': np.pi / 20,
+
+    # Training
+    'lr': 0.03,
+    'epochs': 50,
+    'phase_idx': (0, 1),
+    'n_photons': (1, 1),
     
-    with open(log_filepath, 'w') as f:
-        # Header
-        f.write("=" * 80 + "\n")
-        f.write("Memristor Prediction Log\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write("=" * 80 + "\n\n")
-        
-        # Parameters
-        f.write("Model Parameters:\n")
-        f.write("-" * 40 + "\n")
-        f.write(f"Memory Depth: {memory_depth}\n")
-        f.write(f"Phase1: {float(phase1):.4f}\n")
-        f.write(f"Phase3: {float(phase3):.4f}\n")
-        f.write(f"Memristor Weight: {float(memristor_weight):.4f}\n")
-        f.write(f"Cutoff Dimension: {cutoff_dim}\n\n")
-        
-        # Prediction Settings
-        f.write("Prediction Settings:\n")
-        f.write("-" * 40 + "\n")
-        f.write(f"Stochastic: {stochastic}\n")
-        f.write(f"Number of Samples: {samples}\n")
-        f.write(f"Variance: {var}\n")
-        f.write(f"Test Set Size: {len(x_test)}\n\n")
-        
-        f.write("Predictions:\n")
-        f.write("-" * 80 + "\n")
-        f.write(f"{'Index':>6} {'Target':>10} {'Prediction':>12} {'Uncertainty':>12}\n")
-        f.write("-" * 80 + "\n")
-        
-    return log_filepath
+    # Model initialization
+    'init_theta': None,  # Will be set in trainer
 
-def log_prediction_step(filepath, index, target, prediction, uncertainty=None):
-    """Log individual prediction results"""
-    with open(filepath, 'a') as f:
-        if uncertainty is not None:
-            f.write(f"{index:6d} {float(target):10.4f} {float(prediction):12.4f} {float(uncertainty):12.4f}\n")
-        else:
-            f.write(f"{index:6d} {float(target):10.4f} {float(prediction):12.4f} {'N/A':>12}\n")
+    # Plotting
+    'do_plot': True,
+
+    # Sampler
+    'n_samples': 1000
+}
+# =========================================================
 
 
-
-def memristor_update_function(x, y1, y2):
+def _resolve_n_swipe() -> int:
     """
-    Computes the memristor update based on current input x and past values y1 and y2.
-
-    Interpretation:
-    - x: Current input value.
-    - y1: Previous output (at time t-1).
-    - y2: Output before previous (at time t-2).
-
-    This function models how the memristor's state changes over time,
-    incorporating both current input and past outputs.
+    Resolves the number of swipes to use, either from config or by computing it.
+    Returns:
+        int: Number of swipes.
     """
-    return 0.4 * y1 + 0.4 * y1 * y2 + 0.6 * x ** 3 + 0.1
+    if config['n_swipe'] is not None:
+        return config['n_swipe']
+    auto = compute_n_swipe(
+        config['t_phase_ms'],
+        config['f_laser_khz'],
+        config['det_window_us'],
+        config['max_swipe'],
+    )
+    print(f"[timing] computed n_swipe = {auto}")
+    return auto
 
-def multiply_three_inputs(x1, x2, x3):
+
+def _run_training(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    *,
+    cont: bool,
+    n_samples: int
+) -> None:
     """
-    Multiplies three input values.
-
-    Interpretation:
-    - x1, x2, x3: Input values at times t, t-1, and t-2, respectively.
-
-    This function models a target where the output is the product of three inputs.
+    Runs the training process and plots results for both discrete and continuous modes.
+    Args:
+        X_train (np.ndarray): Training input data.
+        y_train (np.ndarray): Training output data.
+        X_test (np.ndarray): Test input data.
+        y_test (np.ndarray): Test output data.
+        cont (bool): Whether to use continuous-swipe training.
+        n_samples (int): Number of samples for the Sampler.
+    Returns:
+        None
     """
-    return x1 * x2 * x3
+    if cont:
+        n_swipe = _resolve_n_swipe()
+        config['n_swipe'] = n_swipe  # freeze for the rest of the run
+        theta_opt, history = train_pytorch(
+            X_train, y_train,
+            memory_depth=config['memory_depth'],
+            lr=config['lr'],
+            epochs=config['epochs'],
+            phase_idx=config['phase_idx'],
+            n_photons=config['n_photons'],
+            n_swipe=config['n_swipe'],
+            swipe_span=config['swipe_span'],
+            n_samples=n_samples
+        )
+    else:
+        theta_opt, history = train_pytorch(
+            X_train, y_train,
+            memory_depth=config['memory_depth'],
+            lr=config['lr'],
+            epochs=config['epochs'],
+            phase_idx=config['phase_idx'],
+            n_photons=config['n_photons'],
+            n_swipe=0,
+            swipe_span=0.0,
+            n_samples=n_samples
+        )
 
-def target_function(xt, xt1, xt2):
+    print("Optimized θ:", theta_opt)
+
+    # ── predictions on dense grid ──
+    if cont:
+        preds = run_simulation_sequence_np(
+            theta_opt, config['memory_depth'], n_samples,
+            encoded_phases=2 * np.arccos(X_test), n_swipe=config['n_swipe'], swipe_span=config['swipe_span']
+        )
+    else:
+        enc_test = 2 * np.arccos(X_test)
+        preds = run_simulation_sequence_np(theta_opt, config['memory_depth'], n_samples, encoded_phases=enc_test)
+
+    if config['do_plot']:
+        # ————————————————————————————————————————————————————————————————
+        # Plot 1: loss curve
+        plt.figure(figsize=(9, 4))
+        plt.plot(history)
+        plt.yscale('log')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.grid()
+
+        # Plot 2: data cloud + model fit
+        plt.figure(figsize=(9, 5))
+        plt.scatter(X_train, y_train, s=20, label='Original data', zorder=3)
+
+        if cont:
+            enc_swipe, _ = get_cont_swipe_data(X_train, y_train, n_swipe=config['n_swipe'], swipe_span=config['swipe_span'])
+            X_swipe = np.cos(enc_swipe / 2)
+            plt.scatter(X_swipe, np.repeat(y_train, config['n_swipe']), s=8, alpha=0.35, label=f'Swipe (n={config['n_swipe']})', zorder=2)
+
+        plt.plot(X_test, y_test, label='Quartic', ls='--', zorder=1)
+        plt.plot(X_test, preds, label='Model', c='red', zorder=4)
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.grid()
+        plt.legend()
+        plt.tight_layout()
+
+        # Plot 3: index vs encoded phase
+        plt.figure(figsize=(9, 4))
+        idx = np.arange(len(X_train))
+        enc_orig = 2 * np.arccos(X_train)
+        plt.plot(idx, enc_orig, '-o', label='Original enc φ', lw=1.5)
+
+        if cont:
+            # enc_swipe already computed above
+            idx_swipe = np.repeat(idx, config['n_swipe'])
+            plt.scatter(idx_swipe, enc_swipe, s=6, alpha=0.35, label='Swipe enc φ')
+
+        plt.xlabel('Data index')
+        plt.ylabel('Encoding phase [rad]')
+        plt.grid()
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+
+def main(n_samples: int, measured_data: Optional[str] = None, use_continuous: bool = False) -> None:
     """
-    Computes the target output as a sinusoidal function based on current and past inputs.
-
-    Interpretation:
-    - xt: Current input value at time t.
-    - xt1: Previous input value at time t-1.
-    - xt2: Input value at time t-2.
-
-    This function defines a smooth, sinusoidal target for the model to learn.
+    Main entry point for running the training and evaluation pipeline.
+    Args:
+        n_samples (int): Number of samples for the Sampler.
+        measured_data (str | None): Path to measured data pickle file, or None for synthetic data.
+        use_continuous (bool): Whether to use continuous-swipe training.
+    Returns:
+        None
     """
-    return np.sin(2 * np.pi * (xt + xt1 + xt2)) + 1
+    if not isinstance(n_samples, int) or n_samples <= 0:
+        raise ValueError(f"n_samples must be a positive int, got {n_samples!r}")
+    if measured_data is not None:
+        X_train, y_train = load_measurement_pickle(measured_data)
+        # Synthetic test set: densify full phase range
+        X_test = np.linspace(0.0, 1.0, 500)
+        y_test = quartic_data(X_test)  # Placeholder when ground truth unknown
+    else:
+        X_train, y_train, X_test, y_test = get_data(
+            config['n_data'],
+            config['sigma_noise'],
+            config['datafunction']
+        )
+    _run_training(X_train, y_train, X_test, y_test, cont=use_continuous, n_samples=n_samples)
+    sim_logger.report()
 
-# def target_function(xt, xt1, xt2):
-#     """
-#     Computes the target output based on current and past inputs.
 
-#     Interpretation:
-#     - xt: Current input value (at time t).
-#     - xt1: Previous input value (at time t-1).
-#     - xt2: Input value before previous (at time t-2).
+def run_cli():
+    """Command-line interface for the UQ-QNN training pipeline."""
+    parser = argparse.ArgumentParser(description="UQ-QNN Photonic Training Pipeline")
+    parser.add_argument("--n-samples", type=int, default=1000, 
+                       help="Number of samples for the Sampler")
+    parser.add_argument("--measured-data", type=str, default=None,
+                       help="Path to measured data pickle file")
+    parser.add_argument("--continuous", action="store_true",
+                       help="Use continuous-swipe training")
+    parser.add_argument("--epochs", type=int, default=50,
+                       help="Number of training epochs")
+    parser.add_argument("--lr", type=float, default=0.03,
+                       help="Learning rate")
+    parser.add_argument("--no-plot", action="store_true",
+                       help="Disable plotting")
+    
+    args = parser.parse_args()
+    
+    # Update config with CLI arguments
+    config['epochs'] = args.epochs
+    config['lr'] = args.lr
+    config['do_plot'] = not args.no_plot
+    
+    main(args.n_samples, args.measured_data, args.continuous)
 
-#     This function defines the desired output for the model to learn.
-#     """
-#     return 0.4 * xt1 + 0.4 * xt1 * xt2 + 0.6 * xt ** 3 + 0.1
 
-def format_metrics(metrics_dict, indent=0):
-    """Format metrics dictionary into lines with proper indentation"""
-    lines = []
-    indent_str = " " * indent
-    for key, value in metrics_dict.items():
-        if isinstance(value, tf.Variable):
-            # Extract numeric value from TensorFlow variable
-            value = float(value.numpy())
-            lines.append(f"{indent_str}{key}: {value:.4f}")
-        elif isinstance(value, dict):
-            lines.append(f"{indent_str}{key}:")
-            lines.extend(format_metrics(value, indent + 2))
-        elif isinstance(value, (np.ndarray, list)):
-            lines.append(f"{indent_str}{key}: {np.mean(value):.4f}")
-        else:
-            lines.append(f"{indent_str}{key}: {value}")
-    return lines
-
-def format_hyperparameters(hyperparameters_dict, indent=0):
-    lines = []
-    indent_str = " " * indent
-    for key, value in hyperparameters_dict.items():
-        if isinstance(value, float):
-            lines.append(f"{indent_str}{key}: {value:.6f}")
-        else:
-            lines.append(f"{indent_str}{key}: {value}")
-    return lines
-
+if __name__ == "__main__":
+    run_cli()
