@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Circuit Printer Example
+
+This script creates memristor and Clements circuits and prints them out in detail,
+showing their structure, components, and operation.
+"""
+
+import sys
+import os
+import numpy as np
+
+# Add the parent directory to the path so we can import the library
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import perceval as pcvl
+from src.circuits import (
+    CircuitType, 
+    memristor_circuit, 
+    clements_circuit, 
+    build_circuit,
+    encoding_circuit
+)
+
+def print_circuit_components(circuit, indent=""):
+    """Recursively print circuit components with their parameters."""
+    if hasattr(circuit, 'components'):
+        for i, component in enumerate(circuit.components):
+            component_info = f"{indent}Component {i+1}: {component.__class__.__name__}"
+            
+            # Add modes information if available
+            if hasattr(component, 'modes'):
+                component_info += f" on modes {component.modes}"
+            
+            # Add phase information for PS components
+            if isinstance(component, pcvl.PS) and hasattr(component, 'phi'):
+                component_info += f", phi={component.phi:.4f} rad ({component.phi * 180/np.pi:.1f}°)"
+            
+            print(component_info)
+            
+            # Recursively print sub-components
+            if hasattr(component, 'components'):
+                print_circuit_components(component, indent + "  ")
+
+def print_circuit_matrix(circuit):
+    """Print the unitary matrix of the circuit."""
+    try:
+        # Get the unitary matrix of the circuit
+        processor = pcvl.Processor("SLOS", circuit)
+        matrix = processor.get_unitary()
+        
+        print("\nCircuit Unitary Matrix:")
+        
+        # Format and print the matrix
+        for i in range(matrix.shape[0]):
+            row = ""
+            for j in range(matrix.shape[1]):
+                val = matrix[i, j]
+                real = np.real(val)
+                imag = np.imag(val)
+                
+                if abs(imag) < 1e-10:  # Effectively zero imaginary part
+                    row += f" {real:6.3f}        "
+                else:
+                    sign = "+" if imag >= 0 else ""
+                    row += f" {real:6.3f}{sign}{imag:6.3f}i "
+            print(f"  [{row} ]")
+    except Exception as e:
+        print(f"\nCouldn't print matrix: {str(e)}")
+
+def print_circuit_details(circuit, input_state, measurement_mode, title):
+    """Print detailed information about a circuit."""
+    print(f"\n{'='*80}")
+    print(f"=== {title} ===")
+    print(f"{'='*80}")
+    
+    # Basic information
+    print(f"Circuit name: {circuit.name}")
+    print(f"Number of modes: {circuit.m}")
+    print(f"Input state: {input_state}")
+    print(f"Measurement mode(s): {measurement_mode}")
+    
+    # Print component structure
+    print("\nCircuit Structure:")
+    print_circuit_components(circuit)
+    
+    # Print unitary matrix
+    if circuit.m <= 6:  # Only print matrix for smaller circuits
+        print_circuit_matrix(circuit)
+    else:
+        print("\nUnitary matrix too large to display")
+    
+    # Simulation with the given input
+    print("\nSimulation Results:")
+    processor = pcvl.Processor("SLOS", circuit)
+    processor.with_input(input_state)
+    
+    # Run simulation
+    sampler = pcvl.algorithm.Sampler(processor)
+    results = sampler.probs(10000)["results"]
+    
+    # Print output states and probabilities
+    print("Output state probabilities:")
+    for state, prob in sorted(results.items(), key=lambda x: x[1], reverse=True)[:10]:
+        print(f"  {state}: {prob:.6f}")
+    
+    # Analyze measurement modes
+    print(f"\nProbability of detecting photon in measurement mode(s) {measurement_mode}:")
+    for mode in measurement_mode:
+        total_prob = 0
+        for state, prob in results.items():
+            state_str = str(state)
+            if '|' in state_str and '>' in state_str:
+                photon_counts = state_str.strip('|>').split(',')
+                if len(photon_counts) > mode and int(photon_counts[mode]) > 0:
+                    total_prob += prob
+        print(f"  Mode {mode}: {total_prob:.6f}")
+    
+    # If this is a circuit with memory, explain the memory operation
+    if "memristor" in circuit.name.lower():
+        print("\nMemristor Operation:")
+        print("  1. Input: Photon enters mode 1 (|010>)")
+        print("  2. First MZI: Splits photon between modes 0 and 1 with phase phi1")
+        print("  3. Second MZI: Connects modes 1 and 2 with memory phase (mem_phi)")
+        print("  4. Third MZI: Final interference with phase phi3")
+        print("  5. Output: Measure probability of photon in mode 2 (|001>)")
+        print("  6. Memory update: Update mem_phi based on detection probabilities")
+    
+    if "clements" in circuit.name.lower():
+        print("\nClements Operation:")
+        print(f"  1. Input: Photon enters mode {input_state.index(1)} of {circuit.m} modes")
+        print(f"  2. Mesh of {circuit.m * (circuit.m - 1) // 2} MZIs in rectangular grid pattern")
+        print(f"  3. Each MZI has two phase shifters (internal and external)")
+        print(f"  4. Output: Measure probability of photon in mode {measurement_mode[0]}")
+
+def create_memristor_circuit():
+    """Create and print a memristor circuit."""
+    # Define phases
+    phases = np.array([0.5, 1.2, 0.8])
+    enc_phi = np.pi/4
+    
+    # Create basic memristor circuit
+    basic_mem = memristor_circuit(phases)
+    
+    # Create full circuit with encoding
+    full_mem = build_circuit(
+        phases=phases,
+        enc_phi=enc_phi,
+        circuit_type=CircuitType.MEMRISTOR,
+        n_modes=3,
+        encoding_mode=0
+    )
+    
+    # Input state: |010>
+    input_state = pcvl.BasicState([0, 1, 0])
+    
+    # Measurement mode: 2
+    measurement_mode = (2,)
+    
+    # Print circuit details
+    print_circuit_details(basic_mem, input_state, measurement_mode, "Memristor Circuit (standalone)")
+    print_circuit_details(full_mem, input_state, measurement_mode, "Memristor Circuit with Encoding")
+    
+    return full_mem
+
+def create_clements_circuit(n_modes=6):
+    """Create and print a Clements circuit."""
+    # Calculate required phases
+    n_phases = n_modes * (n_modes - 1)
+    
+    # Initialize random phases with fixed seed for reproducibility
+    np.random.seed(42)
+    phases = np.random.uniform(0, 2*np.pi, n_phases)
+    enc_phi = np.pi/4
+    
+    # Create basic Clements circuit
+    basic_clements = clements_circuit(phases, n_modes)
+    
+    # Create full circuit with encoding
+    full_clements = build_circuit(
+        phases=phases,
+        enc_phi=enc_phi,
+        circuit_type=CircuitType.CLEMENTS,
+        n_modes=n_modes,
+        encoding_mode=0
+    )
+    
+    # Input state: |100000>
+    input_modes = [0] * n_modes
+    input_modes[0] = 1
+    input_state = pcvl.BasicState(input_modes)
+    
+    # Measurement mode: last mode
+    measurement_mode = (n_modes - 1,)
+    
+    # Print circuit details
+    print_circuit_details(basic_clements, input_state, measurement_mode, f"Clements Circuit {n_modes}x{n_modes} (standalone)")
+    print_circuit_details(full_clements, input_state, measurement_mode, f"Clements Circuit {n_modes}x{n_modes} with Encoding")
+    
+    return full_clements
+
+def main():
+    """Main function to create and print circuits."""
+    print("=== Circuit Printer Example ===")
+    
+    # 1. Create and print memristor circuit
+    mem_circuit = create_memristor_circuit()
+    
+    # 2. Create and print 6-mode Clements circuit
+    clements_circuit_6 = create_clements_circuit(n_modes=6)
+    
+    # 3. Create and print 3-mode Clements circuit for comparison
+    clements_circuit_3 = create_clements_circuit(n_modes=3)
+    
+    print("\nCircuit printing complete.")
+
+if __name__ == "__main__":
+    main()
