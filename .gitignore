@@ -1,5 +1,6 @@
 # Folder
 reports/
+tmp/
 
 # OS specific
 .DS_Store
