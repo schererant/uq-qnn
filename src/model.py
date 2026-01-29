@@ -98,7 +98,7 @@ def train_memristor(X_train,
                       constraint=lambda z: tf.clip_by_value(z, 0.01, 1))  # Memristor parameter
 
     
-    logger.log_initial_training_phase(phase1, phase3, memristor_weight)
+    logger.log_initial_training_phase(phases=[phase1, phase3], weights=[memristor_weight])
     
         
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
