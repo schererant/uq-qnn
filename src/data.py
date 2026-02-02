@@ -188,6 +188,112 @@ def damped_cosine_data(x: np.ndarray) -> np.ndarray:
     return np.exp(-2 * x) * np.cos(10 * np.pi * x) * 0.5 + 0.5
 
 
+def one_hot_encode(labels: np.ndarray, n_classes: int) -> np.ndarray:
+    """
+    Convert integer class labels to one-hot encoding.
+    Args:
+        labels (np.ndarray): Integer labels of shape (n_samples,).
+        n_classes (int): Number of classes.
+    Returns:
+        np.ndarray: One-hot encoded labels of shape (n_samples, n_classes).
+    """
+    n_samples = len(labels)
+    one_hot = np.zeros((n_samples, n_classes))
+    one_hot[np.arange(n_samples), labels.astype(int)] = 1.0
+    return one_hot
+
+
+def generate_classification_data(
+    n_data: int = 100,
+    n_classes: int = 2,
+    data_type: str = 'binary_threshold',
+    noise_level: float = 0.0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Generate synthetic classification datasets.
+    Args:
+        n_data (int): Number of data points.
+        n_classes (int): Number of classes (2 for binary, 3+ for multi-class).
+        data_type (str): Type of classification data:
+            - 'binary_threshold': Simple threshold at x=0.5
+            - 'multi_class_regions': Three regions [0,0.33], [0.33,0.66], [0.66,1.0]
+            - 'sinusoidal': Classes based on sin(2πx) sign
+        noise_level (float): Probability of flipping labels (for noise).
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: (X, y) where y is integer labels.
+    """
+    X = np.linspace(0.0, 1.0, n_data)
+    
+    if data_type == 'binary_threshold':
+        if n_classes != 2:
+            raise ValueError("binary_threshold only supports 2 classes")
+        y = (X > 0.5).astype(int)
+    elif data_type == 'multi_class_regions':
+        y = np.zeros(n_data, dtype=int)
+        y[(X > 0.33) & (X <= 0.66)] = 1
+        y[X > 0.66] = 2
+        if n_classes != 3:
+            raise ValueError("multi_class_regions only supports 3 classes")
+    elif data_type == 'sinusoidal':
+        if n_classes != 2:
+            raise ValueError("sinusoidal only supports 2 classes")
+        y = (np.sin(2 * np.pi * X) > 0).astype(int)
+    else:
+        raise ValueError(f"Unknown data_type: {data_type}")
+    
+    # Add noise by randomly flipping labels
+    if noise_level > 0:
+        flip_mask = np.random.random(n_data) < noise_level
+        if n_classes == 2:
+            y[flip_mask] = 1 - y[flip_mask]
+        else:
+            # For multi-class, randomly assign to different class
+            for i in np.where(flip_mask)[0]:
+                other_classes = [c for c in range(n_classes) if c != y[i]]
+                y[i] = np.random.choice(other_classes)
+    
+    return X, y
+
+
+def get_classification_data(
+    n_data: int = 100,
+    n_classes: int = 2,
+    data_type: str = 'binary_threshold',
+    noise_level: float = 0.0,
+    return_one_hot: bool = False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Generates synthetic training and test data for classification tasks.
+    Args:
+        n_data (int): Number of training data points.
+        n_classes (int): Number of classes.
+        data_type (str): Type of classification data (see generate_classification_data).
+        noise_level (float): Probability of label noise.
+        return_one_hot (bool): If True, return one-hot encoded labels.
+    Returns:
+        Tuple: (X_train, y_train, X_test, y_test) arrays.
+            If return_one_hot=True, y arrays are one-hot encoded.
+    """
+    x_min, x_max = 0.0, 1.0
+    X = np.linspace(x_min, x_max, n_data)
+    y = generate_classification_data(n_data, n_classes, data_type, noise_level)[1]
+    
+    # Create train/test split with gap (similar to regression)
+    gap = (x_min + 0.35 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))
+    mask = ~((X > gap[0]) & (X < gap[1]))
+    X_train, y_train = X[mask], y[mask]
+    
+    # Generate test data
+    X_test = np.linspace(x_min, x_max, 500)
+    y_test = generate_classification_data(500, n_classes, data_type, 0.0)[1]
+    
+    if return_one_hot:
+        y_train = one_hot_encode(y_train, n_classes)
+        y_test = one_hot_encode(y_test, n_classes)
+    
+    return X_train, y_train, X_test, y_test
+
+
 def get_data(
     n_data: int = 100,
     sigma_noise: float = 0.0,

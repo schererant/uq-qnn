@@ -61,6 +61,8 @@ def train_pytorch_generic(
     n_modes: int = 3,
     encoding_mode: int = 0,
     target_mode: Optional[Tuple[int, ...]] = None,
+    loss_type: str = 'mse',
+    n_classes: int = 1,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -76,15 +78,45 @@ def train_pytorch_generic(
         n_samples (int): Number of samples for the Sampler.
         n_swipe (int): Number of phase points per data point (0 for discrete).
         swipe_span (float): Total phase span for swiping.
+        circuit_type (str): Type of circuit architecture ('memristor' or 'clements').
+        n_modes (int): Number of modes for Clements architecture.
+        encoding_mode (int): Mode to apply encoding to.
+        target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
+        loss_type (str): Loss function type ('mse' for regression, 'cross_entropy' for classification).
+        n_classes (int): Number of classes for classification (default: 1 for regression).
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
+    # Validate classification setup
+    if loss_type == 'cross_entropy':
+        if target_mode is None:
+            # Set default target modes based on n_classes
+            if circuit_type.lower() == 'memristor':
+                if n_classes == 2:
+                    target_mode = (1, 2)  # Modes 1 and 2 for binary classification
+                else:
+                    raise ValueError(
+                        f"Memristor architecture supports up to 2 classes, got {n_classes}"
+                    )
+            else:  # Clements
+                if n_classes > n_modes:
+                    raise ValueError(
+                        f"For {n_classes} classes, need at least {n_classes} modes, got {n_modes}"
+                    )
+                target_mode = tuple(range(n_classes))
+        elif len(target_mode) != n_classes:
+            raise ValueError(
+                f"For classification with n_classes={n_classes}, "
+                f"target_mode must have {n_classes} elements, got {len(target_mode)}"
+            )
+    
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(rng, n_phases, circuit_type, n_modes)
     model = PhotonicModel(
         init_theta, enc_np, y_np, memory_depth, phase_idx, n_photons,
         circuit_type=circuit_type, n_modes=n_modes, 
-        encoding_mode=encoding_mode, target_mode=target_mode
+        encoding_mode=encoding_mode, target_mode=target_mode,
+        loss_type=loss_type, n_classes=n_classes
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
@@ -120,6 +152,8 @@ def train_pytorch(
     n_modes: int = 3,
     encoding_mode: int = 0,
     target_mode: Optional[Tuple[int, ...]] = None,
+    loss_type: str = 'mse',
+    n_classes: int = 1,
     **kwargs
 ) -> Tuple[np.ndarray, List[float]]:
     """
@@ -148,6 +182,8 @@ def train_pytorch(
         n_modes=n_modes,
         encoding_mode=encoding_mode,
         target_mode=target_mode,
+        loss_type=loss_type,
+        n_classes=n_classes,
         **kwargs
     )
 
