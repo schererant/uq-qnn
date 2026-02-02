@@ -3,6 +3,8 @@ from __future__ import annotations
 import pickle
 from typing import Tuple
 import numpy as np
+from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
 
 
 def load_measurement_pickle(path: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -253,6 +255,93 @@ def generate_classification_data(
                 y[i] = np.random.choice(other_classes)
     
     return X, y
+
+
+def get_two_moons_data(
+    n_samples: int = 1000,
+    noise: float = 0.1,
+    random_state: int = 0,
+    return_one_hot: bool = False,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Generate the Two Moons (half-moons) classification dataset.
+    
+    This is a 2D binary classification dataset that creates two interleaving
+    half-circles. It's commonly used for visualization and testing classification
+    algorithms.
+    
+    Args:
+        n_samples (int): Total number of samples to generate.
+        noise (float): Standard deviation of Gaussian noise added to the data.
+        random_state (int): Random seed for reproducibility.
+        return_one_hot (bool): If True, return one-hot encoded labels.
+    
+    Returns:
+        Tuple: (X_train, y_train, X_test, y_test) arrays.
+            - X arrays have shape (n_samples, 2) for 2D features
+            - y arrays are integer labels (0 or 1) or one-hot if return_one_hot=True
+    """
+    # Generate the two moons dataset
+    X, y = make_moons(n_samples=n_samples, noise=noise, random_state=random_state)
+    
+    # Normalize X to [0, 1] range for each dimension
+    X_normalized = X.copy()
+    for dim in range(X.shape[1]):
+        x_min, x_max = X[:, dim].min(), X[:, dim].max()
+        if x_max > x_min:
+            X_normalized[:, dim] = (X[:, dim] - x_min) / (x_max - x_min)
+        else:
+            X_normalized[:, dim] = 0.5  # All same value
+    
+    # Split into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_normalized, y, test_size=0.2, random_state=random_state
+    )
+    
+    if return_one_hot:
+        y_train = one_hot_encode(y_train, n_classes=2)
+        y_test = one_hot_encode(y_test, n_classes=2)
+    
+    return X_train, y_train, X_test, y_test
+
+
+def encode_2d_to_phase(X_2d: np.ndarray, method: str = 'weighted_sum') -> np.ndarray:
+    """
+    Encode 2D input data to a single phase value for photonic circuit encoding.
+    
+    Args:
+        X_2d (np.ndarray): 2D input data of shape (n_samples, 2), values in [0, 1].
+        method (str): Encoding method:
+            - 'weighted_sum': Linear combination of both dimensions
+            - 'first_dim': Use only first dimension
+            - 'radial': Use radial distance from center
+    
+    Returns:
+        np.ndarray: Encoded phases of shape (n_samples,) in [0, 2π].
+    """
+    if X_2d.ndim != 2 or X_2d.shape[1] != 2:
+        raise ValueError(f"Expected 2D array with shape (n_samples, 2), got {X_2d.shape}")
+    
+    if method == 'weighted_sum':
+        # Weighted combination: 0.5 * x0 + 0.5 * x1, normalized to [0, 1]
+        X_combined = 0.5 * X_2d[:, 0] + 0.5 * X_2d[:, 1]
+        X_combined = np.clip(X_combined, 0.0, 1.0)
+    elif method == 'first_dim':
+        # Use only first dimension
+        X_combined = X_2d[:, 0]
+    elif method == 'radial':
+        # Radial distance from center (0.5, 0.5)
+        center = np.array([0.5, 0.5])
+        distances = np.sqrt(np.sum((X_2d - center) ** 2, axis=1))
+        # Normalize to [0, 1] (max distance from center is sqrt(2)/2)
+        max_dist = np.sqrt(2) / 2
+        X_combined = np.clip(distances / max_dist, 0.0, 1.0)
+    else:
+        raise ValueError(f"Unknown encoding method: {method}")
+    
+    # Convert to phase encoding: 2 * arccos(X) (same as 1D case)
+    encoded_phases = 2 * np.arccos(X_combined)
+    return encoded_phases
 
 
 def get_classification_data(

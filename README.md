@@ -81,6 +81,7 @@ The repository includes several example scripts:
 **Classification Examples:**
 4. `examples/simple_classification.py` - Binary classification with uncertainty quantification
 5. `examples/multi_class_classification.py` - Multi-class classification (3+ classes) demonstration
+6. `examples/two_moons_classification.py` - Two Moons (half-moons) 2D classification dataset
 
 For the Clements architecture example, run:
 ```bash
@@ -183,11 +184,18 @@ theta, history = train_pytorch(
 
 ### Classification Data Types
 
-The `get_classification_data()` function supports several data types:
+The framework supports several classification datasets:
 
+**1D Synthetic Datasets** (via `get_classification_data()`):
 - `'binary_threshold'`: Simple threshold at x=0.5 (2 classes only)
 - `'multi_class_regions'`: Three regions [0,0.33], [0.33,0.66], [0.66,1.0] (3 classes only)
 - `'sinusoidal'`: Classes based on sin(2πx) sign (2 classes only)
+
+**2D Datasets**:
+- **Two Moons** (via `get_two_moons_data()`): Classic 2D binary classification dataset with two interleaving half-circles. Uses `sklearn.datasets.make_moons` under the hood. The 2D features are encoded to a single phase value using `encode_2d_to_phase()` with methods:
+  - `'weighted_sum'`: Linear combination of both dimensions (default)
+  - `'first_dim'`: Use only first dimension
+  - `'radial'`: Use radial distance from center
 
 ### Classification PSR
 
@@ -209,7 +217,41 @@ For classification tasks, uncertainty is quantified using:
 - **Multiple forward passes**: Similar to regression, run multiple passes with parameter perturbations
 - **Class probability variance**: Standard deviation of class probabilities across forward passes
 
-See `examples/simple_classification.py` and `examples/multi_class_classification.py` for complete examples.
+See `examples/simple_classification.py`, `examples/multi_class_classification.py`, and `examples/two_moons_classification.py` for complete examples.
+
+### Two Moons Dataset Example
+
+
+The Two Moons dataset is a classic 2D binary classification benchmark:
+
+```python
+from src.data import get_two_moons_data, encode_2d_to_phase
+from src.training import train_pytorch_generic
+
+# Generate Two Moons dataset
+X_train, y_train, X_test, y_test = get_two_moons_data(
+    n_samples=1000,
+    noise=0.1,
+    random_state=42,
+    return_one_hot=False
+)
+
+# Encode 2D features to phase values
+enc_train = encode_2d_to_phase(X_train, method='weighted_sum')
+enc_test = encode_2d_to_phase(X_test, method='weighted_sum')
+
+# Train with cross-entropy loss
+theta, history = train_pytorch_generic(
+    enc_train, y_train,
+    loss_type='cross_entropy',
+    n_classes=2,
+    target_mode=(1, 2),
+    epochs=50,
+    n_samples=500
+)
+```
+
+The example includes visualization of the decision boundary and uncertainty maps.
 
 ## Tasks
 
