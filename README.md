@@ -221,7 +221,7 @@ See `examples/simple_classification.py`, `examples/multi_class_classification.py
 
 ### Two Moons Dataset Example
 Taking implementation from https://github.com/lightning-uq-box/lightning-uq-box/blob/main/lightning_uq_box/datamodules/toy_half_moons.py
-
+    
 
 The Two Moons dataset is a classic 2D binary classification benchmark:
 

@@ -35,12 +35,12 @@ def main():
     np.random.seed(42)
     
     # Configure parameters
-    config['lr'] = 0.03
-    config['epochs'] = 50
-    config['memory_depth'] = 2
+    config['lr'] = 0.01  # Reduced from 0.03 for more stable convergence
+    config['epochs'] = 100  # Increased from 50 for more training time
+    config['memory_depth'] = 3  # Increased from 2 for more model capacity
     config['phase_idx'] = (0, 1)  # Indices of phase parameters (excluding weight)
     config['n_photons'] = (1, 1)  # Number of photons for each phase
-    n_samples = 500
+    n_samples = 1000  # Increased from 500 for better probability estimates
     n_phases = 2
     n_classes = 2  # Binary classification
     
@@ -48,7 +48,7 @@ def main():
     print("Generating Two Moons dataset...")
     X_train, y_train, X_test, y_test = get_two_moons_data(
         n_samples=1000,
-        noise=0.1,
+        noise=0.05,  # Reduced from 0.1 for cleaner training data
         random_state=42,
         return_one_hot=False
     )
@@ -59,8 +59,8 @@ def main():
     
     # Encode 2D features to phase values
     print("Encoding 2D features to phase values...")
-    enc_train = encode_2d_to_phase(X_train, method='weighted_sum')
-    enc_test = encode_2d_to_phase(X_test, method='weighted_sum')
+    enc_train = encode_2d_to_phase(X_train, method='radial')  # Changed from 'weighted_sum' - better for circular patterns
+    enc_test = encode_2d_to_phase(X_test, method='radial')
     
     # Train the model with discrete phases
     print("Training model with discrete phases...")
