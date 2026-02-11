@@ -51,7 +51,7 @@ def main():
         n_classes=n_classes,
         data_type='binary_threshold',
         noise_level=0.05,
-        return_one_hot=False
+        return_one_hot=True  # 2D one-hot for cross-entropy loss
     )
     
     # Train the model with discrete phases
@@ -87,11 +87,14 @@ def main():
     # For binary: preds_probs[:, 1] is probability of class 1
     preds_discrete = np.argmax(preds_probs, axis=1)
     
+    # Integer labels for evaluation (y_test is one-hot 2D)
+    y_test_labels = np.argmax(y_test, axis=1)
+    
     # Compute accuracy
-    accuracy = accuracy_score(y_test, preds_discrete)
+    accuracy = accuracy_score(y_test_labels, preds_discrete)
     print(f"Test Accuracy: {accuracy:.4f}")
     print("\nClassification Report:")
-    print(classification_report(y_test, preds_discrete))
+    print(classification_report(y_test_labels, preds_discrete))
     
     # Add uncertainty estimation through multiple forward passes
     print("\nEstimating uncertainty through multiple forward passes...")
@@ -145,7 +148,7 @@ def main():
     plt.subplot(2, 3, 2)
     colors = ['blue', 'red']
     for c in range(n_classes):
-        mask = y_test == c
+        mask = y_test_labels == c
         plt.scatter(X_test[mask], [c] * mask.sum(), c=colors[c], 
                    label=f'Class {c} (true)', alpha=0.6, s=20)
     pred_mask_0 = mean_preds == 0
@@ -181,7 +184,7 @@ def main():
     
     # Plot 4: Entropy (uncertainty)
     plt.subplot(2, 3, 4)
-    scatter = plt.scatter(X_test, entropy, c=(mean_preds != y_test), 
+    scatter = plt.scatter(X_test, entropy, c=(mean_preds != y_test_labels), 
                          cmap='RdYlGn', alpha=0.7)
     plt.colorbar(scatter, label='Misclassified')
     plt.xlabel('x')
@@ -191,7 +194,7 @@ def main():
     
     # Plot 5: Confusion matrix
     plt.subplot(2, 3, 5)
-    cm = confusion_matrix(y_test, mean_preds)
+    cm = confusion_matrix(y_test_labels, mean_preds)
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title('Confusion Matrix')
     plt.colorbar()
@@ -208,7 +211,7 @@ def main():
     
     # Plot 6: Calibration (entropy vs error)
     plt.subplot(2, 3, 6)
-    errors = (mean_preds != y_test).astype(int)
+    errors = (mean_preds != y_test_labels).astype(int)
     plt.scatter(entropy, errors, alpha=0.7)
     plt.xlabel('Entropy (Uncertainty)')
     plt.ylabel('Error (0=correct, 1=wrong)')

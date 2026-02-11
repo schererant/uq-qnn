@@ -1,0 +1,1 @@
+for the examples/simple_classification.py we need to use a 2d output in the cross entropy loss
