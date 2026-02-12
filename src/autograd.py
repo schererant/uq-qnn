@@ -60,14 +60,13 @@ class MemristorLossPSR(torch.autograd.Function):
         phase_idx: Sequence[int],
         n_photons: Sequence[int],
         n_samples: int,
-        n_swipe: int = 0,
-        swipe_span: float = 0.0,
-        circuit_type: CircuitType = CircuitType.MEMRISTOR,
-        n_modes: int = 3,
-        encoding_mode: int = 0,
-        target_mode: Optional[Tuple[int, ...]] = None,
+        n_swipe: int,
+        swipe_span: float,
+        circuit_type: CircuitType,
+        n_modes: int,
+        encoding_mode: int,
+        target_mode: Optional[Tuple[int, ...]],
     ) -> Tensor:
-        discrete = (n_swipe == 0)
         theta_np = theta.detach().cpu().double().numpy()
         enc_np   = enc_phases.detach().cpu().double().numpy()
         y_np     = y.detach().cpu().double().numpy()
@@ -92,7 +91,6 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.save_for_backward(theta.detach(),
                               enc_phases.detach(),
                               y.detach())
-        ctx.discrete     = discrete
         ctx.phase_idx    = list(phase_idx)
         ctx.n_photons    = list(n_photons)
         ctx.n_swipe      = n_swipe

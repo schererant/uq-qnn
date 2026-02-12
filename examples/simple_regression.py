@@ -39,7 +39,7 @@ def main():
     config['lr'] = 0.03
     config['epochs'] = 30
     config['memory_depth'] = 2
-    config['phase_idx'] = (0, 1)  # Indices of phase parameters (excluding weight)
+    config['phase_idx'] = (0, 1) # Indices of phase parameters (excluding weight)
     config['n_photons'] = (1, 1)  # Number of photons for each phase
     n_samples = 500
     n_phases = 2  # Number of external phase parameters (excluding memory phase)

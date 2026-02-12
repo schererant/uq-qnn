@@ -8,7 +8,10 @@ from tqdm import tqdm
 from .loss import PhotonicModel
 
 
-def _init_theta(rng: np.random.Generator, n_phases: int = 2, circuit_type: str = 'memristor', n_modes: int = 3) -> np.ndarray:
+def _init_theta(rng: np.random.Generator, 
+                n_phases: int, 
+                circuit_type: str, 
+                n_modes: int) -> np.ndarray:
     """
     Initializes model parameters randomly within specified ranges.
     Args:
@@ -80,11 +83,21 @@ def train_pytorch_generic(
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
     rng = np.random.default_rng(seed)
-    init_theta = _init_theta(rng, n_phases, circuit_type, n_modes)
-    model = PhotonicModel(
-        init_theta, enc_np, y_np, memory_depth, phase_idx, n_photons,
-        circuit_type=circuit_type, n_modes=n_modes, 
-        encoding_mode=encoding_mode, target_mode=target_mode
+    init_theta = _init_theta(rng=rng, 
+                        n_phases=n_phases, 
+                        circuit_type=circuit_type, 
+                        n_modes=n_modes
+                        )
+    model = PhotonicModel(init_theta=init_theta, 
+                        enc_np=enc_np, 
+                        y_np=y_np,
+                        memory_depth=memory_depth, 
+                        phase_idx=phase_idx, 
+                        n_photons=n_photons,
+                        circuit_type=circuit_type,
+                        n_modes=n_modes,
+                        encoding_mode=encoding_mode, 
+                        target_mode=target_mode
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []

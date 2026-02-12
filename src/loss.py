@@ -24,10 +24,17 @@ class PhotonicModel(torch.nn.Module):
         encoding_mode (int): Mode to apply encoding to.
         target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
     """
-    def __init__(self, init_theta: Sequence[float], enc_np: np.ndarray, y_np: np.ndarray,
-                 memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int],
-                 circuit_type: str = 'memristor', n_modes: int = 3, 
-                 encoding_mode: int = 0, target_mode: Optional[Tuple[int, ...]] = None) -> None:
+    def __init__(self, 
+                 init_theta: Sequence[float], 
+                 enc_np: np.ndarray, 
+                 y_np: np.ndarray,
+                 memory_depth: int, 
+                 phase_idx: Sequence[int], 
+                 n_photons: Sequence[int],
+                 circuit_type: str, 
+                 n_modes: int, 
+                 encoding_mode: int, 
+                 target_mode: Optional[Tuple[int, ...]] = None) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
         self.register_buffer("enc", torch.from_numpy(enc_np).double())
