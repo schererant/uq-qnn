@@ -72,24 +72,20 @@ class MemristorLossPSR(torch.autograd.Function):
         enc_np   = enc_phases.detach().cpu().double().numpy()
         y_np     = y.detach().cpu().double().numpy()
 
-        if discrete:
-            preds = run_simulation_sequence_np(
-                theta_np, memory_depth, n_samples,
+
+        preds = run_simulation_sequence_np(
+                params=theta_np,
+                memory_depth=memory_depth,
+                n_samples=n_samples,
                 encoded_phases=enc_np,
+                n_swipe= n_swipe,
+                swipe_span=swipe_span,
                 circuit_type=circuit_type,
                 n_modes=n_modes,
                 encoding_mode=encoding_mode,
                 target_mode=target_mode
             )
-        else:
-            preds = run_simulation_sequence_np(
-                theta_np, memory_depth, n_samples,
-                encoded_phases=enc_np, n_swipe=n_swipe, swipe_span=swipe_span,
-                circuit_type=circuit_type,
-                n_modes=n_modes,
-                encoding_mode=encoding_mode,
-                target_mode=target_mode
-            )
+
 
         loss_val = 0.5 * np.mean((preds - y_np) ** 2)
 
@@ -131,24 +127,19 @@ class MemristorLossPSR(torch.autograd.Function):
             for s, c in zip(shifts.numpy(), coeffs.numpy()):
                 θ_shift = theta_np.copy()
                 θ_shift[p_idx] += s
-                if ctx.discrete:
-                    out = run_simulation_sequence_np(
-                        θ_shift, ctx.memory_depth, ctx.n_samples,
-                        encoded_phases=enc_np,
-                        circuit_type=ctx.circuit_type,
-                        n_modes=ctx.n_modes,
-                        encoding_mode=ctx.encoding_mode,
-                        target_mode=ctx.target_mode
+                out = run_simulation_sequence_np(
+                    params=θ_shift,
+                    memory_depth=ctx.memory_depth,
+                    n_samples=ctx.n_samples,
+                    encoded_phases=enc_np,
+                    n_swipe= ctx.n_swipe,
+                    swipe_span=ctx.swipe_span,
+                    circuit_type=ctx.circuit_type,
+                    n_modes=ctx.n_modes,
+                    encoding_mode=ctx.encoding_mode,
+                    target_mode=ctx.target_mode
                     )
-                else:
-                    out = run_simulation_sequence_np(
-                        θ_shift, ctx.memory_depth, ctx.n_samples,
-                        encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                        circuit_type=ctx.circuit_type,
-                        n_modes=ctx.n_modes,
-                        encoding_mode=ctx.encoding_mode,
-                        target_mode=ctx.target_mode
-                    )
+ 
                 df_dθ += c * out
             grads[p_idx] = np.real(np.dot(dL_df, df_dθ))
 
@@ -165,40 +156,33 @@ class MemristorLossPSR(torch.autograd.Function):
                 θ_p[idx] = θ_p[idx] % (2 * np.pi)
                 θ_m[idx] = θ_m[idx] % (2 * np.pi)
 
-            if ctx.discrete:
-                pred_p = run_simulation_sequence_np(
-                    θ_p, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np,
-                    circuit_type=ctx.circuit_type,
-                    n_modes=ctx.n_modes,
-                    encoding_mode=ctx.encoding_mode,
-                    target_mode=ctx.target_mode
+            
+            pred_p = run_simulation_sequence_np(
+                params=θ_p,
+                memory_depth=ctx.memory_depth,
+                n_samples=ctx.n_samples,
+                encoded_phases=enc_np,
+                n_swipe= ctx.n_swipe,
+                swipe_span=ctx.swipe_span,
+                circuit_type=ctx.circuit_type,
+                n_modes=ctx.n_modes,
+                encoding_mode=ctx.encoding_mode,
+                target_mode=ctx.target_mode
+            )
+
+            pred_m = run_simulation_sequence_np(
+                params=θ_m,
+                memory_depth=ctx.memory_depth,
+                n_samples=ctx.n_samples,
+                encoded_phases=enc_np,
+                n_swipe= ctx.n_swipe,
+                swipe_span=ctx.swipe_span,
+                circuit_type=ctx.circuit_type,
+                n_modes=ctx.n_modes,
+                encoding_mode=ctx.encoding_mode,
+                target_mode=ctx.target_mode
                 )
-                pred_m = run_simulation_sequence_np(
-                    θ_m, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np,
-                    circuit_type=ctx.circuit_type,
-                    n_modes=ctx.n_modes,
-                    encoding_mode=ctx.encoding_mode,
-                    target_mode=ctx.target_mode
-                )
-            else:
-                pred_p = run_simulation_sequence_np(
-                    θ_p, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                    circuit_type=ctx.circuit_type,
-                    n_modes=ctx.n_modes,
-                    encoding_mode=ctx.encoding_mode,
-                    target_mode=ctx.target_mode
-                )
-                pred_m = run_simulation_sequence_np(
-                    θ_m, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                    circuit_type=ctx.circuit_type,
-                    n_modes=ctx.n_modes,
-                    encoding_mode=ctx.encoding_mode,
-                    target_mode=ctx.target_mode
-                )
+
 
             loss_p = 0.5 * np.mean((pred_p - y_np) ** 2)
             loss_m = 0.5 * np.mean((pred_m - y_np) ** 2)

@@ -23,6 +23,7 @@ from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
+from src.circuits import CircuitType
 
 
 def main():
@@ -42,6 +43,13 @@ def main():
     config['n_photons'] = (1, 1)  # Number of photons for each phase
     n_samples = 500
     n_phases = 2  # Number of external phase parameters (excluding memory phase)
+    n_swipe=0
+    swipe_span = 0.0
+    circuit_type = 'memristor'
+    n_modes = 3
+    encoding_mode = 0
+    target_mode = 1 
+    circuit_type_class = CircuitType.MEMRISTOR
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -60,19 +68,30 @@ def main():
         epochs=config['epochs'],
         phase_idx=config['phase_idx'],
         n_photons=config['n_photons'],
-        n_swipe=0,
+        n_phases=n_phases,
         n_samples=n_samples,
-        n_phases=n_phases
+        n_swipe=n_swipe,
+        swipe_span = swipe_span,
+        circuit_type = circuit_type,
+        n_modes = n_modes,
+        encoding_mode = encoding_mode,
+        target_mode = target_mode 
     )
     
     # Generate predictions
     print("Generating predictions...")
     enc_test = 2 * np.arccos(X_test)
     preds_discrete = run_simulation_sequence_np(
-        theta_discrete, 
-        config['memory_depth'], 
-        n_samples, 
-        encoded_phases=enc_test
+        params=theta_discrete,
+        memory_depth=config['memory_depth'],
+        n_samples=n_samples,
+        encoded_phases=enc_test,
+        n_swipe= n_swipe,
+        swipe_span=swipe_span,
+        circuit_type=circuit_type_class,
+        n_modes=n_modes,
+        encoding_mode=encoding_mode,
+        target_mode=target_mode
     )
     
     # Compute MSE
@@ -95,10 +114,16 @@ def main():
         perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
         
         preds = run_simulation_sequence_np(
-            perturbed_theta, 
-            config['memory_depth'], 
-            sample_count, 
-            encoded_phases=enc_test
+            params=perturbed_theta,
+            memory_depth=config['memory_depth'],
+            n_samples=n_samples,
+            encoded_phases=enc_test,
+            n_swipe= n_swipe,
+            swipe_span=swipe_span,
+            circuit_type=circuit_type_class,
+            n_modes=n_modes,
+            encoding_mode=encoding_mode,
+            target_mode=target_mode
         )
         all_preds[:, i] = preds
     
