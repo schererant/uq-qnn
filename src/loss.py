@@ -26,7 +26,7 @@ class PhotonicModel(torch.nn.Module):
     """
     def __init__(self, init_theta: Sequence[float], enc_np: np.ndarray, y_np: np.ndarray,
                  memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int],
-                 circuit_type: str = 'memristor', n_modes: int = 3, 
+                 circuit_type: CircuitType = CircuitType.MEMRISTOR, n_modes: int = 3, 
                  encoding_mode: int = 0, target_mode: Optional[Tuple[int, ...]] = None) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
@@ -37,7 +37,7 @@ class PhotonicModel(torch.nn.Module):
         self.n_photons = n_photons
         
         # Circuit architecture parameters
-        self.circuit_type = CircuitType.MEMRISTOR if circuit_type.lower() == 'memristor' else CircuitType.CLEMENTS
+        self.circuit_type = CircuitType.MEMRISTOR if circuit_type == CircuitType.MEMRISTOR else CircuitType.CLEMENTS
         self.n_modes = n_modes
         self.encoding_mode = encoding_mode
         self.target_mode = target_mode

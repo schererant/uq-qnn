@@ -23,6 +23,7 @@ from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
+from src.circuits import build_circuit, CircuitType
 
 
 def main():
@@ -33,15 +34,16 @@ def main():
     np.random.seed(42)
     
     # Configure parameters
-    config['n_data'] = 80
+    config['n_data'] = 60
     config['sigma_noise'] = 0.05
     config['lr'] = 0.03
-    config['epochs'] = 30
+    config['epochs'] = 50
     config['memory_depth'] = 2
     config['phase_idx'] = (0, 1)  # Indices of phase parameters (excluding weight)
     config['n_photons'] = (1, 1)  # Number of photons for each phase
-    n_samples = 500
-    n_phases = 2  # Number of external phase parameters (excluding memory phase)
+    n_samples = 60
+    n_phases = 2 # Number of external phase parameters (excluding memory phase)
+    n_modes = 2 
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -62,7 +64,12 @@ def main():
         n_photons=config['n_photons'],
         n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases
+        n_phases=n_phases,
+        n_modes=n_modes,
+        circuit_type = CircuitType.MEMRISTOR,
+        encoding_mode = 0,
+        target_mode=0,
+        swipe_span=None
     )
     
     # Generate predictions
@@ -72,7 +79,10 @@ def main():
         theta_discrete, 
         config['memory_depth'], 
         n_samples, 
-        encoded_phases=enc_test
+        encoded_phases=enc_test,
+        n_swipe=0,
+        n_modes=n_modes,
+        circuit_type=CircuitType.MEMRISTOR
     )
     
     # Compute MSE
@@ -98,7 +108,10 @@ def main():
             perturbed_theta, 
             config['memory_depth'], 
             sample_count, 
-            encoded_phases=enc_test
+            encoded_phases=enc_test,
+            n_swipe=0,
+            n_modes=n_modes,
+            circuit_type=CircuitType.MEMRISTOR
         )
         all_preds[:, i] = preds
     

@@ -10,6 +10,7 @@ from .simulation import run_simulation_sequence_np
 from .circuits import CircuitType
 
 
+
 @lru_cache(maxsize=None)
 def photonic_psr_coeffs_torch(n: int) -> Tuple[Tensor, Tensor]:
     """
@@ -60,12 +61,12 @@ class MemristorLossPSR(torch.autograd.Function):
         phase_idx: Sequence[int],
         n_photons: Sequence[int],
         n_samples: int,
-        n_swipe: int = 0,
-        swipe_span: float = 0.0,
-        circuit_type: CircuitType = CircuitType.MEMRISTOR,
-        n_modes: int = 3,
-        encoding_mode: int = 0,
+        n_swipe: int,
+        swipe_span: float,
+        n_modes: int,
+        encoding_mode: int,
         target_mode: Optional[Tuple[int, ...]] = None,
+        circuit_type: CircuitType = CircuitType.MEMRISTOR,
     ) -> Tensor:
         discrete = (n_swipe == 0)
         theta_np = theta.detach().cpu().double().numpy()
@@ -79,7 +80,8 @@ class MemristorLossPSR(torch.autograd.Function):
                 circuit_type=circuit_type,
                 n_modes=n_modes,
                 encoding_mode=encoding_mode,
-                target_mode=target_mode
+                target_mode=target_mode,
+                n_swipe=n_swipe
             )
         else:
             preds = run_simulation_sequence_np(
@@ -124,6 +126,7 @@ class MemristorLossPSR(torch.autograd.Function):
         grads = np.zeros_like(theta_np)
         eps   = 1e-3
 
+
         # PSR gradients for photonic phases
         for gate_i, p_idx in enumerate(ctx.phase_idx):
             shifts, coeffs = photonic_psr_coeffs_torch(ctx.n_photons[gate_i])
@@ -138,7 +141,8 @@ class MemristorLossPSR(torch.autograd.Function):
                         circuit_type=ctx.circuit_type,
                         n_modes=ctx.n_modes,
                         encoding_mode=ctx.encoding_mode,
-                        target_mode=ctx.target_mode
+                        target_mode=ctx.target_mode,
+                        n_swipe=ctx.n_swipe
                     )
                 else:
                     out = run_simulation_sequence_np(
@@ -168,7 +172,7 @@ class MemristorLossPSR(torch.autograd.Function):
             if ctx.discrete:
                 pred_p = run_simulation_sequence_np(
                     θ_p, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np,
+                    encoded_phases=enc_np, n_swipe=ctx.n_swipe,
                     circuit_type=ctx.circuit_type,
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
@@ -176,7 +180,7 @@ class MemristorLossPSR(torch.autograd.Function):
                 )
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
-                    encoded_phases=enc_np,
+                    encoded_phases=enc_np, n_swipe=ctx.n_swipe,
                     circuit_type=ctx.circuit_type,
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,

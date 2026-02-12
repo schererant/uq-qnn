@@ -3,12 +3,15 @@ from __future__ import annotations
 from typing import List, Sequence, Tuple
 import numpy as np
 import torch
+
 from tqdm import tqdm
 
 from .loss import PhotonicModel
+from src.circuits import build_circuit, CircuitType
 
 
-def _init_theta(rng: np.random.Generator, n_phases: int = 2, circuit_type: str = 'memristor', n_modes: int = 3) -> np.ndarray:
+
+def _init_theta(rng: np.random.Generator, n_phases, circuit_type, n_modes) -> np.ndarray:
     """
     Initializes model parameters randomly within specified ranges.
     Args:
@@ -19,7 +22,7 @@ def _init_theta(rng: np.random.Generator, n_phases: int = 2, circuit_type: str =
     Returns:
         np.ndarray: Array of initial parameter values.
     """
-    if circuit_type.lower() == 'memristor':
+    if circuit_type == CircuitType.MEMRISTOR:
         # Fixed structure for memristor: [phi1, phi2, w]
         phases = rng.uniform(0.01, 1, size=2) * 2 * np.pi
         w = rng.uniform(0.01, 1)
@@ -47,20 +50,20 @@ def train_pytorch_generic(
     enc_np: np.ndarray,
     y_np: np.ndarray,
     *,
-    memory_depth: int = 2,
-    lr: float = 0.03,
-    epochs: int = 150,
-    phase_idx: Sequence[int] = (0, 1),
-    n_photons: Sequence[int] = (1, 1),
-    n_phases: int = 2,
-    seed: int = 42,
+    memory_depth: int,
+    lr: float,
+    epochs: int,
+    phase_idx: Sequence[int],
+    n_photons: Sequence[int],
+    n_phases: int,
+    seed: int=42,
     n_samples: int,
-    n_swipe: int = 0,
-    swipe_span: float = 0.0,
-    circuit_type: str = 'memristor',
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    n_swipe: int,
+    swipe_span: float,
+    n_modes: int,
+    encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]] = None,
+    circuit_type: CircuitType = CircuitType.MEMRISTOR
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -79,6 +82,7 @@ def train_pytorch_generic(
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
+
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(rng, n_phases, circuit_type, n_modes)
     model = PhotonicModel(
@@ -113,13 +117,13 @@ def train_pytorch(
     X: np.ndarray,
     y: np.ndarray,
     *,
-    n_swipe: int = 0,
-    swipe_span: float = 0.0,
-    n_phases: int = 2,
-    circuit_type: str = 'memristor',
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    n_swipe: int,
+    swipe_span: float,
+    n_phases: int,
+    n_modes: int,
+    encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]] = None,
+    circuit_type: CircuitType = CircuitType.MEMRISTOR,
     **kwargs
 ) -> Tuple[np.ndarray, List[float]]:
     """
