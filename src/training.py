@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -112,6 +112,22 @@ def train_pytorch_generic(
     
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(rng, n_phases, circuit_type, n_modes)
+
+    # Ensure phase_idx and n_photons match the actual theta structure.
+    # theta = [phase_0, ..., phase_{n-1}, weight]; last element is always weight.
+    n_phase_params = len(init_theta) - 1
+    if any(p >= len(init_theta) for p in phase_idx) or len(phase_idx) != n_phase_params or len(n_photons) != n_phase_params:
+        # User passed phase_idx/n_photons that don't match theta (e.g. n_phases>2 with memristor).
+        # Override to match actual structure.
+        if any(p >= len(init_theta) for p in phase_idx):
+            print(
+                f"Note: phase_idx contained out-of-bounds indices for {circuit_type} circuit "
+                f"(theta has {len(init_theta)} params). Adjusted to phase_idx={tuple(range(n_phase_params))}. "
+                f"For more phases, use circuit_type='clements' with n_modes>3."
+            )
+        phase_idx = tuple(range(n_phase_params))
+        n_photons = tuple([1] * n_phase_params)
+
     model = PhotonicModel(
         init_theta, enc_np, y_np, memory_depth, phase_idx, n_photons,
         circuit_type=circuit_type, n_modes=n_modes, 
