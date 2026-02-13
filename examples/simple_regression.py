@@ -22,6 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
+from src.circuits import CircuitType
 from src.utils import config
 
 
@@ -38,10 +39,11 @@ def main():
     config['lr'] = 0.03
     config['epochs'] = 30
     config['memory_depth'] = 2
-    config['phase_idx'] = (0, 1)  # Indices of phase parameters (excluding weight)
-    config['n_photons'] = (1, 1)  # Number of photons for each phase
+    n_modes = 3
+    n_phases = n_modes * (n_modes - 1)  # Memristor uses Clements structure
+    config['phase_idx'] = tuple(range(n_phases))
+    config['n_photons'] = tuple([1] * n_phases)
     n_samples = 500
-    n_phases = 2  # Number of external phase parameters (excluding memory phase)
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -62,7 +64,9 @@ def main():
         n_photons=config['n_photons'],
         n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases
+        n_phases=n_phases,
+        circuit_type='memristor',
+        n_modes=n_modes
     )
     
     # Generate predictions
@@ -72,7 +76,9 @@ def main():
         theta_discrete, 
         config['memory_depth'], 
         n_samples, 
-        encoded_phases=enc_test
+        encoded_phases=enc_test,
+        circuit_type=CircuitType.MEMRISTOR,
+        n_modes=n_modes
     )
     
     # Compute MSE
@@ -98,7 +104,9 @@ def main():
             perturbed_theta, 
             config['memory_depth'], 
             sample_count, 
-            encoded_phases=enc_test
+            encoded_phases=enc_test,
+            circuit_type=CircuitType.MEMRISTOR,
+            n_modes=n_modes
         )
         all_preds[:, i] = preds
     

@@ -20,8 +20,11 @@ def _init_theta(rng: np.random.Generator, n_phases: int = 2, circuit_type: str =
         np.ndarray: Array of initial parameter values.
     """
     if circuit_type.lower() == 'memristor':
-        # Fixed structure for memristor: [phi1, phi2, w]
-        phases = rng.uniform(0.01, 1, size=2) * 2 * np.pi
+        # Memristor uses same structure as Clements: [phase_0, ..., phase_{n-1}, w]
+        expected_phases = n_modes * (n_modes - 1)
+        if n_phases != expected_phases:
+            n_phases = expected_phases
+        phases = rng.uniform(0.0, 2 * np.pi, size=n_phases)
         w = rng.uniform(0.01, 1)
         return np.concatenate([phases, [w]])
     else:  # Clements
@@ -63,6 +66,7 @@ def train_pytorch_generic(
     target_mode: Optional[Tuple[int, ...]] = None,
     loss_type: str = 'mse',
     n_classes: int = 1,
+    memristive_phase_idx: Optional[int] = None,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -84,6 +88,7 @@ def train_pytorch_generic(
         target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
         loss_type (str): Loss function type ('mse' for regression, 'cross_entropy' for classification).
         n_classes (int): Number of classes for classification (default: 1 for regression).
+        memristive_phase_idx (Optional[int]): For memristor, which phase is memristive. None = auto.
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
@@ -132,7 +137,8 @@ def train_pytorch_generic(
         init_theta, enc_np, y_np, memory_depth, phase_idx, n_photons,
         circuit_type=circuit_type, n_modes=n_modes, 
         encoding_mode=encoding_mode, target_mode=target_mode,
-        loss_type=loss_type, n_classes=n_classes
+        loss_type=loss_type, n_classes=n_classes,
+        memristive_phase_idx=memristive_phase_idx
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
@@ -170,6 +176,7 @@ def train_pytorch(
     target_mode: Optional[Tuple[int, ...]] = None,
     loss_type: str = 'mse',
     n_classes: int = 1,
+    memristive_phase_idx: Optional[int] = None,
     **kwargs
 ) -> Tuple[np.ndarray, List[float]]:
     """
@@ -200,6 +207,7 @@ def train_pytorch(
         target_mode=target_mode,
         loss_type=loss_type,
         n_classes=n_classes,
+        memristive_phase_idx=memristive_phase_idx,
         **kwargs
     )
 

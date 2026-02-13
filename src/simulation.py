@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import time
 from collections import Counter
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, Sequence
 import numpy as np
 import perceval as pcvl
 from perceval.algorithm import Sampler
 
-from .circuits import build_circuit, CircuitType
+from .circuits import build_circuit, CircuitType, get_mzi_modes_for_phase
 
 
 class SimulationLogger:
@@ -45,6 +45,43 @@ class SimulationLogger:
 sim_logger = SimulationLogger()
 
 
+def _default_memristive_phase_idx(n_modes: int) -> Tuple[int]:
+    """Default memristive phase index: middle MZI internal phase. For 3-mode, returns (2,) (matches original)."""
+    n_phases = n_modes * (n_modes - 1)
+    if n_modes == 3:
+        return (2,)  # (1,2) MZI internal phase - matches original memristor
+    return (n_phases // 2 - 1,)  # Middle of circuit
+
+
+def _normalize_memristive_phase_idx(
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
+    n_modes: int,
+    n_phases: int,
+) -> Tuple[int, ...]:
+    """Normalize memristive_phase_idx to a tuple of phase indices. Returns empty tuple for non-memristor."""
+    if memristive_phase_idx is None:
+        return _default_memristive_phase_idx(n_modes)
+    if isinstance(memristive_phase_idx, int):
+        idx = memristive_phase_idx
+        if idx < 0 or idx >= n_phases:
+            raise ValueError(
+                f"memristive_phase_idx must be in [0, {n_phases-1}] for {n_modes} modes, got {idx}"
+            )
+        return (idx,)
+    # Sequence (tuple, list, etc.)
+    indices = tuple(int(x) for x in memristive_phase_idx)
+    for idx in indices:
+        if idx < 0 or idx >= n_phases:
+            raise ValueError(
+                f"Each memristive_phase_idx must be in [0, {n_phases-1}] for {n_modes} modes, got {idx}"
+            )
+    if len(indices) != len(set(indices)):
+        raise ValueError(
+            f"memristive_phase_idx must not contain duplicates, got {memristive_phase_idx}"
+        )
+    return indices
+
+
 def run_simulation_sequence_np(
     params: np.ndarray,
     memory_depth: int,
@@ -57,6 +94,7 @@ def run_simulation_sequence_np(
     encoding_mode: int = 0,
     target_mode: Optional[Tuple[int, ...]] = None,
     return_class_probs: bool = False,
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
 ) -> np.ndarray:
     """
     Runs a sequence of photonic-circuit simulations in either:
@@ -73,10 +111,12 @@ def run_simulation_sequence_np(
         n_swipe (int, optional): Number of phase points per X[i] (0 for discrete mode, >0 for continuous mode).
         swipe_span (float, optional): Total phase span for swiping (only used if n_swipe > 0).
         circuit_type (CircuitType): Type of circuit architecture.
-        n_modes (int): Number of modes for Clements architecture.
+        n_modes (int): Number of modes for Clements/Memristor architecture.
         encoding_mode (int): Mode to apply encoding to.
         target_mode (Optional[Tuple[int, ...]]): Target output mode(s). For classification, should have n_classes elements.
         return_class_probs (bool): If True and target_mode has multiple modes, returns (n_data, n_classes) array.
+        memristive_phase_idx (Optional[int]): For MEMRISTOR, which phase index (0 to n_phases-1) is replaced by
+            memory-driven phase. If None, uses default (middle MZI internal phase; for 3-mode = 2).
 
     Returns:
         np.ndarray: 
@@ -112,20 +152,39 @@ def run_simulation_sequence_np(
     start_time = time.perf_counter()
     # Set up circuit parameters based on circuit type
     if circuit_type == CircuitType.MEMRISTOR:
-        # Memristor architecture: params = [phi1, phi3, w]
-        # First two are phases, third is weight
-        if len(params) != 3:
-            raise ValueError(f"Memristor architecture requires 3 parameters, got {len(params)}")
-        phi1, phi3, w = params[0], params[1], params[2]
+        # Memristor: same structure as Clements, params = [phase_0, ..., phase_{n-1}, w]
+        n_phases = n_modes * (n_modes - 1)
+        if len(params) != n_phases + 1:
+            raise ValueError(
+                f"Memristor architecture requires {n_phases + 1} parameters "
+                f"({n_phases} phases + weight) for {n_modes} modes, got {len(params)}"
+            )
+        w = params[-1]
+        if memristive_phase_idx is None:
+            memristive_phase_idx = _default_memristive_phase_idx(n_modes)
+        if memristive_phase_idx < 0 or memristive_phase_idx >= n_phases:
+            raise ValueError(
+                f"memristive_phase_idx must be in [0, {n_phases-1}] for {n_modes} modes, "
+                f"got {memristive_phase_idx}"
+            )
         
-        # Fixed input and output states for memristor
-        input_state = pcvl.BasicState([0, 1, 0])
-        state_001 = pcvl.BasicState([0, 0, 1])
-        state_010 = pcvl.BasicState([0, 1, 0])
+        # Input state: single photon in encoding_mode
+        input_modes = [0] * n_modes
+        input_modes[encoding_mode] = 1
+        input_state = pcvl.BasicState(input_modes)
         
-        # Default target mode for memristor if not specified
+        # Memory states: probabilities of photon in the two modes of the memristive MZI
+        m1, m2 = get_mzi_modes_for_phase(memristive_phase_idx, n_modes)
+        state_m1 = [0] * n_modes
+        state_m1[m1] = 1
+        state_m2 = [0] * n_modes
+        state_m2[m2] = 1
+        state_m1_bs = pcvl.BasicState(state_m1)
+        state_m2_bs = pcvl.BasicState(state_m2)
+        
+        # Default target mode if not specified
         if target_mode is None:
-            target_mode = (2,)  # Mode 2 (index 2, state 001)
+            target_mode = (n_modes - 1,)  # Last mode
     else:
         # Clements architecture: params are all phases for MZIs
         # Initialize weight as the last parameter
@@ -140,6 +199,13 @@ def run_simulation_sequence_np(
         if target_mode is None:
             # Default to last mode if not specified
             target_mode = (n_modes - 1,)
+
+    # Build target states list for multi-class / probability extraction
+    target_modes_list = []
+    for m in target_mode:
+        tm = [0] * n_modes
+        tm[m] = 1
+        target_modes_list.append(pcvl.BasicState(tm))
 
     # prepare memory and output
     mem_p1 = np.zeros(memory_depth, dtype=float)
@@ -165,14 +231,6 @@ def run_simulation_sequence_np(
         offsets = np.array([])
         enc_base = encoded_phases
 
-    # Create empty lists for target states if using Clements architecture
-    if circuit_type == CircuitType.CLEMENTS:
-        target_modes_list = []
-        for mode in target_mode:
-            target_mode_array = [0] * n_modes
-            target_mode_array[mode] = 1
-            target_modes_list.append(pcvl.BasicState(target_mode_array))
-    
     # main loop
     for i in range(num_pts):
         t = i % memory_depth
@@ -190,7 +248,8 @@ def run_simulation_sequence_np(
             enc_phi = encoded_phases[i]
             # Build phases array for circuit based on architecture
             if circuit_type == CircuitType.MEMRISTOR:
-                phases = np.array([phi1, mem_phi, phi3])
+                phases = params[:-1].copy()
+                phases[memristive_phase_idx] = mem_phi
             else:
                 # For Clements, use all original phases but replace the memory phase
                 # at specific positions based on the encoding scheme
@@ -214,26 +273,17 @@ def run_simulation_sequence_np(
             sim_logger.log_circuit(time.perf_counter() - t0)
 
             if circuit_type == CircuitType.MEMRISTOR:
-                p001 = probs.get(state_001, 0.0)
-                p010 = probs.get(state_010, 0.0)
+                p_m1 = probs.get(state_m1_bs, 0.0)
+                p_m2 = probs.get(state_m2_bs, 0.0)
                 if return_class_probs and n_classes > 1:
-                    # For classification, use multiple output modes
-                    # For memristor with 2 classes, use p001 and p010
-                    if n_classes == 2:
-                        preds[i, 0] = p010  # Class 0 from mode 1
-                        preds[i, 1] = p001  # Class 1 from mode 2
-                    else:
-                        # For more classes, need more modes - use available probabilities
-                        for c in range(min(n_classes, 2)):
-                            if c == 0:
-                                preds[i, c] = p010
-                            elif c == 1:
-                                preds[i, c] = p001
-                            else:
-                                preds[i, c] = 0.0  # Not enough modes
+                    for c, target_state in enumerate(target_modes_list):
+                        preds[i, c] = probs.get(target_state, 0.0)
                 else:
-                    preds[i] = p001
-                mem_p1[t], mem_p2[t] = p010, p001
+                    target_prob = sum(probs.get(ts, 0.0) for ts in target_modes_list)
+                    if len(target_modes_list) > 1:
+                        target_prob /= len(target_modes_list)
+                    preds[i] = target_prob
+                mem_p1[t], mem_p2[t] = p_m1, p_m2
             else:
                 # For Clements, handle multi-class output
                 if return_class_probs and n_classes > 1:
@@ -263,11 +313,13 @@ def run_simulation_sequence_np(
             # We've already validated that we're in memristor mode above
             p1_swipe = np.empty(n_swipe, dtype=float)
             p2_swipe = np.empty(n_swipe, dtype=float)
+            target_swipe = np.empty((n_swipe, n_classes) if return_class_probs and n_classes > 1 else (n_swipe,), dtype=float)
             for k, off in enumerate(offsets):
                 enc_phi = enc_base[i] + off
                 # Build phases array for circuit based on architecture
                 if circuit_type == CircuitType.MEMRISTOR:
-                    phases = np.array([phi1, mem_phi, phi3])
+                    phases = params[:-1].copy()
+                    phases[memristive_phase_idx] = mem_phi
                 else:
                     # For Clements, use all original phases but replace the memory phase
                     phases = params[:-1].copy()  # All but the weight parameter
@@ -287,8 +339,15 @@ def run_simulation_sequence_np(
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
                 if circuit_type == CircuitType.MEMRISTOR:
-                    p1_swipe[k] = probs.get(state_010, 0.0)
-                    p2_swipe[k] = probs.get(state_001, 0.0)
+                    p1_swipe[k] = probs.get(state_m1_bs, 0.0)
+                    p2_swipe[k] = probs.get(state_m2_bs, 0.0)
+                    if return_class_probs and n_classes > 1:
+                        for c, ts in enumerate(target_modes_list):
+                            target_swipe[k, c] = probs.get(ts, 0.0)
+                    else:
+                        target_swipe[k] = sum(probs.get(ts, 0.0) for ts in target_modes_list)
+                        if len(target_modes_list) > 1:
+                            target_swipe[k] /= len(target_modes_list)
                 else:
                     # For Clements, use target modes
                     target_prob = 0.0
@@ -300,18 +359,12 @@ def run_simulation_sequence_np(
                     
                     p1_swipe[k] = target_prob
                     p2_swipe[k] = target_prob
+                    target_swipe[k] = target_prob
 
             if return_class_probs and n_classes > 1:
-                # For classification in swipe mode, average probabilities across swipes
-                if circuit_type == CircuitType.MEMRISTOR and n_classes == 2:
-                    preds[i, 0] = p1_swipe.mean()  # Class 0
-                    preds[i, 1] = p2_swipe.mean()  # Class 1
-                else:
-                    # For Clements or more classes, need to recompute
-                    # This is a simplified version - full implementation would track per class
-                    preds[i] = p2_swipe.mean() if n_classes == 1 else p2_swipe.mean()
+                preds[i] = target_swipe.mean(axis=0)
             else:
-                preds[i] = p2_swipe.mean()
+                preds[i] = target_swipe.mean()
             mem_p1[t], mem_p2[t] = p1_swipe.mean(), p2_swipe.mean()
 
     # finalize

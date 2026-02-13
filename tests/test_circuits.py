@@ -20,7 +20,8 @@ from src.circuits import (
     mzi_unit, 
     memristor_circuit, 
     clements_circuit, 
-    build_circuit
+    build_circuit,
+    get_mzi_modes_for_phase
 )
 
 
@@ -91,21 +92,23 @@ class TestCircuitArchitectures(unittest.TestCase):
             clements_circuit(np.array([0.1, 0.2]), 1)
     
     def test_build_circuit_memristor(self):
-        """Test building a complete memristor circuit."""
-        phases = np.array([np.pi/4, np.pi/3, np.pi/2])
+        """Test building a complete memristor circuit (uses Clements structure)."""
+        n_modes = 3
+        n_phases = n_modes * (n_modes - 1)
+        phases = np.ones(n_phases) * np.pi/4
         enc_phi = np.pi/6
         
         # Basic test
-        circ = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR)
-        self.assertEqual(circ.m, 3)
+        circ = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, n_modes=n_modes)
+        self.assertEqual(circ.m, n_modes)
         
         # Test with encoding mode
-        circ2 = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, encoding_mode=1)
-        self.assertEqual(circ2.m, 3)
+        circ2 = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, n_modes=n_modes, encoding_mode=1)
+        self.assertEqual(circ2.m, n_modes)
         
         # Test with invalid encoding mode - should not crash, will use mode 1 (valid)
-        circ3 = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, encoding_mode=10)
-        self.assertEqual(circ3.m, 3)
+        circ3 = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, n_modes=n_modes, encoding_mode=10)
+        self.assertEqual(circ3.m, n_modes)
     
     def test_build_circuit_clements(self):
         """Test building a complete Clements circuit."""
@@ -150,6 +153,20 @@ class TestCircuitArchitectures(unittest.TestCase):
                 circuit_type=CircuitType.CLEMENTS, 
                 n_modes=1
             )
+
+    def test_get_mzi_modes_for_phase(self):
+        """Test phase index to MZI mode mapping."""
+        # 3-mode Clements: MZI (0,1) phases 0,1; (1,2) phases 2,3; (0,1) phases 4,5
+        self.assertEqual(get_mzi_modes_for_phase(0, 3), (0, 1))
+        self.assertEqual(get_mzi_modes_for_phase(1, 3), (0, 1))
+        self.assertEqual(get_mzi_modes_for_phase(2, 3), (1, 2))
+        self.assertEqual(get_mzi_modes_for_phase(3, 3), (1, 2))
+        self.assertEqual(get_mzi_modes_for_phase(4, 3), (0, 1))
+        self.assertEqual(get_mzi_modes_for_phase(5, 3), (0, 1))
+        with self.assertRaises(ValueError):
+            get_mzi_modes_for_phase(6, 3)
+        with self.assertRaises(ValueError):
+            get_mzi_modes_for_phase(-1, 3)
 
 
 if __name__ == "__main__":

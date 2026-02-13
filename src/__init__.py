@@ -16,7 +16,14 @@ __author__ = "UQ-QNN Team"
 
 # Main imports for convenience
 from .data import get_data, load_measurement_pickle, quartic_data
-from .circuits import encoding_circuit, memristor_circuit, build_circuit
+from .circuits import (
+    CircuitType,
+    encoding_circuit,
+    memristor_circuit,
+    clements_circuit,
+    build_circuit,
+    get_mzi_modes_for_phase,
+)
 from .simulation import run_simulation_sequence_np, SimulationLogger
 from .autograd import photonic_psr_coeffs_torch, MemristorLossPSR
 from .loss import PhotonicModel
@@ -36,9 +43,12 @@ __all__ = [
     "get_data",
     "load_measurement_pickle",
     "quartic_data",
+    "CircuitType",
     "encoding_circuit",
-    "memristor_circuit", 
+    "memristor_circuit",
+    "clements_circuit",
     "build_circuit",
+    "get_mzi_modes_for_phase",
     "run_simulation_sequence_np",
     "SimulationLogger",
     "photonic_psr_coeffs_torch",

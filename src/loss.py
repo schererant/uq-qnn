@@ -30,7 +30,8 @@ class PhotonicModel(torch.nn.Module):
                  memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int],
                  circuit_type: str = 'memristor', n_modes: int = 3, 
                  encoding_mode: int = 0, target_mode: Optional[Tuple[int, ...]] = None,
-                 loss_type: str = 'mse', n_classes: int = 1) -> None:
+                 loss_type: str = 'mse', n_classes: int = 1,
+                 memristive_phase_idx: Optional[int] = None) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
         self.register_buffer("enc", torch.from_numpy(enc_np).double())
@@ -46,6 +47,7 @@ class PhotonicModel(torch.nn.Module):
         self.target_mode = target_mode
         self.loss_type = loss_type
         self.n_classes = n_classes
+        self.memristive_phase_idx = memristive_phase_idx
         
         # Validate inputs for classification
         if loss_type == 'cross_entropy':
@@ -90,5 +92,6 @@ class PhotonicModel(torch.nn.Module):
             self.memory_depth, self.phase_idx, self.n_photons, n_samples, 
             n_swipe, swipe_span, 
             self.circuit_type, self.n_modes, self.encoding_mode, self.target_mode,
-            self.loss_type, self.n_classes
+            self.loss_type, self.n_classes,
+            self.memristive_phase_idx
         )

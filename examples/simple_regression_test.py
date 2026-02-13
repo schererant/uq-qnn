@@ -39,16 +39,16 @@ def main():
     config['lr'] = 0.03
     config['epochs'] = 30
     config['memory_depth'] = 2
-    config['phase_idx'] = (0, 1) # Indices of phase parameters (excluding weight)
-    config['n_photons'] = (1, 1)  # Number of photons for each phase
+    n_modes = 3
+    n_phases = n_modes * (n_modes - 1)  # Memristor uses Clements structure
+    config['phase_idx'] = tuple(range(n_phases))
+    config['n_photons'] = tuple([1] * n_phases)
     n_samples = 500
-    n_phases = 2  # Number of external phase parameters (excluding memory phase)
-    n_swipe=0
+    n_swipe = 0
     swipe_span = 0.0
     circuit_type = 'memristor'
-    n_modes = 3
     encoding_mode = 0
-    target_mode = 1 
+    target_mode = (n_modes - 1,)  # Last mode for regression
     circuit_type_class = CircuitType.MEMRISTOR
     
     # Generate synthetic data
@@ -75,7 +75,7 @@ def main():
         circuit_type = circuit_type,
         n_modes = n_modes,
         encoding_mode = encoding_mode,
-        target_mode = target_mode 
+        target_mode=target_mode
     )
     
     # Generate predictions

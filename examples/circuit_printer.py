@@ -18,7 +18,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import perceval as pcvl
 from src.circuits import (
     CircuitType, 
-    memristor_circuit, 
     clements_circuit, 
     build_circuit,
     encoding_circuit
@@ -102,12 +101,9 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
     # If this is a circuit with memory, explain the memory operation
     if "memristor" in circuit.name.lower():
         print("\nMemristor Operation:")
-        print("  1. Input: Photon enters mode 1 (|010>)")
-        print("  2. First MZI: Splits photon between modes 0 and 1 with phase phi1")
-        print("  3. Second MZI: Connects modes 1 and 2 with memory phase (mem_phi)")
-        print("  4. Third MZI: Final interference with phase phi3")
-        print("  5. Output: Measure probability of photon in mode 2 (|001>)")
-        print("  6. Memory update: Update mem_phi based on detection probabilities")
+        print("  1. Uses same Clements mesh structure as CLEMENTS (scalable)")
+        print("  2. One designated phase is memristive (replaced by memory-driven mem_phi)")
+        print("  3. Memory update: mem_phi based on detection in memristive MZI modes")
     
     if "clements" in circuit.name.lower():
         print("\nClements Operation:")
@@ -118,29 +114,32 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
         print(f"  3. Each MZI has two phase shifters (internal and external)")
         print(f"  4. Output: Measure probability of photon in mode {measurement_mode[0]}")
 
-def create_memristor_circuit():
-    """Create and print a memristor circuit."""
-    # Define phases
-    phases = np.array([0.5, 1.2, 0.8])
+def create_memristor_circuit(n_modes=3):
+    """Create and print a memristor circuit (uses Clements structure)."""
+    n_phases = n_modes * (n_modes - 1)
+    phases = np.random.uniform(0, 2*np.pi, n_phases)
     enc_phi = np.pi/4
     
-    # Create basic memristor circuit
-    basic_mem = memristor_circuit(phases)
+    # Create basic memristor circuit (same structure as Clements)
+    basic_mem = clements_circuit(phases, n_modes)
+    basic_mem.name = f"Memristor-{n_modes}"  # For display
     
     # Create full circuit with encoding
     full_mem = build_circuit(
         phases=phases,
         enc_phi=enc_phi,
         circuit_type=CircuitType.MEMRISTOR,
-        n_modes=3,
+        n_modes=n_modes,
         encoding_mode=0
     )
     
-    # Input state: |010>
-    input_state = pcvl.BasicState([0, 1, 0])
+    # Input state: single photon in mode 0
+    input_modes = [0] * n_modes
+    input_modes[0] = 1
+    input_state = pcvl.BasicState(input_modes)
     
-    # Measurement mode: 2
-    measurement_mode = (2,)
+    # Measurement mode: last mode
+    measurement_mode = (n_modes - 1,)
     
     # Print circuit details
     print_circuit_details(basic_mem, input_state, measurement_mode, "Memristor Circuit (standalone)")

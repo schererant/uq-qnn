@@ -111,12 +111,16 @@ def update_config_from_args(args):
     
     # Configure circuit architecture
     if args.circuit_type == 'memristor':
-        # For memristor, use fixed number of phases (2)
-        n_phases = 2
+        # Memristor uses same Clements structure - scalable with n_modes
+        if args.n_modes < 2:
+            print(f"Warning: Memristor requires at least 2 modes, setting to 3")
+            args.n_modes = 3
+        n_phases = args.n_modes * (args.n_modes - 1)
+        args.n_phases = n_phases
         circuit_enum = CircuitType.MEMRISTOR
         # Default target mode for memristor
         if args.target_mode is None:
-            target_mode = (2,)  # Mode 2 (index 2, state 001)
+            target_mode = (args.n_modes - 1,)  # Last mode
     else:  # Clements
         # Validate number of modes
         if args.n_modes < 2:
@@ -138,7 +142,6 @@ def update_config_from_args(args):
     config['n_photons'] = tuple([1] * n_phases)
     
     # Parse target mode if provided
-    target_mode = None
     if args.target_mode:
         try:
             target_mode = tuple(int(m) for m in args.target_mode.split(','))
@@ -148,7 +151,8 @@ def update_config_from_args(args):
                 target_mode = (min(args.n_modes - 1, max(0, target_mode[0])),)
         except ValueError:
             print(f"Warning: Invalid target mode format '{args.target_mode}', using default")
-            target_mode = None
+            target_mode = (args.n_modes - 1,)  # Fallback to default
+    # else: target_mode already set in circuit_type block above
     
     # Timing settings
     config['t_phase_ms'] = args.t_phase_ms
@@ -252,8 +256,8 @@ def run_training(X_train, y_train, X_test, y_test, args):
             preds = run_simulation_sequence_np(
                 theta_opt, config['memory_depth'], args.n_samples,
                 encoded_phases=enc_test,
-                circuit_type=circuit_enum, n_modes=3,
-                encoding_mode=0, target_mode=(2,)
+                circuit_type=circuit_enum, n_modes=args.n_modes,
+                encoding_mode=0, target_mode=(args.n_modes - 1,)
             )
         else:
             # For Clements, try with simplified parameters
@@ -367,7 +371,7 @@ def plot_results(X_train, y_train, X_test, y_test, preds, history, continuous_mo
     
     # Add circuit info as text
     if args.circuit_type == 'memristor':
-        circuit_info = f"Memristor: 3 modes, {args.n_phases} phases + memory phase + weight"
+        circuit_info = f"Memristor: {args.n_modes} modes, {args.n_phases} phases + weight"
     else:
         circuit_info = f"Clements: {args.n_modes} modes, {args.n_phases} phases + weight"
     
@@ -396,7 +400,7 @@ def main():
         print(f"  {key}: {value}")
     
     if args.circuit_type == 'memristor':
-        print(f"Circuit configuration: Memristor architecture with {args.n_phases} phase parameters + memory phase")
+        print(f"Circuit configuration: Memristor architecture with {args.n_modes} modes ({args.n_phases} phases + weight)")
         print(f"Encoding mode: {args.encoding_mode}, Target mode(s): {target_mode}")
     else:
         print(f"Circuit configuration: Clements architecture with {args.n_modes} modes ({n_phases} phases)")

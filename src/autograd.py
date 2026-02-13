@@ -69,6 +69,7 @@ class MemristorLossPSR(torch.autograd.Function):
         target_mode: Optional[Tuple[int, ...]] = None,
         loss_type: str = 'mse',
         n_classes: int = 1,
+        memristive_phase_idx: Optional[int] = None,
     ) -> Tensor:
         discrete = (n_swipe == 0)
         theta_np = theta.detach().cpu().double().numpy()
@@ -86,7 +87,8 @@ class MemristorLossPSR(torch.autograd.Function):
                 n_modes=n_modes,
                 encoding_mode=encoding_mode,
                 target_mode=target_mode,
-                return_class_probs=return_class_probs
+                return_class_probs=return_class_probs,
+                memristive_phase_idx=memristive_phase_idx
             )
         else:
             preds = run_simulation_sequence_np(
@@ -96,7 +98,8 @@ class MemristorLossPSR(torch.autograd.Function):
                 n_modes=n_modes,
                 encoding_mode=encoding_mode,
                 target_mode=target_mode,
-                return_class_probs=return_class_probs
+                return_class_probs=return_class_probs,
+                memristive_phase_idx=memristive_phase_idx
             )
 
         # Compute loss based on loss_type
@@ -149,6 +152,7 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.target_mode  = target_mode
         ctx.loss_type    = loss_type
         ctx.n_classes    = n_classes
+        ctx.memristive_phase_idx = memristive_phase_idx
 
         return torch.tensor(loss_val, dtype=theta.dtype, device=theta.device)
 
@@ -210,7 +214,8 @@ class MemristorLossPSR(torch.autograd.Function):
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
-                            return_class_probs=True
+                            return_class_probs=True,
+                            memristive_phase_idx=ctx.memristive_phase_idx
                         )
                     else:
                         out = run_simulation_sequence_np(
@@ -220,7 +225,8 @@ class MemristorLossPSR(torch.autograd.Function):
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
-                            return_class_probs=True
+                            return_class_probs=True,
+                            memristive_phase_idx=ctx.memristive_phase_idx
                         )
                     if out.ndim == 1:
                         out = np.stack([1 - out, out], axis=1)
@@ -242,7 +248,8 @@ class MemristorLossPSR(torch.autograd.Function):
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
-                            return_class_probs=return_class_probs
+                            return_class_probs=return_class_probs,
+                            memristive_phase_idx=ctx.memristive_phase_idx
                         )
                     else:
                         out = run_simulation_sequence_np(
@@ -252,7 +259,8 @@ class MemristorLossPSR(torch.autograd.Function):
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
-                            return_class_probs=return_class_probs
+                            return_class_probs=return_class_probs,
+                            memristive_phase_idx=ctx.memristive_phase_idx
                         )
                     if out.ndim > 1:
                         out = out[:, -1]  # Use last class for regression
@@ -264,8 +272,8 @@ class MemristorLossPSR(torch.autograd.Function):
         for idx in weight_idxs:
             θ_p = theta_np.copy(); θ_m = theta_np.copy()
             θ_p[idx] += eps; θ_m[idx] -= eps
-            # Only clip the weight parameter (index 2), not the phases
-            if idx == 2:  # weight parameter
+            # Only clip the weight parameter (last index), not the phases
+            if idx == len(theta_np) - 1:  # weight parameter
                 θ_p[idx] = np.clip(θ_p[idx], 0.01, 1)
                 θ_m[idx] = np.clip(θ_m[idx], 0.01, 1)
             else:  # phase parameters can wrap around
@@ -282,7 +290,8 @@ class MemristorLossPSR(torch.autograd.Function):
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
-                    return_class_probs=return_class_probs
+                    return_class_probs=return_class_probs,
+                    memristive_phase_idx=ctx.memristive_phase_idx
                 )
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
@@ -291,7 +300,8 @@ class MemristorLossPSR(torch.autograd.Function):
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
-                    return_class_probs=return_class_probs
+                    return_class_probs=return_class_probs,
+                    memristive_phase_idx=ctx.memristive_phase_idx
                 )
             else:
                 pred_p = run_simulation_sequence_np(
@@ -301,7 +311,8 @@ class MemristorLossPSR(torch.autograd.Function):
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
-                    return_class_probs=return_class_probs
+                    return_class_probs=return_class_probs,
+                    memristive_phase_idx=ctx.memristive_phase_idx
                 )
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
@@ -310,7 +321,8 @@ class MemristorLossPSR(torch.autograd.Function):
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
-                    return_class_probs=return_class_probs
+                    return_class_probs=return_class_probs,
+                    memristive_phase_idx=ctx.memristive_phase_idx
                 )
 
             # Compute loss based on loss_type
@@ -346,4 +358,4 @@ class MemristorLossPSR(torch.autograd.Function):
                 loss_m = 0.5 * np.mean((pred_m - y_np) ** 2)
             grads[idx] = (loss_p - loss_m) / (2 * eps)
 
-        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None, None, None, None, None, None, None, None, None
+        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
