@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Sequence, Tuple, Optional
+from typing import Sequence, Tuple, Optional, Union
 import numpy as np
 import torch
 from torch import Tensor
 
 from .simulation import run_simulation_sequence_np
-from .circuits import CircuitType
 
 
 @lru_cache(maxsize=None)
@@ -63,13 +62,12 @@ class MemristorLossPSR(torch.autograd.Function):
         n_samples: int,
         n_swipe: int = 0,
         swipe_span: float = 0.0,
-        circuit_type: CircuitType = CircuitType.MEMRISTOR,
         n_modes: int = 3,
         encoding_mode: int = 0,
         target_mode: Optional[Tuple[int, ...]] = None,
         loss_type: str = 'mse',
         n_classes: int = 1,
-        memristive_phase_idx: Optional[int] = None,
+        memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]] = None,
     ) -> Tensor:
         discrete = (n_swipe == 0)
         theta_np = theta.detach().cpu().double().numpy()
@@ -83,7 +81,6 @@ class MemristorLossPSR(torch.autograd.Function):
             preds = run_simulation_sequence_np(
                 theta_np, memory_depth, n_samples,
                 encoded_phases=enc_np,
-                circuit_type=circuit_type,
                 n_modes=n_modes,
                 encoding_mode=encoding_mode,
                 target_mode=target_mode,
@@ -94,7 +91,6 @@ class MemristorLossPSR(torch.autograd.Function):
             preds = run_simulation_sequence_np(
                 theta_np, memory_depth, n_samples,
                 encoded_phases=enc_np, n_swipe=n_swipe, swipe_span=swipe_span,
-                circuit_type=circuit_type,
                 n_modes=n_modes,
                 encoding_mode=encoding_mode,
                 target_mode=target_mode,
@@ -146,7 +142,6 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.memory_depth = memory_depth
         ctx.n_samples    = n_samples
         ctx.preds_np     = preds
-        ctx.circuit_type = circuit_type
         ctx.n_modes      = n_modes
         ctx.encoding_mode = encoding_mode
         ctx.target_mode  = target_mode
@@ -210,7 +205,6 @@ class MemristorLossPSR(torch.autograd.Function):
                         out = run_simulation_sequence_np(
                             θ_shift, ctx.memory_depth, ctx.n_samples,
                             encoded_phases=enc_np,
-                            circuit_type=ctx.circuit_type,
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
@@ -221,7 +215,6 @@ class MemristorLossPSR(torch.autograd.Function):
                         out = run_simulation_sequence_np(
                             θ_shift, ctx.memory_depth, ctx.n_samples,
                             encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                            circuit_type=ctx.circuit_type,
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
@@ -244,7 +237,6 @@ class MemristorLossPSR(torch.autograd.Function):
                         out = run_simulation_sequence_np(
                             θ_shift, ctx.memory_depth, ctx.n_samples,
                             encoded_phases=enc_np,
-                            circuit_type=ctx.circuit_type,
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
@@ -255,7 +247,6 @@ class MemristorLossPSR(torch.autograd.Function):
                         out = run_simulation_sequence_np(
                             θ_shift, ctx.memory_depth, ctx.n_samples,
                             encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                            circuit_type=ctx.circuit_type,
                             n_modes=ctx.n_modes,
                             encoding_mode=ctx.encoding_mode,
                             target_mode=ctx.target_mode,
@@ -286,7 +277,6 @@ class MemristorLossPSR(torch.autograd.Function):
                 pred_p = run_simulation_sequence_np(
                     θ_p, ctx.memory_depth, ctx.n_samples,
                     encoded_phases=enc_np,
-                    circuit_type=ctx.circuit_type,
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
@@ -296,7 +286,6 @@ class MemristorLossPSR(torch.autograd.Function):
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
                     encoded_phases=enc_np,
-                    circuit_type=ctx.circuit_type,
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
@@ -307,7 +296,6 @@ class MemristorLossPSR(torch.autograd.Function):
                 pred_p = run_simulation_sequence_np(
                     θ_p, ctx.memory_depth, ctx.n_samples,
                     encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                    circuit_type=ctx.circuit_type,
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
@@ -317,7 +305,6 @@ class MemristorLossPSR(torch.autograd.Function):
                 pred_m = run_simulation_sequence_np(
                     θ_m, ctx.memory_depth, ctx.n_samples,
                     encoded_phases=enc_np, n_swipe=ctx.n_swipe, swipe_span=ctx.swipe_span,
-                    circuit_type=ctx.circuit_type,
                     n_modes=ctx.n_modes,
                     encoding_mode=ctx.encoding_mode,
                     target_mode=ctx.target_mode,
@@ -358,4 +345,4 @@ class MemristorLossPSR(torch.autograd.Function):
                 loss_m = 0.5 * np.mean((pred_m - y_np) ** 2)
             grads[idx] = (loss_p - loss_m) / (2 * eps)
 
-        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+        return g_out * torch.from_numpy(grads).to(theta), None, None, None, None, None, None, None, None, None, None, None, None, None, None

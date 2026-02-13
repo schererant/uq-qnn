@@ -19,7 +19,7 @@ import matplotlib.colors as mcolors
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import perceval as pcvl
-from src.circuits import clements_circuit, CircuitType, build_circuit
+from src.circuits import clements_circuit, build_circuit
 
 def create_clements_circuit(n_modes=6):
     """Creates a Clements circuit with the specified number of modes."""
@@ -48,11 +48,10 @@ def create_full_circuit(n_modes=6, encoding_mode=0):
     phases = np.random.uniform(0, 2*np.pi, n_phases)
     enc_phi = np.pi/4  # Example encoding phase
 
-    # Create the full circuit
+    # Create the full circuit (Clements, no memristive phases)
     circuit = build_circuit(
         phases=phases,
         enc_phi=enc_phi,
-        circuit_type=CircuitType.CLEMENTS,
         n_modes=n_modes,
         encoding_mode=encoding_mode
     )

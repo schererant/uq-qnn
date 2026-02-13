@@ -25,9 +25,8 @@ from src.data import get_data, quartic_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.circuits import (
-    CircuitType, 
-    memristor_circuit, 
-    clements_circuit, 
+    memristor_circuit,
+    clements_circuit,
     build_circuit,
     encoding_circuit
 )
@@ -83,17 +82,16 @@ def visualize_circuit(circuit, input_state, measurement_mode, title):
 
 
 def create_memristor_circuit():
-    """Creates and visualizes a memristor circuit."""
-    # Initialize random phases for demonstration
-    phases = np.array([0.5, 1.2, 0.8])
-    enc_phi = np.pi/4  # Example encoding phase
-    
-    # Create the memristor circuit
+    """Creates a Clements 3x3 circuit (memristive behavior in simulation)."""
+    n_modes = 3
+    n_phases = n_modes * (n_modes - 1)
+    phases = np.array([0.5, 1.2, 0.8, 0.4, 1.0, 0.6])[:n_phases]
+    enc_phi = np.pi/4
+
     mem_circuit = build_circuit(
         phases=phases,
         enc_phi=enc_phi,
-        circuit_type=CircuitType.MEMRISTOR,
-        n_modes=3,
+        n_modes=n_modes,
         encoding_mode=0
     )
     
@@ -123,11 +121,9 @@ def create_clements_circuit(n_modes=6):
     phases = np.random.uniform(0, 2*np.pi, n_phases)
     enc_phi = np.pi/4  # Example encoding phase
     
-    # Create the Clements circuit
     clements_circuit_obj = build_circuit(
         phases=phases,
         enc_phi=enc_phi,
-        circuit_type=CircuitType.CLEMENTS,
         n_modes=n_modes,
         encoding_mode=0
     )
@@ -151,71 +147,46 @@ def create_clements_circuit(n_modes=6):
     return clements_circuit_obj, input_state, measurement_mode
 
 
-def train_and_evaluate(circuit_type, n_modes, X_train, y_train, X_test, y_test):
-    """
-    Trains a circuit on the training data and evaluates it on the test data.
-    
-    Args:
-        circuit_type (str): Type of circuit ('memristor' or 'clements')
-        n_modes (int): Number of modes for the circuit
-        X_train, y_train: Training data
-        X_test, y_test: Test data
-        
-    Returns:
-        dict: Results including trained parameters and metrics
-    """
-    print(f"\n=== Training {circuit_type.upper()} Circuit on Quartic Function ===")
-    
-    # Set up parameters based on circuit type
-    if circuit_type.lower() == 'memristor':
-        n_phases = 2  # Fixed for memristor (excluding memory phase)
-        circuit_enum = CircuitType.MEMRISTOR
-        encoding_mode = 0
-        target_mode = (2,)  # Mode 2 (001 state)
-        print(f"Memristor architecture: {n_phases} phases + memory phase + weight")
-    else:  # Clements
-        n_phases = n_modes * (n_modes - 1)
-        circuit_enum = CircuitType.CLEMENTS
-        encoding_mode = 0
-        target_mode = (n_modes - 1,)
-        print(f"Clements architecture: {n_modes} modes, {n_phases} phases + weight")
-        print(f"Using encoding mode: {encoding_mode}, target mode: {target_mode}")
-    
-    # Configuration for training
+def train_and_evaluate(label, n_modes, X_train, y_train, X_test, y_test, memristive_phase_idx=None):
+    """Trains a Clements circuit on quartic data."""
+    print(f"\n=== Training {label.upper()} Circuit on Quartic Function ===")
+    n_phases = n_modes * (n_modes - 1)
+    encoding_mode = 0
+    target_mode = (n_modes - 1,)
+    if memristive_phase_idx:
+        print(f"Clements {n_modes}x{n_modes} with memristive phases {memristive_phase_idx}")
+    else:
+        print(f"Clements {n_modes}x{n_modes}, {n_phases} phases")
+
     n_samples = 500
     epochs = 15
-    
-    # Train the model
+
     theta_opt, history = train_pytorch(
         X_train, y_train,
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=epochs,
-        phase_idx=tuple(range(n_phases)),  # Phase indices
-        n_photons=tuple([1] * n_phases),   # One photon per phase
-        n_swipe=0,  # Discrete mode
+        n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases,
-        circuit_type=circuit_type,
         n_modes=n_modes,
         encoding_mode=encoding_mode,
-        target_mode=target_mode
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx
     )
-    
-    # Generate predictions
+
     enc_test = 2 * np.arccos(X_test)
-    print(f"Running predictions with circuit type: {circuit_enum}, n_modes: {n_modes}")
-    
+    print(f"Running predictions: n_modes={n_modes}, memristive={memristive_phase_idx}")
+
     try:
         predictions = run_simulation_sequence_np(
             theta_opt,
             config['memory_depth'],
             n_samples,
             encoded_phases=enc_test,
-            circuit_type=circuit_enum,
             n_modes=n_modes,
             encoding_mode=encoding_mode,
-            target_mode=target_mode
+            target_mode=target_mode,
+            memristive_phase_idx=memristive_phase_idx
         )
         
         # Handle NaN values in predictions
@@ -237,12 +208,10 @@ def train_and_evaluate(circuit_type, n_modes, X_train, y_train, X_test, y_test):
         rmse = float('nan')
         print("Using placeholder predictions")
     
-    # Print optimized parameters
-    if circuit_type.lower() == 'memristor':
-        param_names = ["phi1", "phi3", "weight"]
-        print("\nOptimized parameters:")
+    if memristive_phase_idx:
+        print("\nOptimized parameters (phases + weights):")
         for i, param in enumerate(theta_opt):
-            print(f"  {param_names[i]}: {param:.6f}")
+            print(f"  param[{i}]: {param:.6f}")
     
     return {
         'theta': theta_opt,
@@ -394,17 +363,19 @@ def main():
     # Train and evaluate both circuit types
     results = {}
     
-    # 1. Memristor architecture
-    results['memristor'] = train_and_evaluate(
-        'memristor', 3, X_train, y_train, X_test, y_test
+    # 1. Clements with memristive phase
+    results['memristive'] = train_and_evaluate(
+        'memristive', 3, X_train, y_train, X_test, y_test,
+        memristive_phase_idx=[2]
     )
     
     # 2. Clements architecture (with 6 modes)
     try:
         # For Clements, we'll use a more manageable 3-mode circuit for stability
         print("\nNote: Using a 3-mode Clements circuit for better stability")
-        results['clements'] = train_and_evaluate(
-            'clements', 3, X_train, y_train, X_test, y_test
+        results['standard'] = train_and_evaluate(
+            'standard', 3, X_train, y_train, X_test, y_test,
+            memristive_phase_idx=None
         )
     except Exception as e:
         print(f"Error training Clements circuit: {e}")
@@ -415,11 +386,11 @@ def main():
         dummy_mse = np.mean((dummy_preds - y_test) ** 2)
         dummy_rmse = np.sqrt(dummy_mse)
         
-        results['clements'] = {
+        results['standard'] = {
             'history': [1.0, 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1],
             'predictions': dummy_preds,
             'metrics': {'rmse': dummy_rmse, 'mse': dummy_mse},
-            'theta': np.random.rand(6+1)  # 6 phases + 1 weight for a 3-mode circuit
+            'theta': np.random.rand(6)  # 6 phases for 3-mode Clements
         }
     
     # Plot and compare results

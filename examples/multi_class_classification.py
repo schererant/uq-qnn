@@ -44,9 +44,7 @@ def main():
     n_phases = 2
     n_classes = 3  # Three-class classification
     
-    # Use Clements architecture for multi-class (more modes needed)
-    circuit_type = 'clements'
-    n_modes = 4  # Need at least n_classes modes
+    n_modes = 4  # Need at least n_classes modes (Clements architecture)
     
     # Generate synthetic multi-class classification data
     print("Generating synthetic multi-class classification data...")
@@ -70,7 +68,6 @@ def main():
         n_swipe=0,
         n_samples=n_samples,
         n_phases=n_phases,
-        circuit_type=circuit_type,
         n_modes=n_modes,
         loss_type='cross_entropy',
         n_classes=n_classes,
@@ -85,7 +82,6 @@ def main():
         config['memory_depth'], 
         n_samples, 
         encoded_phases=enc_test,
-        circuit_type='clements',
         n_modes=n_modes,
         target_mode=(0, 1, 2),
         return_class_probs=True
@@ -121,7 +117,6 @@ def main():
             config['memory_depth'], 
             sample_count, 
             encoded_phases=enc_test,
-            circuit_type='clements',
             n_modes=n_modes,
             target_mode=(0, 1, 2),
             return_class_probs=True

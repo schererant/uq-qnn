@@ -15,11 +15,10 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.circuits import (
-    CircuitType, 
-    encoding_circuit, 
-    mzi_unit, 
-    memristor_circuit, 
-    clements_circuit, 
+    encoding_circuit,
+    mzi_unit,
+    memristor_circuit,
+    clements_circuit,
     build_circuit,
     get_mzi_modes_for_phase
 )
@@ -91,68 +90,27 @@ class TestCircuitArchitectures(unittest.TestCase):
             # Too few modes
             clements_circuit(np.array([0.1, 0.2]), 1)
     
-    def test_build_circuit_memristor(self):
-        """Test building a complete memristor circuit (uses Clements structure)."""
+    def test_build_circuit(self):
+        """Test building Clements circuits (3x3, 6x6, etc.)."""
         n_modes = 3
         n_phases = n_modes * (n_modes - 1)
         phases = np.ones(n_phases) * np.pi/4
         enc_phi = np.pi/6
-        
-        # Basic test
-        circ = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, n_modes=n_modes)
+
+        circ = build_circuit(phases, enc_phi, n_modes=n_modes)
         self.assertEqual(circ.m, n_modes)
-        
-        # Test with encoding mode
-        circ2 = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, n_modes=n_modes, encoding_mode=1)
+
+        circ2 = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=1)
         self.assertEqual(circ2.m, n_modes)
-        
-        # Test with invalid encoding mode - should not crash, will use mode 1 (valid)
-        circ3 = build_circuit(phases, enc_phi, circuit_type=CircuitType.MEMRISTOR, n_modes=n_modes, encoding_mode=10)
-        self.assertEqual(circ3.m, n_modes)
-    
-    def test_build_circuit_clements(self):
-        """Test building a complete Clements circuit."""
-        n_modes = 3
-        n_phases = n_modes * (n_modes - 1)
-        phases = np.ones(n_phases) * np.pi/4
-        enc_phi = np.pi/6
-        
-        # Basic test
-        circ = build_circuit(
-            phases, enc_phi, 
-            circuit_type=CircuitType.CLEMENTS, 
-            n_modes=n_modes
-        )
-        self.assertEqual(circ.m, n_modes)
-        
-        # Test with different encoding mode
-        circ2 = build_circuit(
-            phases, enc_phi, 
-            circuit_type=CircuitType.CLEMENTS, 
-            n_modes=n_modes, 
-            encoding_mode=1
-        )
-        self.assertEqual(circ2.m, n_modes)
-        
-        # Test with larger circuit
+
         n_modes = 5
         n_phases = n_modes * (n_modes - 1)
         phases = np.ones(n_phases) * np.pi/4
-        circ3 = build_circuit(
-            phases, enc_phi, 
-            circuit_type=CircuitType.CLEMENTS, 
-            n_modes=n_modes
-        )
+        circ3 = build_circuit(phases, enc_phi, n_modes=n_modes)
         self.assertEqual(circ3.m, n_modes)
-        
-        # Test error cases
+
         with self.assertRaises(ValueError):
-            # Too few modes
-            build_circuit(
-                phases, enc_phi, 
-                circuit_type=CircuitType.CLEMENTS, 
-                n_modes=1
-            )
+            build_circuit(phases, enc_phi, n_modes=1)
 
     def test_get_mzi_modes_for_phase(self):
         """Test phase index to MZI mode mapping."""
@@ -167,6 +125,44 @@ class TestCircuitArchitectures(unittest.TestCase):
             get_mzi_modes_for_phase(6, 3)
         with self.assertRaises(ValueError):
             get_mzi_modes_for_phase(-1, 3)
+
+    def test_multiple_memristive_mzis(self):
+        """Test simulation with multiple memristive MZIs."""
+        from src.simulation import run_simulation_sequence_np
+
+        n_modes = 3
+        n_phases = n_modes * (n_modes - 1)
+        memristive_phase_idx = (2, 5)
+        params = np.concatenate([
+            np.ones(n_phases) * np.pi / 4,
+            np.array([0.5, 0.5])
+        ])
+        enc = np.linspace(0, np.pi, 5)
+        preds = run_simulation_sequence_np(
+            params, memory_depth=2, n_samples=100,
+            encoded_phases=enc,
+            n_modes=n_modes,
+            memristive_phase_idx=memristive_phase_idx
+        )
+        self.assertEqual(len(preds), 5)
+        self.assertTrue(np.all(preds >= 0) and np.all(preds <= 1))
+
+    def test_no_memristive(self):
+        """Test simulation with no memristive phases (standard Clements)."""
+        from src.simulation import run_simulation_sequence_np
+
+        n_modes = 3
+        n_phases = n_modes * (n_modes - 1)
+        params = np.ones(n_phases) * np.pi / 4
+        enc = np.linspace(0, np.pi, 5)
+        preds = run_simulation_sequence_np(
+            params, memory_depth=2, n_samples=100,
+            encoded_phases=enc,
+            n_modes=n_modes,
+            memristive_phase_idx=None
+        )
+        self.assertEqual(len(preds), 5)
+        self.assertTrue(np.all(preds >= 0) and np.all(preds <= 1))
 
 
 if __name__ == "__main__":

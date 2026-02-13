@@ -17,7 +17,6 @@ __author__ = "UQ-QNN Team"
 # Main imports for convenience
 from .data import get_data, load_measurement_pickle, quartic_data
 from .circuits import (
-    CircuitType,
     encoding_circuit,
     memristor_circuit,
     clements_circuit,
@@ -43,7 +42,6 @@ __all__ = [
     "get_data",
     "load_measurement_pickle",
     "quartic_data",
-    "CircuitType",
     "encoding_circuit",
     "memristor_circuit",
     "clements_circuit",

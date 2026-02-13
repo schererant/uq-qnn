@@ -4,8 +4,8 @@
 """
 Circuit comparison example using the UQ-QNN framework.
 
-This example demonstrates training and evaluating both the memristor
-and Clements (rectangular) architectures on the same dataset.
+This example demonstrates training and evaluating Clements circuits
+with and without memristive phases on the same dataset.
 """
 
 import sys
@@ -21,103 +21,77 @@ from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
-from src.circuits import CircuitType
 
 
 def train_and_evaluate_circuit(
-    circuit_type,
+    label,
     X_train,
     y_train,
     X_test,
     y_test,
     n_samples=500,
     epochs=30,
-    n_modes=3
+    n_modes=3,
+    memristive_phase_idx=None
 ):
     """
-    Train and evaluate a specific circuit architecture.
+    Train and evaluate a Clements circuit (optionally with memristive phases).
 
     Args:
-        circuit_type (str): 'memristor' or 'clements'
-        X_train (np.ndarray): Training inputs
-        y_train (np.ndarray): Training targets
-        X_test (np.ndarray): Test inputs
-        y_test (np.ndarray): Test targets
-        n_samples (int): Number of samples for circuit simulation
-        epochs (int): Number of training epochs
-        n_modes (int): Number of modes for Clements architecture
+        label (str): 'memristive' or 'standard' for display
+        X_train, y_train, X_test, y_test: Data
+        n_samples, epochs: Training params
+        n_modes (int): Number of modes (3 for 3x3, etc.)
+        memristive_phase_idx: Phase indices to make memristive, or None
 
     Returns:
-        dict: Results dictionary with all training outcomes and metrics
+        dict: Results dictionary
     """
-    print(f"\n=== Training {circuit_type.upper()} architecture ===")
+    print(f"\n=== Training {label.upper()} (Clements {n_modes}x{n_modes}) ===")
+    n_phases = n_modes * (n_modes - 1)
+    encoding_mode = 0
+    target_mode = (n_modes - 1,)
+    if memristive_phase_idx is not None:
+        print(f"Memristive phases: {memristive_phase_idx}")
+    else:
+        print(f"Standard Clements: {n_phases} phases")
 
-    # Calculate required number of phases based on circuit type
-    # Initialize phase parameters
-    if circuit_type.lower() == 'memristor':
-        n_phases = 2  # Fixed for memristor
-        circuit_enum = CircuitType.MEMRISTOR
-        encoding_mode = 0
-        target_mode = (2,)  # Default: mode 2 (001 state)
-        print(f"Memristor architecture: {n_phases} phases + memory phase + weight")
-    else:  # Clements
-        n_phases = n_modes * (n_modes - 1)
-        circuit_enum = CircuitType.CLEMENTS
-        # Default: encode in first mode, measure last mode
-        encoding_mode = 0
-        target_mode = (n_modes - 1,)
-        print(f"Clements architecture: {n_modes} modes, {n_phases} phases + weight")
-        print(f"Using encoding mode: {encoding_mode}, target mode: {target_mode}")
-
-        # Validate that we have a reasonable number of phases for the Clements architecture
-        if n_modes < 2:
-            raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
-        if n_phases == 0:
-            raise ValueError(f"Clements architecture with {n_modes} modes requires at least some phases")
-
-    # Train the model - always use discrete mode (n_swipe=0)
     theta_opt, history = train_pytorch(
         X_train, y_train,
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=epochs,
-        phase_idx=tuple(range(n_phases)),
-        n_photons=tuple([1] * n_phases),
-        n_swipe=0,  # Always use discrete mode
+        n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases,
-        circuit_type=circuit_type,
         n_modes=n_modes,
         encoding_mode=encoding_mode,
-        target_mode=target_mode
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx
     )
 
-    # Uncertainty estimation through multiple forward passes
     n_forward_passes = 10
     all_preds = np.zeros((len(X_test), n_forward_passes))
 
     for i in range(n_forward_passes):
-        # Each forward pass with a different sample count introduces some randomness
         sample_count = n_samples + np.random.randint(-100, 100)
-        sample_count = max(100, sample_count)  # Ensure at least 100 samples
-
-        # Small random perturbation to parameters to simulate quantum noise
+        sample_count = max(100, sample_count)
         perturbed_theta = theta_opt.copy()
-        # Only perturb phases slightly, not the weight
-        perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
+        n_memristive = len(memristive_phase_idx) if memristive_phase_idx else 0
+        n_perturb = len(perturbed_theta) - n_memristive
+        if n_perturb > 0:
+            perturbed_theta[:n_perturb] += np.random.normal(0, 0.05, size=n_perturb)
 
-        # Generate predictions - always use discrete mode (n_swipe=0)
         enc_test = 2 * np.arccos(X_test)
         preds = run_simulation_sequence_np(
             perturbed_theta,
             config['memory_depth'],
             sample_count,
             encoded_phases=enc_test,
-            n_swipe=0,  # Always use discrete mode
-            circuit_type=circuit_enum,
+            n_swipe=0,
             n_modes=n_modes,
             encoding_mode=encoding_mode,
-            target_mode=target_mode
+            target_mode=target_mode,
+            memristive_phase_idx=memristive_phase_idx
         )
         all_preds[:, i] = preds
 
@@ -144,7 +118,7 @@ def train_and_evaluate_circuit(
             'mae': mae
         },
         'circuit_config': {
-            'type': circuit_type,
+            'type': label,
             'n_modes': n_modes,
             'n_phases': n_phases,
             'encoding_mode': encoding_mode,
@@ -313,27 +287,27 @@ def main():
         datafunction
     )
 
-    # Train and evaluate each circuit type
     results = {}
 
-    # 1. Memristor architecture
-    results['memristor'] = train_and_evaluate_circuit(
-        'memristor', X_train, y_train, X_test, y_test,
-        n_samples=n_samples, epochs=epochs
+    # 1. Clements with memristive phase
+    results['memristive'] = train_and_evaluate_circuit(
+        'memristive', X_train, y_train, X_test, y_test,
+        n_samples=n_samples, epochs=epochs, n_modes=clements_n_modes,
+        memristive_phase_idx=[2]
     )
 
-    # 2. Clements architecture
+    # 2. Standard Clements (no memristive)
     try:
-        # Attempt with configured modes
         print(f"Attempting Clements with {clements_n_modes} modes...")
-        results['clements'] = train_and_evaluate_circuit(
-            'clements', X_train, y_train, X_test, y_test,
-            n_samples=n_samples, epochs=epochs, n_modes=clements_n_modes
+        results['standard'] = train_and_evaluate_circuit(
+            'standard', X_train, y_train, X_test, y_test,
+            n_samples=n_samples, epochs=epochs, n_modes=clements_n_modes,
+            memristive_phase_idx=None
         )
 
         # Check for NaN values in results
-        mean_preds, std_preds = results['clements']['predictions']
-        if np.isnan(mean_preds).any() or np.isnan(std_preds).any() or np.isnan(results['clements']['metrics']['rmse']):
+        mean_preds, std_preds = results['standard']['predictions']
+        if np.isnan(mean_preds).any() or np.isnan(std_preds).any() or np.isnan(results['standard']['metrics']['rmse']):
             print("Warning: NaN values detected in Clements results. Using fallback.")
             raise ValueError("NaN values in results")
 
@@ -354,8 +328,8 @@ def main():
         # Create synthetic training history
         dummy_history = np.logspace(-1, -3, epochs)
 
-        results['clements'] = {
-            'theta': np.ones(7) * 0.5,  # 6 phases + 1 weight for 3-mode circuit
+        results['standard'] = {
+            'theta': np.ones(6) * 0.5,  # 6 phases for 3-mode Clements
             'history': list(dummy_history),
             'predictions': (dummy_preds, dummy_std),
             'metrics': {
@@ -364,7 +338,7 @@ def main():
                 'mae': dummy_mae
             },
             'circuit_config': {
-                'type': 'clements',
+                'type': 'standard',
                 'n_modes': 3,
                 'n_phases': 6,
                 'encoding_mode': 0,

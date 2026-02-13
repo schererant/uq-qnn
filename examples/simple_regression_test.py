@@ -23,7 +23,6 @@ from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
-from src.circuits import CircuitType
 
 
 def main():
@@ -40,16 +39,15 @@ def main():
     config['epochs'] = 30
     config['memory_depth'] = 2
     n_modes = 3
-    n_phases = n_modes * (n_modes - 1)  # Memristor uses Clements structure
+    n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
     config['phase_idx'] = tuple(range(n_phases))
     config['n_photons'] = tuple([1] * n_phases)
     n_samples = 500
     n_swipe = 0
     swipe_span = 0.0
-    circuit_type = 'memristor'
     encoding_mode = 0
-    target_mode = (n_modes - 1,)  # Last mode for regression
-    circuit_type_class = CircuitType.MEMRISTOR
+    target_mode = (n_modes - 1,)
+    memristive_phase_idx = [2]
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -66,15 +64,12 @@ def main():
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        phase_idx=config['phase_idx'],
-        n_photons=config['n_photons'],
-        n_phases=n_phases,
         n_samples=n_samples,
         n_swipe=n_swipe,
-        swipe_span = swipe_span,
-        circuit_type = circuit_type,
-        n_modes = n_modes,
-        encoding_mode = encoding_mode,
+        swipe_span=swipe_span,
+        n_modes=n_modes,
+        memristive_phase_idx=memristive_phase_idx,
+        encoding_mode=encoding_mode,
         target_mode=target_mode
     )
     
@@ -88,8 +83,8 @@ def main():
         encoded_phases=enc_test,
         n_swipe= n_swipe,
         swipe_span=swipe_span,
-        circuit_type=circuit_type_class,
         n_modes=n_modes,
+        memristive_phase_idx=memristive_phase_idx,
         encoding_mode=encoding_mode,
         target_mode=target_mode
     )
@@ -120,8 +115,8 @@ def main():
             encoded_phases=enc_test,
             n_swipe= n_swipe,
             swipe_span=swipe_span,
-            circuit_type=circuit_type_class,
             n_modes=n_modes,
+            memristive_phase_idx=memristive_phase_idx,
             encoding_mode=encoding_mode,
             target_mode=target_mode
         )

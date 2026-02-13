@@ -23,7 +23,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data import get_classification_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
-from src.circuits import CircuitType
 from src.utils import config
 
 
@@ -40,7 +39,7 @@ def main():
     config['epochs'] = 30
     config['memory_depth'] = 2
     n_modes = 3
-    n_phases = n_modes * (n_modes - 1)  # Memristor uses Clements structure
+    n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
     config['phase_idx'] = tuple(range(n_phases))
     config['n_photons'] = tuple([1] * n_phases)
     n_samples = 500
@@ -63,13 +62,10 @@ def main():
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        phase_idx=config['phase_idx'],
-        n_photons=config['n_photons'],
         n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases,
-        circuit_type='memristor',
         n_modes=n_modes,
+        memristive_phase_idx=[2],
         loss_type='cross_entropy',
         n_classes=n_classes,
         target_mode=(1, 2)  # Use modes 1 and 2 for binary classification
@@ -79,12 +75,12 @@ def main():
     print("Generating predictions...")
     enc_test = 2 * np.arccos(X_test)
     preds_probs = run_simulation_sequence_np(
-        theta_discrete, 
-        config['memory_depth'], 
-        n_samples, 
+        theta_discrete,
+        config['memory_depth'],
+        n_samples,
         encoded_phases=enc_test,
-        circuit_type=CircuitType.MEMRISTOR,
         n_modes=n_modes,
+        memristive_phase_idx=[2],
         target_mode=(1, 2),
         return_class_probs=True
     )
@@ -118,12 +114,12 @@ def main():
         perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
         
         preds = run_simulation_sequence_np(
-            perturbed_theta, 
-            config['memory_depth'], 
-            sample_count, 
+            perturbed_theta,
+            config['memory_depth'],
+            sample_count,
             encoded_phases=enc_test,
-            circuit_type=CircuitType.MEMRISTOR,
             n_modes=n_modes,
+            memristive_phase_idx=[2],
             target_mode=(1, 2),
             return_class_probs=True
         )

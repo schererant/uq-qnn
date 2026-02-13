@@ -16,12 +16,7 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import perceval as pcvl
-from src.circuits import (
-    CircuitType, 
-    clements_circuit, 
-    build_circuit,
-    encoding_circuit
-)
+from src.circuits import clements_circuit, build_circuit, encoding_circuit
 
 def print_circuit_matrix(circuit):
     """Print the unitary matrix of the circuit."""
@@ -98,13 +93,6 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
                     total_prob += prob
         print(f"  Mode {mode}: {total_prob:.6f}")
     
-    # If this is a circuit with memory, explain the memory operation
-    if "memristor" in circuit.name.lower():
-        print("\nMemristor Operation:")
-        print("  1. Uses same Clements mesh structure as CLEMENTS (scalable)")
-        print("  2. One designated phase is memristive (replaced by memory-driven mem_phi)")
-        print("  3. Memory update: mem_phi based on detection in memristive MZI modes")
-    
     if "clements" in circuit.name.lower():
         print("\nClements Operation:")
         # FockState uses photon2mode(0) for single-photon input mode, not .index()
@@ -114,24 +102,14 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
         print(f"  3. Each MZI has two phase shifters (internal and external)")
         print(f"  4. Output: Measure probability of photon in mode {measurement_mode[0]}")
 
-def create_memristor_circuit(n_modes=3):
-    """Create and print a memristor circuit (uses Clements structure)."""
+def create_clements_with_memristive(n_modes=3, memristive_phase_idx=None):
+    """Create Clements circuit, optionally with memristive phases."""
     n_phases = n_modes * (n_modes - 1)
     phases = np.random.uniform(0, 2*np.pi, n_phases)
     enc_phi = np.pi/4
-    
-    # Create basic memristor circuit (same structure as Clements)
-    basic_mem = clements_circuit(phases, n_modes)
-    basic_mem.name = f"Memristor-{n_modes}"  # For display
-    
-    # Create full circuit with encoding
-    full_mem = build_circuit(
-        phases=phases,
-        enc_phi=enc_phi,
-        circuit_type=CircuitType.MEMRISTOR,
-        n_modes=n_modes,
-        encoding_mode=0
-    )
+
+    basic = clements_circuit(phases, n_modes)
+    full = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=0)
     
     # Input state: single photon in mode 0
     input_modes = [0] * n_modes
@@ -141,11 +119,9 @@ def create_memristor_circuit(n_modes=3):
     # Measurement mode: last mode
     measurement_mode = (n_modes - 1,)
     
-    # Print circuit details
-    print_circuit_details(basic_mem, input_state, measurement_mode, "Memristor Circuit (standalone)")
-    print_circuit_details(full_mem, input_state, measurement_mode, "Memristor Circuit with Encoding")
-    
-    return full_mem
+    print_circuit_details(basic, input_state, measurement_mode, f"Clements {n_modes}x{n_modes} (standalone)")
+    print_circuit_details(full, input_state, measurement_mode, f"Clements {n_modes}x{n_modes} with Encoding")
+    return full
 
 def create_clements_circuit(n_modes=6):
     """Create and print a Clements circuit."""
@@ -160,14 +136,7 @@ def create_clements_circuit(n_modes=6):
     # Create basic Clements circuit
     basic_clements = clements_circuit(phases, n_modes)
     
-    # Create full circuit with encoding
-    full_clements = build_circuit(
-        phases=phases,
-        enc_phi=enc_phi,
-        circuit_type=CircuitType.CLEMENTS,
-        n_modes=n_modes,
-        encoding_mode=0
-    )
+    full_clements = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=0)
     
     # Input state: |100000>
     input_modes = [0] * n_modes
@@ -187,8 +156,8 @@ def main():
     """Main function to create and print circuits."""
     print("=== Circuit Printer Example ===")
     
-    # 1. Create and print memristor circuit
-    mem_circuit = create_memristor_circuit()
+    # 1. Create and print 3-mode Clements circuit
+    create_clements_with_memristive(n_modes=3)
     
     # 2. Create and print 6-mode Clements circuit
     clements_circuit_6 = create_clements_circuit(n_modes=6)

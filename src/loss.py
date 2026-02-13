@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Sequence, Optional, Tuple
+from typing import Sequence, Optional, Tuple, Union
 import numpy as np
 import torch
 from torch import Tensor
 
 from .autograd import MemristorLossPSR
-from .circuits import CircuitType
 
 
 class PhotonicModel(torch.nn.Module):
@@ -19,8 +18,7 @@ class PhotonicModel(torch.nn.Module):
         memory_depth (int): Memory buffer depth.
         phase_idx (Sequence[int]): Indices of phase parameters.
         n_photons (Sequence[int]): Number of photons for each phase.
-        circuit_type (str): Type of circuit architecture ('memristor' or 'clements').
-        n_modes (int): Number of modes for Clements architecture.
+        n_modes (int): Number of modes (3 for 3x3, 6 for 6x6, etc.).
         encoding_mode (int): Mode to apply encoding to.
         target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
         loss_type (str): Loss function type ('mse' for regression, 'cross_entropy' for classification).
@@ -28,10 +26,10 @@ class PhotonicModel(torch.nn.Module):
     """
     def __init__(self, init_theta: Sequence[float], enc_np: np.ndarray, y_np: np.ndarray,
                  memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int],
-                 circuit_type: str = 'memristor', n_modes: int = 3, 
+                 n_modes: int = 3, 
                  encoding_mode: int = 0, target_mode: Optional[Tuple[int, ...]] = None,
                  loss_type: str = 'mse', n_classes: int = 1,
-                 memristive_phase_idx: Optional[int] = None) -> None:
+                 memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
         self.register_buffer("enc", torch.from_numpy(enc_np).double())
@@ -40,8 +38,6 @@ class PhotonicModel(torch.nn.Module):
         self.phase_idx = phase_idx
         self.n_photons = n_photons
         
-        # Circuit architecture parameters
-        self.circuit_type = CircuitType.MEMRISTOR if circuit_type.lower() == 'memristor' else CircuitType.CLEMENTS
         self.n_modes = n_modes
         self.encoding_mode = encoding_mode
         self.target_mode = target_mode
@@ -89,9 +85,9 @@ class PhotonicModel(torch.nn.Module):
         """
         return MemristorLossPSR.apply(
             self.theta, self.enc, self.y,
-            self.memory_depth, self.phase_idx, self.n_photons, n_samples, 
-            n_swipe, swipe_span, 
-            self.circuit_type, self.n_modes, self.encoding_mode, self.target_mode,
+            self.memory_depth, self.phase_idx, self.n_photons, n_samples,
+            n_swipe, swipe_span,
+            self.n_modes, self.encoding_mode, self.target_mode,
             self.loss_type, self.n_classes,
             self.memristive_phase_idx
         )

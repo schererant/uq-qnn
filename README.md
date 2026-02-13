@@ -172,7 +172,6 @@ X_train, y_train, X_test, y_test = get_classification_data(
 # Train with Clements architecture (more modes needed)
 theta, history = train_pytorch(
     X_train, y_train,
-    circuit_type='clements',
     n_modes=4,  # Need at least n_classes modes
     loss_type='cross_entropy',
     n_classes=3,

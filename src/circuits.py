@@ -2,14 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import perceval as pcvl
-from enum import Enum
-from typing import Optional, Tuple, List
-
-
-class CircuitType(Enum):
-    """Enumeration of supported circuit architectures."""
-    MEMRISTOR = "memristor"
-    CLEMENTS = "clements"
+from typing import Optional, Tuple
 
 
 def encoding_circuit(encoded_phase: float) -> pcvl.Circuit:
@@ -90,8 +83,8 @@ def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
 def memristor_circuit(phases: np.ndarray) -> pcvl.Circuit:
     """
     Builds a 3-mode memristor circuit with phase shifters and beamsplitters.
-    DEPRECATED: Use build_circuit with circuit_type=MEMRISTOR and n_modes for
-    scalable Clements-based memristor. This is kept for backward compatibility.
+    DEPRECATED: Use build_circuit(phases, enc_phi, n_modes) with memristive_phase_idx
+    in simulation/training for Clements-based memristive behavior. Kept for compatibility.
     
     Args:
         phases (np.ndarray): Array of phases [phi1, mem_phi, phi3] for the three PS elements.
@@ -166,64 +159,41 @@ def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
 
 
 def build_circuit(
-    phases: np.ndarray, 
+    phases: np.ndarray,
     enc_phi: float,
-    circuit_type: CircuitType = CircuitType.MEMRISTOR,
     n_modes: int = 3,
     encoding_mode: int = 0,
 ) -> pcvl.Circuit:
     """
-    Builds a full circuit by combining encoding and main circuit architectures.
-    
-    For MEMRISTOR: Uses the same Clements mesh structure as CLEMENTS, with one phase
-    designated as memristive (replaced by memory-driven phase at runtime). Scalable
-    to any n_modes. Phases array length must be n_modes * (n_modes - 1).
-    
+    Builds a full Clements circuit by combining encoding and main circuit.
+
+    Architecture is always Clements (3x3, 6x6, etc.). Phases array length must be
+    n_modes * (n_modes - 1).
+
     Args:
-        phases (np.ndarray): Array of phases for the main circuit.
+        phases (np.ndarray): Array of phases for the Clements mesh.
         enc_phi (float): Encoding phase.
-        circuit_type (CircuitType): Type of circuit architecture to use.
-        n_modes (int): Number of modes (used for both MEMRISTOR and CLEMENTS).
+        n_modes (int): Number of modes (3 for 3x3, 6 for 6x6, etc.).
         encoding_mode (int): Mode to apply encoding to (default: 0).
-        
+
     Returns:
         pcvl.Circuit: The complete circuit.
     """
-    # Ensure encoding phase is within valid range
     enc_phi = float(enc_phi) % (2 * np.pi)
-    
-    # Validate input parameters
     if encoding_mode < 0:
         raise ValueError(f"Encoding mode must be non-negative, got {encoding_mode}")
-    
-    if circuit_type == CircuitType.MEMRISTOR:
-        # Memristor uses Clements structure (same as CLEMENTS) - scalable
-        expected_phases = n_modes * (n_modes - 1)
-        if len(phases) != expected_phases:
-            raise ValueError(
-                f"Memristor circuit requires {expected_phases} phases for {n_modes} modes, "
-                f"got {len(phases)}"
-            )
-        if n_modes < 2:
-            raise ValueError(f"Memristor requires at least 2 modes, got {n_modes}")
-        
-        c = pcvl.Circuit(n_modes, name=f"Full-Memristor-{n_modes}")
-        # Encoding circuit spans 2 modes, so valid range is 0 to n_modes-2
-        valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
-        c.add(valid_encoding_mode, encoding_circuit(enc_phi))
-        c.add(0, clements_circuit(phases, n_modes))
-        return c
-    else:  # CLEMENTS
-        if n_modes < 2:
-            raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
-            
-        if encoding_mode >= n_modes:
-            print(f"Warning: Encoding mode {encoding_mode} exceeds available modes ({n_modes}). Using mode 0 instead.")
-            encoding_mode = 0
-            
-        c = pcvl.Circuit(n_modes, name=f"Full-Clements-{n_modes}")
-        # Encoding circuit spans 2 modes, so valid range is 0 to n_modes-2
-        valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
-        c.add(valid_encoding_mode, encoding_circuit(enc_phi))
-        c.add(0, clements_circuit(phases, n_modes))
-        return c
+    if n_modes < 2:
+        raise ValueError(f"Requires at least 2 modes, got {n_modes}")
+
+    expected_phases = n_modes * (n_modes - 1)
+    if len(phases) != expected_phases:
+        raise ValueError(
+            f"Clements circuit requires {expected_phases} phases for {n_modes} modes, "
+            f"got {len(phases)}"
+        )
+
+    c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
+    valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
+    c.add(valid_encoding_mode, encoding_circuit(enc_phi))
+    c.add(0, clements_circuit(phases, n_modes))
+    return c
