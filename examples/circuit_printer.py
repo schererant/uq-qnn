@@ -24,32 +24,13 @@ from src.circuits import (
     encoding_circuit
 )
 
-def print_circuit_components(circuit, indent=""):
-    """Recursively print circuit components with their parameters."""
-    if hasattr(circuit, 'components'):
-        for i, component in enumerate(circuit.components):
-            component_info = f"{indent}Component {i+1}: {component.__class__.__name__}"
-            
-            # Add modes information if available
-            if hasattr(component, 'modes'):
-                component_info += f" on modes {component.modes}"
-            
-            # Add phase information for PS components
-            if isinstance(component, pcvl.PS) and hasattr(component, 'phi'):
-                component_info += f", phi={component.phi:.4f} rad ({component.phi * 180/np.pi:.1f}°)"
-            
-            print(component_info)
-            
-            # Recursively print sub-components
-            if hasattr(component, 'components'):
-                print_circuit_components(component, indent + "  ")
-
 def print_circuit_matrix(circuit):
     """Print the unitary matrix of the circuit."""
     try:
-        # Get the unitary matrix of the circuit
-        processor = pcvl.Processor("SLOS", circuit)
-        matrix = processor.get_unitary()
+        # Get the unitary matrix from the circuit (Processor doesn't have get_unitary)
+        matrix = circuit.compute_unitary()
+        if hasattr(matrix, 'real') and hasattr(matrix, 'imag'):
+            matrix = np.array(matrix)
         
         print("\nCircuit Unitary Matrix:")
         
@@ -82,9 +63,9 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
     print(f"Input state: {input_state}")
     print(f"Measurement mode(s): {measurement_mode}")
     
-    # Print component structure
+    # Print circuit structure using Perceval's built-in visualization
     print("\nCircuit Structure:")
-    print_circuit_components(circuit)
+    pcvl.pdisplay(circuit, output_format=pcvl.Format.TEXT, recursive=True)
     
     # Print unitary matrix
     if circuit.m <= 6:  # Only print matrix for smaller circuits
@@ -130,7 +111,9 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
     
     if "clements" in circuit.name.lower():
         print("\nClements Operation:")
-        print(f"  1. Input: Photon enters mode {input_state.index(1)} of {circuit.m} modes")
+        # FockState uses photon2mode(0) for single-photon input mode, not .index()
+        input_mode = input_state.photon2mode(0) if input_state.n > 0 else 0
+        print(f"  1. Input: Photon enters mode {input_mode} of {circuit.m} modes")
         print(f"  2. Mesh of {circuit.m * (circuit.m - 1) // 2} MZIs in rectangular grid pattern")
         print(f"  3. Each MZI has two phase shifters (internal and external)")
         print(f"  4. Output: Measure probability of photon in mode {measurement_mode[0]}")
