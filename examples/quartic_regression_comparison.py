@@ -28,13 +28,12 @@ from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
 
 
-# 6x6 Clements: 4th MZI = phases 6,7 | 5th MZI = phases 8,9
+# 6x6 Clements: 4th MZI = phases 6,7 (modes 1,2) | 5th MZI = phases 8,9 (modes 3,4)
 N_MODES = 6
 MEMRISTIVE_PHASE_IDX = [6, 8]  # 4th and 5th MZI (first phase of each)
-#TODO: make output modes choosable 
-#TODO: circuit printer in example
-#TODO: print gradient methods (consistent?)
-#TODO: desfault psr? 
+# Custom output modes for feedback: (mode_p1, mode_p2) per memristive phase.
+# Default (None) uses each MZI's own output modes. Example: [(1, 2), (3, 4)]
+MEMRISTIVE_OUTPUT_MODES = [(1, 2), (3, 4)]  # 4th MZI outputs, 5th MZI outputs
 
 
 def run_experiment(
@@ -45,6 +44,7 @@ def run_experiment(
     n_samples: int,
     lr: float,
     epochs: int,
+    memristive_output_modes=None,
 ):
     """Train and evaluate one configuration."""
     print(f"\n--- {label} ---")
@@ -57,6 +57,7 @@ def run_experiment(
         n_samples=n_samples,
         n_modes=N_MODES,
         memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
     )
     enc_test = 2 * np.arccos(X_test)
     preds = run_simulation_sequence_np(
@@ -66,6 +67,7 @@ def run_experiment(
         encoded_phases=enc_test,
         n_modes=N_MODES,
         memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
     )
     mse = np.mean((preds - y_test) ** 2)
     print(f"MSE: {mse:.6f}")
@@ -101,31 +103,34 @@ def main():
         n_samples=n_samples, lr=config['lr'], epochs=config['epochs'],
     )
 
-    # 2. Memristors, depth 1 (minimal memory)
+    # 2. Memristors, depth 1 (minimal memory), custom output modes
     results['memristor_depth1'] = run_experiment(
         "6x6, memristors (4th & 5th MZI), depth=1",
         memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
         memory_depth=1,
         X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
         n_samples=n_samples, lr=config['lr'], epochs=config['epochs'],
+        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
     )
 
-    # 3. Memristors, depth 2
+    # 3. Memristors, depth 2, custom output modes
     results['memristor_depth2'] = run_experiment(
         "6x6, memristors (4th & 5th MZI), depth=2",
         memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
         memory_depth=2,
         X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
         n_samples=n_samples, lr=config['lr'], epochs=config['epochs'],
+        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
     )
 
-    # 4. Memristors, depth 3
+    # 4. Memristors, depth 3, custom output modes
     results['memristor_depth3'] = run_experiment(
         "6x6, memristors (4th & 5th MZI), depth=3",
         memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
         memory_depth=3,
         X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
         n_samples=n_samples, lr=config['lr'], epochs=config['epochs'],
+        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
     )
 
     # Summary table

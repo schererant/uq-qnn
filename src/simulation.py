@@ -45,6 +45,37 @@ class SimulationLogger:
 sim_logger = SimulationLogger()
 
 
+def _normalize_memristive_output_modes(
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
+    memristive_indices: Tuple[int, ...],
+    n_modes: int,
+) -> Tuple[Tuple[int, int], ...]:
+    """
+    Normalize memristive_output_modes to a tuple of (mode_p1, mode_p2) per memristive index.
+    When None, uses get_mzi_modes_for_phase for each index (default: MZI output modes).
+    """
+    if memristive_output_modes is None:
+        return tuple(get_mzi_modes_for_phase(idx, n_modes) for idx in memristive_indices)
+    modes = tuple(
+        (int(m1), int(m2)) for m1, m2 in memristive_output_modes
+    )
+    if len(modes) != len(memristive_indices):
+        raise ValueError(
+            f"memristive_output_modes must have {len(memristive_indices)} entries "
+            f"(one per memristive phase), got {len(modes)}"
+        )
+    for j, (m1, m2) in enumerate(modes):
+        if m1 < 0 or m1 >= n_modes or m2 < 0 or m2 >= n_modes:
+            raise ValueError(
+                f"memristive_output_modes[{j}] = ({m1}, {m2}): modes must be in [0, {n_modes-1}]"
+            )
+        if m1 == m2:
+            raise ValueError(
+                f"memristive_output_modes[{j}] = ({m1}, {m2}): the two modes must differ"
+            )
+    return modes
+
+
 def _normalize_memristive_phase_idx(
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     n_modes: int,
@@ -91,6 +122,7 @@ def run_simulation_sequence_np(
     target_mode: Optional[Tuple[int, ...]] = None,
     return_class_probs: bool = False,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
 ) -> np.ndarray:
     """
     Runs a sequence of photonic-circuit simulations. Architecture is always Clements (3x3, 6x6, etc.).
@@ -109,6 +141,9 @@ def run_simulation_sequence_np(
         return_class_probs (bool): If True and multiple targets, returns (n_data, n_classes).
         memristive_phase_idx (Optional[Union[int, Sequence[int]]]): Phase indices to make memristive.
             None or empty = no memristive behavior. e.g. [2] or (2, 5) for one or two MZIs.
+        memristive_output_modes (Optional[Sequence[Tuple[int, int]]]): For each memristive phase index,
+            the (mode_p1, mode_p2) output modes to use for feedback. When None, uses the MZI's
+            own output modes. e.g. [(1, 2), (3, 4)] for two memristive phases.
 
     Returns:
         np.ndarray: Predicted probability per input point, or class probabilities if return_class_probs.
@@ -124,6 +159,9 @@ def run_simulation_sequence_np(
     n_phases = n_modes * (n_modes - 1)
     memristive_indices = _normalize_memristive_phase_idx(memristive_phase_idx, n_modes, n_phases)
     n_memristive = len(memristive_indices)
+    output_modes = _normalize_memristive_output_modes(
+        memristive_output_modes, memristive_indices, n_modes
+    ) if n_memristive > 0 else ()
 
     # Continuous mode only when memristive is active
     if n_swipe > 0 and n_memristive == 0:
@@ -152,8 +190,8 @@ def run_simulation_sequence_np(
 
     state_m1_list = []
     state_m2_list = []
-    for idx in memristive_indices:
-        m1, m2 = get_mzi_modes_for_phase(idx, n_modes)
+    for j in range(n_memristive):
+        m1, m2 = output_modes[j]
         s1, s2 = [0] * n_modes, [0] * n_modes
         s1[m1], s2[m2] = 1, 1
         state_m1_list.append(pcvl.BasicState(s1))

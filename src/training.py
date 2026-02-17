@@ -46,6 +46,7 @@ def train_pytorch_generic(
     loss_type: str = 'mse',
     n_classes: int = 1,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -68,6 +69,8 @@ def train_pytorch_generic(
         n_classes (int): Number of classes for classification (default: 1 for regression).
         memristive_phase_idx (Optional[Union[int, Sequence[int]]]): Phase indices to make memristive.
             None or empty = no memristive. e.g. [2] or (2, 5) for one or two MZIs.
+        memristive_output_modes (Optional[Sequence[Tuple[int, int]]]): For each memristive phase,
+            the (mode_p1, mode_p2) output modes for feedback. None = use MZI's own modes.
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
@@ -98,7 +101,8 @@ def train_pytorch_generic(
         n_modes=n_modes,
         encoding_mode=encoding_mode, target_mode=target_mode,
         loss_type=loss_type, n_classes=n_classes,
-        memristive_phase_idx=memristive_phase_idx
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
@@ -131,6 +135,7 @@ def train_pytorch(
     loss_type: str = 'mse',
     n_classes: int = 1,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
     **kwargs
 ) -> Tuple[np.ndarray, List[float]]:
     """
@@ -158,6 +163,7 @@ def train_pytorch(
         loss_type=loss_type,
         n_classes=n_classes,
         memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
         **kwargs
     )
 
