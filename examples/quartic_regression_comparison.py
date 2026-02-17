@@ -34,6 +34,10 @@ MEMRISTIVE_PHASE_IDX = [6, 8]  # 4th and 5th MZI (first phase of each)
 # Custom output modes for feedback: (mode_p1, mode_p2) per memristive phase.
 # Default (None) uses each MZI's own output modes. Example: [(1, 2), (3, 4)]
 MEMRISTIVE_OUTPUT_MODES = [(1, 2), (3, 4)]  # 4th MZI outputs, 5th MZI outputs
+#TODO: make output modes choosable 
+#TODO: circuit printer in example
+#TODO: print gradient methods (consistent?)
+#TODO: desfault psr? 
 
 
 def run_experiment(
