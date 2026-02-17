@@ -113,6 +113,7 @@ def run_simulation_sequence_np(
     Returns:
         np.ndarray: Predicted probability per input point, or class probabilities if return_class_probs.
     """
+    start_time = time.perf_counter()
     if encoded_phases is None:
         raise ValueError("encoded_phases must be provided.")
     if n_swipe < 0:
