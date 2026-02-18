@@ -149,8 +149,8 @@ def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
                     phi_ext = phases[idx + 1]
                     idx += 2
                     
-                    # Add the MZI to the circuit
-                    c.add(0, mzi_unit((m, m+1), phi_int, phi_ext))
+                    # Add the MZI to the circuit (merge=True flattens to show BS/PS)
+                    c.add(0, mzi_unit((m, m+1), phi_int, phi_ext), merge=True)
                 else:
                     print(f"Warning: Not enough phases provided. Expected at least {idx+2}, got {len(phases)}")
                     break
@@ -194,6 +194,6 @@ def build_circuit(
 
     c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
     valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
-    c.add(valid_encoding_mode, encoding_circuit(enc_phi))
-    c.add(0, clements_circuit(phases, n_modes))
+    c.add(valid_encoding_mode, encoding_circuit(enc_phi), merge=True)
+    c.add(0, clements_circuit(phases, n_modes), merge=True)
     return c

@@ -26,6 +26,7 @@ from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
+from src.circuit_visualization import save_circuit_annotated
 
 
 # 6x6 Clements: 4th MZI = phases 6,7 (modes 1,2) | 5th MZI = phases 8,9 (modes 3,4)
@@ -35,8 +36,6 @@ MEMRISTIVE_PHASE_IDX = [6, 8]  # 4th and 5th MZI (first phase of each)
 # Default (None) uses each MZI's own output modes. Example: [(1, 2), (3, 4)]
 MEMRISTIVE_OUTPUT_MODES = [(1, 2), (3, 4)]  # 4th MZI outputs, 5th MZI outputs
 VERBOSE = True  # Set True for per-epoch loss and parameter printing
-#TODO: make output modes choosable 
-#TODO: circuit printer in example
 #TODO: print gradient methods (consistent?)
 #TODO: desfault psr? 
 
@@ -98,6 +97,17 @@ def main():
     config['lr'] = 0.03
     config['epochs'] = 2
     n_samples = 500
+
+    # Save annotated circuit diagram (encoding, target, memristive phases)
+    print("Saving annotated circuit diagram...")
+    save_circuit_annotated(
+        "quartic_circuit_annotated.png",
+        n_modes=N_MODES,
+        encoding_mode=0,
+        target_mode=(N_MODES - 1,),
+        memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
+        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+    )
 
     print("Generating quartic data (y = x^4)...")
     X_train, y_train, X_test, y_test = get_data(

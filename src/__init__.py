@@ -28,6 +28,7 @@ from .autograd import photonic_psr_coeffs_torch, MemristorLossPSR
 from .loss import PhotonicModel
 from .training import train_pytorch, train_pytorch_generic, gradient_check
 from .utils import main, config, print_run_params
+from .circuit_visualization import display_circuit_annotated, save_circuit_annotated
 
 __all__ = [
     # Modules
@@ -58,4 +59,6 @@ __all__ = [
     "main",
     "config",
     "print_run_params",
+    "display_circuit_annotated",
+    "save_circuit_annotated",
 ]
