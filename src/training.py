@@ -90,6 +90,29 @@ def train_pytorch_generic(
                 f"target_mode must have {n_classes} elements, got {len(target_mode)}"
             )
     
+    if verbose:
+        params = {
+            "memory_depth": memory_depth,
+            "lr": lr,
+            "epochs": epochs,
+            "n_samples": n_samples,
+            "n_swipe": n_swipe,
+            "swipe_span": swipe_span,
+            "n_modes": n_modes,
+            "encoding_mode": encoding_mode,
+            "target_mode": target_mode,
+            "loss_type": loss_type,
+            "n_classes": n_classes,
+            "seed": seed,
+            "memristive_phase_idx": memristive_phase_idx,
+            "memristive_output_modes": memristive_output_modes,
+        }
+        print("\n--- Run parameters ---")
+        for k, v in sorted(params.items()):
+            if v is not None:
+                print(f"  {k}: {v}")
+        print()
+
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(rng, n_modes, memristive_phase_idx)
 
@@ -108,10 +131,8 @@ def train_pytorch_generic(
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
-    iterator = range(epochs)
-    if not verbose:
-        iterator = tqdm(iterator, desc="Training", ncols=100)
-    for e in iterator:
+    pbar = tqdm(range(epochs), desc="Training", ncols=100)
+    for e in pbar:
         optim.zero_grad()
         loss = model(n_samples=n_samples, n_swipe=n_swipe, swipe_span=swipe_span)
         loss.backward()
@@ -125,11 +146,10 @@ def train_pytorch_generic(
                 model.theta.data[idx].remainder_(2 * np.pi)
         
         hist.append(loss.item())
-        if verbose:
-            print(f"  Epoch {e + 1}/{epochs}: loss = {loss.item():.6f}")
+        pbar.set_postfix(loss=f"{loss.item():.6f}")
     theta_opt = model.theta.detach().cpu().numpy()
     if verbose:
-        print(f"  Final parameters: {theta_opt}")
+        print(f"\nFinal parameters: {theta_opt}")
     return theta_opt, hist
 
 
