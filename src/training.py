@@ -1,66 +1,54 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple, Union
 import numpy as np
 import torch
 from tqdm import tqdm
 
 from .loss import PhotonicModel
+from .simulation import _normalize_memristive_phase_idx
 
 
-def _init_theta(rng: np.random.Generator, n_phases: int = 2, circuit_type: str = 'memristor', n_modes: int = 3) -> np.ndarray:
+def _init_theta(
+    rng: np.random.Generator,
+    n_modes: int,
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
+) -> np.ndarray:
     """
-    Initializes model parameters randomly within specified ranges.
-    Args:
-        rng (np.random.Generator): Random number generator.
-        n_phases (int): Number of phase parameters to initialize (excluding memory phase).
-        circuit_type (str): Type of circuit architecture ('memristor' or 'clements').
-        n_modes (int): Number of modes for Clements architecture.
-    Returns:
-        np.ndarray: Array of initial parameter values.
+    Initializes model parameters. Architecture is always Clements.
+    params = [phase_0, ..., phase_{n-1}] or [phases..., w_0, ..., w_{k-1}] if memristive.
     """
-    if circuit_type.lower() == 'memristor':
-        # Fixed structure for memristor: [phi1, phi2, w]
-        phases = rng.uniform(0.01, 1, size=2) * 2 * np.pi
-        w = rng.uniform(0.01, 1)
-        return np.concatenate([phases, [w]])
-    else:  # Clements
-        # For Clements: [phi1_int, phi1_ext, phi2_int, phi2_ext, ..., w]
-        # Calculate expected number of phases based on n_modes
-        expected_phases = n_modes * (n_modes - 1)
-        
-        # If n_phases doesn't match the expected value, use the correct value
-        if n_phases != expected_phases:
-            print(f"Warning: Adjusting n_phases from {n_phases} to {expected_phases} for {n_modes}-mode Clements circuit")
-            n_phases = expected_phases
-            
-        if n_phases == 0:
-            raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
-            
-        # Initialize phases with Haar-random values for unitarity
-        phases = rng.uniform(0.0, 2 * np.pi, size=n_phases)
-        w = rng.uniform(0.01, 1)
-        return np.concatenate([phases, [w]])
+    expected_phases = n_modes * (n_modes - 1)
+    phases = rng.uniform(0.0, 2 * np.pi, size=expected_phases)
+    memristive_indices = _normalize_memristive_phase_idx(memristive_phase_idx, n_modes, expected_phases)
+    if len(memristive_indices) == 0:
+        return phases
+    weights = rng.uniform(0.01, 1, size=len(memristive_indices))
+    return np.concatenate([phases, weights])
 
 
 def train_pytorch_generic(
     enc_np: np.ndarray,
     y_np: np.ndarray,
     *,
-    memory_depth: int = 2,
-    lr: float = 0.03,
-    epochs: int = 150,
-    phase_idx: Sequence[int] = (0, 1),
-    n_photons: Sequence[int] = (1, 1),
-    n_phases: int = 2,
-    seed: int = 42,
+    memory_depth: int,
+    lr: float,
+    epochs: int,
     n_samples: int,
-    n_swipe: int = 0,
-    swipe_span: float = 0.0,
-    circuit_type: str = 'memristor',
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    n_swipe: int,
+    swipe_span: float,
+    n_modes: int,
+    encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]] = None,
+    loss_type: str = 'mse',
+    n_classes: int = 1,
+    phase_idx: Optional[Sequence[int]] = None,
+    n_photons: Optional[Sequence[int]] = None,
+    seed: int = 42,
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    encoding_phase_idx: Optional[int] = None,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -76,51 +64,117 @@ def train_pytorch_generic(
         n_samples (int): Number of samples for the Sampler.
         n_swipe (int): Number of phase points per data point (0 for discrete).
         swipe_span (float): Total phase span for swiping.
+        n_modes (int): Number of modes for Clements architecture.
+        encoding_mode (int): Mode to apply encoding to.
+        target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
+        loss_type (str): Loss function type ('mse' for regression, 'cross_entropy' for classification).
+        n_classes (int): Number of classes for classification (default: 1 for regression).
+        memristive_phase_idx (Optional[Union[int, Sequence[int]]]): Phase indices to make memristive.
+            None or empty = no memristive. e.g. [2] or (2, 5) for one or two MZIs.
+        memristive_output_modes (Optional[Sequence[Tuple[int, int]]]): For each memristive phase,
+            the (mode_p1, mode_p2) output modes for feedback. None = use MZI's own modes.
+        verbose (bool): If True, print per-epoch loss and final parameters.
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
+    # Validate classification setup
+    if loss_type == 'cross_entropy':
+        if target_mode is None:
+            if n_classes > n_modes:
+                raise ValueError(
+                    f"For {n_classes} classes, need at least {n_classes} modes, got {n_modes}"
+                )
+            target_mode = tuple(range(n_classes))
+        elif len(target_mode) != n_classes:
+            raise ValueError(
+                f"For classification with n_classes={n_classes}, "
+                f"target_mode must have {n_classes} elements, got {len(target_mode)}"
+            )
+    
+    if verbose:
+        params = {
+            "memory_depth": memory_depth,
+            "lr": lr,
+            "epochs": epochs,
+            "n_samples": n_samples,
+            "n_swipe": n_swipe,
+            "swipe_span": swipe_span,
+            "n_modes": n_modes,
+            "encoding_mode": encoding_mode,
+            "target_mode": target_mode,
+            "loss_type": loss_type,
+            "n_classes": n_classes,
+            "seed": seed,
+            "memristive_phase_idx": memristive_phase_idx,
+            "memristive_output_modes": memristive_output_modes,
+            "encoding_phase_idx": encoding_phase_idx,
+        }
+        print("\n--- Run parameters ---")
+        for k, v in sorted(params.items()):
+            if v is not None:
+                print(f"  {k}: {v}")
+        print()
+
     rng = np.random.default_rng(seed)
-    init_theta = _init_theta(rng, n_phases, circuit_type, n_modes)
+    init_theta = _init_theta(rng, n_modes, memristive_phase_idx)
+
+    expected_phases = n_modes * (n_modes - 1)
+    memristive_indices = _normalize_memristive_phase_idx(memristive_phase_idx, n_modes, expected_phases)
+    phase_idx = tuple(i for i in range(expected_phases) if i not in memristive_indices)
+    n_photons = tuple([1] * len(phase_idx))
+
     model = PhotonicModel(
         init_theta, enc_np, y_np, memory_depth, phase_idx, n_photons,
-        circuit_type=circuit_type, n_modes=n_modes, 
-        encoding_mode=encoding_mode, target_mode=target_mode
+        n_modes=n_modes,
+        encoding_mode=encoding_mode, target_mode=target_mode,
+        loss_type=loss_type, n_classes=n_classes,
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=encoding_phase_idx,
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
-    for _ in tqdm(range(epochs), desc="Training", ncols=100):
+    pbar = tqdm(range(epochs), desc="Training", ncols=100)
+    for e in pbar:
         optim.zero_grad()
         loss = model(n_samples=n_samples, n_swipe=n_swipe, swipe_span=swipe_span)
         loss.backward()
         optim.step()
         with torch.no_grad():
-            model.theta.data[-1].clamp_(0.01, 1.0)       # w ∈ [0.01,1]
-            model.theta.data[:-1].remainder_(2 * np.pi)  # Phases ∈ [0,2π)
+            # Clamp weight params to [0.01, 1]; phases to [0, 2π)
+            weight_idxs = set(range(len(model.theta))) - set(phase_idx)
+            for idx in weight_idxs:
+                model.theta.data[idx].clamp_(0.01, 1.0)
+            for idx in phase_idx:
+                model.theta.data[idx].remainder_(2 * np.pi)
         
-            # Apply additional constraints for specific circuit types if needed
-            if circuit_type.lower() == 'clements':
-                # For Clements architecture, ensure phases stay within valid ranges
-                # Ensure phases are between 0 and 2π
-                model.theta.data[:-1].remainder_(2 * np.pi)
-            
-                # Normalize weight parameter 
-                model.theta.data[-1].clamp_(0.01, 1.0)
         hist.append(loss.item())
-    return model.theta.detach().cpu().numpy(), hist
+        pbar.set_postfix(loss=f"{loss.item():.6f}")
+    theta_opt = model.theta.detach().cpu().numpy()
+    if verbose:
+        print(f"\nFinal parameters: {theta_opt}")
+    return theta_opt, hist
 
 
 def train_pytorch(
     X: np.ndarray,
     y: np.ndarray,
     *,
-    n_swipe: int = 0,
-    swipe_span: float = 0.0,
-    n_phases: int = 2,
-    circuit_type: str = 'memristor',
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    memory_depth: int,
+    lr: float,
+    epochs: int,
+    n_samples: int,
+    n_swipe: int,
+    swipe_span: float,
+    n_modes: int,
+    encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]] = None,
-    **kwargs
+    loss_type: str = 'mse',
+    n_classes: int = 1,
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    verbose: bool = False,
+    encoding_phase_idx: Optional[int] = None,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Unified training path for both discrete and continuous modes.
@@ -129,9 +183,7 @@ def train_pytorch(
         y (np.ndarray): Output data array.
         n_swipe (int): Number of phase points per data point (0 for discrete).
         swipe_span (float): Total phase span for swiping.
-        n_phases (int): Number of phase parameters (excluding memory phase).
-        circuit_type (str): Type of circuit architecture ('memristor' or 'clements').
-        n_modes (int): Number of modes for Clements architecture.
+        n_modes (int): Number of modes (3 for 3x3, 6 for 6x6, etc.).
         encoding_mode (int): Mode to apply encoding to.
         target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
         **kwargs: Additional arguments for training.
@@ -140,64 +192,59 @@ def train_pytorch(
     """
     enc = 2 * np.arccos(X)
     return train_pytorch_generic(
-        enc, y, 
-        n_swipe=n_swipe, 
-        swipe_span=swipe_span, 
-        n_phases=n_phases,
-        circuit_type=circuit_type,
+        enc, y,
+        memory_depth=memory_depth,
+        lr=lr,
+        epochs=epochs,
+        n_samples=n_samples,
+        n_swipe=n_swipe,
+        swipe_span=swipe_span,
         n_modes=n_modes,
         encoding_mode=encoding_mode,
         target_mode=target_mode,
-        **kwargs
+        loss_type=loss_type,
+        n_classes=n_classes,
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=encoding_phase_idx,
+        verbose=verbose,
     )
 
 
-def gradient_check(circuit_type: str = 'memristor', n_modes: int = 3) -> None:
+def gradient_check(n_modes: int = 3, memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None) -> None:
     """
     Performs a gradient check comparing finite difference and analytic gradients.
-    Prints the results and their absolute/max errors.
-    Args:
-        circuit_type (str): Type of circuit architecture ('memristor' or 'clements').
-        n_modes (int): Number of modes for Clements architecture.
-    Returns:
-        None
     """
     from .data import get_data
     from .autograd import MemristorLossPSR
-    from .simulation import run_simulation_sequence_np, CircuitType
-    from .circuits import CircuitType as CircuitTypeEnum
-    
+    from .simulation import run_simulation_sequence_np
+
     X, y, *_ = get_data(60, 0.0)
     enc = 2 * np.arccos(X)
-    
-    # Initialize parameters based on circuit type
-    if circuit_type.lower() == 'memristor':
-        theta0 = np.array([1.2, 2.3, 0.5])
-        phase_idx = (0, 1)
-        n_photons = (1, 1)
-        circuit_enum = CircuitTypeEnum.MEMRISTOR
-    else:  # Clements
-        # For a simple test with Clements, we'll use 3 modes (3 MZIs, 6 phases)
-        n_phases = n_modes * (n_modes - 1)
-        theta0 = np.random.rand(n_phases + 1)  # +1 for weight
-        theta0[:-1] *= 2 * np.pi  # phases in [0, 2π)
-        theta0[-1] *= 0.5  # weight in [0, 0.5]
-        phase_idx = tuple(range(n_phases))
-        n_photons = tuple([1] * n_phases)
-        circuit_enum = CircuitTypeEnum.CLEMENTS
-        
+    n_phases = n_modes * (n_modes - 1)
+    memristive_indices = _normalize_memristive_phase_idx(memristive_phase_idx, n_modes, n_phases)
+    n_memristive = len(memristive_indices)
+    phase_idx = tuple(i for i in range(n_phases) if i not in memristive_indices)
+    n_photons = tuple([1] * len(phase_idx))
+
+    theta0 = np.random.rand(n_phases + n_memristive)
+    theta0[:n_phases] *= 2 * np.pi
+    theta0[n_phases:] *= 0.5
     mem_depth = 2
     n_samples = 5
-    
+
     def L(params):
         return 0.5 * ((run_simulation_sequence_np(
-            params, mem_depth, n_samples, 
+            params, mem_depth, n_samples,
             encoded_phases=enc,
-            circuit_type=circuit_enum,
-            n_modes=n_modes
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,) if n_modes else None,
+            memristive_phase_idx=memristive_phase_idx
         ) - y) ** 2).mean()
-    
-    # Finite Difference
+
     eps = 1e-5
     num_grad = np.zeros_like(theta0)
     for k in range(len(theta0)):
@@ -205,12 +252,15 @@ def gradient_check(circuit_type: str = 'memristor', n_modes: int = 3) -> None:
         p_plus[k] += eps
         p_minus[k] -= eps
         num_grad[k] = (L(p_plus) - L(p_minus)) / (2 * eps)
-    
+
     th_t = torch.tensor(theta0, dtype=torch.float64, requires_grad=True)
     loss = MemristorLossPSR.apply(
         th_t, torch.from_numpy(enc).double(), torch.from_numpy(y).double(),
         mem_depth, phase_idx, n_photons, n_samples,
-        circuit_type=circuit_type, n_modes=n_modes
+        0, 0.0,  # n_swipe, swipe_span
+        n_modes, 0, (n_modes - 1,) if n_modes else None,  # n_modes, encoding_mode, target_mode
+        'mse', 1,  # loss_type, n_classes
+        memristive_phase_idx, None  # memristive_phase_idx, memristive_output_modes
     )
     loss.backward()
     psr_grad = th_t.grad.detach().cpu().numpy()

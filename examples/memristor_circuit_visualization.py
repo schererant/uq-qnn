@@ -22,7 +22,7 @@ import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import perceval as pcvl
-from src.circuits import memristor_circuit, CircuitType, encoding_circuit, build_circuit
+from src.circuits import memristor_circuit, encoding_circuit, build_circuit
 
 def create_memristor_circuit():
     """Creates a memristor circuit with random phases."""
@@ -38,16 +38,17 @@ def create_memristor_circuit():
     return circuit, phases
 
 def create_full_circuit(encoding_mode=0):
-    """Creates a full circuit with encoding and memristor components."""
-    # Initialize random phases
-    phases = np.random.uniform(0, 2*np.pi, 3)
+    """Creates a full circuit with encoding and Clements components (3x3).
+    Memristive behavior is enabled in simulation via memristive_phase_idx."""
+    n_modes = 3
+    n_phases = n_modes * (n_modes - 1)
+    phases = np.random.uniform(0, 2*np.pi, n_phases)
     enc_phi = np.random.uniform(0, 2*np.pi)
-    
-    # Create the full circuit
+
     circuit = build_circuit(
         phases=phases,
         enc_phi=enc_phi,
-        circuit_type=CircuitType.MEMRISTOR,
+        n_modes=n_modes,
         encoding_mode=encoding_mode
     )
     
@@ -211,15 +212,19 @@ def main():
     
     # Train the model
     print("Training model on quartic function...")
+    n_modes = 3  # 3x3 Clements with memristive phase 2
     theta_opt, history = train_pytorch(
         X_train, y_train,
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        phase_idx=(0, 1),  # Indices of phase parameters
-        n_photons=(1, 1),  # Number of photons for each phase
-        n_samples=n_samples // 20,  # Reduce samples for faster training
-        n_phases=2  # Number of external phase parameters
+        n_samples=n_samples // 20,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_modes=n_modes,
+        encoding_mode=0,
+        target_mode=(n_modes - 1,),
+        memristive_phase_idx=[2]
     )
     
     # Print optimized parameters
@@ -235,7 +240,13 @@ def main():
         theta_opt,
         config['memory_depth'],
         n_samples // 20,
-        encoded_phases=enc_test
+        encoded_phases=enc_test,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_modes=n_modes,
+        encoding_mode=0,
+        target_mode=(n_modes - 1,),
+        memristive_phase_idx=[2]
     )
     
     # Compute MSE

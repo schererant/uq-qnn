@@ -43,6 +43,11 @@ def main():
     config['phase_idx'] = tuple(range(n_phases))
     config['n_photons'] = tuple([1] * n_phases)
     n_samples = 500
+    n_swipe = 0
+    swipe_span = 0.0
+    encoding_mode = 0
+    target_mode = (n_modes - 1,)
+    memristive_phase_idx = [2]
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -60,12 +65,12 @@ def main():
         lr=config['lr'],
         epochs=config['epochs'],
         n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
+        n_swipe=n_swipe,
+        swipe_span=swipe_span,
         n_modes=n_modes,
-        encoding_mode=0,
-        target_mode=(n_modes - 1,),
-        memristive_phase_idx=[2]  # Phase 2 (MZI 1,2) is memristive
+        encoding_mode=encoding_mode,
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx
     )
     
     # Generate predictions
@@ -76,12 +81,12 @@ def main():
         config['memory_depth'],
         n_samples,
         encoded_phases=enc_test,
-        n_swipe=0,
-        swipe_span=0.0,
+        n_swipe=n_swipe,
+        swipe_span=swipe_span,
         n_modes=n_modes,
-        encoding_mode=0,
-        target_mode=(n_modes - 1,),
-        memristive_phase_idx=[2]
+        encoding_mode=encoding_mode,
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx
     )
     
     # Compute MSE
@@ -108,12 +113,12 @@ def main():
             config['memory_depth'],
             sample_count,
             encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
+            n_swipe=n_swipe,
+            swipe_span=swipe_span,
             n_modes=n_modes,
-            encoding_mode=0,
-            target_mode=(n_modes - 1,),
-            memristive_phase_idx=[2]
+            encoding_mode=encoding_mode,
+            target_mode=target_mode,
+            memristive_phase_idx=memristive_phase_idx
         )
         all_preds[:, i] = preds
     

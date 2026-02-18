@@ -46,6 +46,21 @@ config = {
 # =========================================================
 
 
+def print_run_params(title: str = "Run parameters", **params) -> None:
+    """
+    Print all set parameters at the beginning of a run for reproducibility.
+
+    Args:
+        title (str): Header for the parameter block.
+        **params: Parameter names and values to print (e.g. n_modes=6, lr=0.03).
+    """
+    print(f"\n--- {title} ---")
+    for k, v in sorted(params.items()):
+        if v is not None:
+            print(f"  {k}: {v}")
+    print()
+
+
 def _resolve_n_swipe() -> int:
     """
     Resolves the number of swipes to use, either from config or by computing it.
@@ -93,11 +108,12 @@ def _run_training(
             memory_depth=config['memory_depth'],
             lr=config['lr'],
             epochs=config['epochs'],
-            phase_idx=config['phase_idx'],
-            n_photons=config['n_photons'],
+            n_samples=n_samples,
             n_swipe=config['n_swipe'],
             swipe_span=config['swipe_span'],
-            n_samples=n_samples
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
         )
     else:
         theta_opt, history = train_pytorch(
@@ -105,11 +121,12 @@ def _run_training(
             memory_depth=config['memory_depth'],
             lr=config['lr'],
             epochs=config['epochs'],
-            phase_idx=config['phase_idx'],
-            n_photons=config['n_photons'],
+            n_samples=n_samples,
             n_swipe=0,
             swipe_span=0.0,
-            n_samples=n_samples
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
         )
 
     print("Optimized θ:", theta_opt)
@@ -118,11 +135,24 @@ def _run_training(
     if cont:
         preds = run_simulation_sequence_np(
             theta_opt, config['memory_depth'], n_samples,
-            encoded_phases=2 * np.arccos(X_test), n_swipe=config['n_swipe'], swipe_span=config['swipe_span']
+            encoded_phases=2 * np.arccos(X_test),
+            n_swipe=config['n_swipe'],
+            swipe_span=config['swipe_span'],
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
         )
     else:
         enc_test = 2 * np.arccos(X_test)
-        preds = run_simulation_sequence_np(theta_opt, config['memory_depth'], n_samples, encoded_phases=enc_test)
+        preds = run_simulation_sequence_np(
+            theta_opt, config['memory_depth'], n_samples,
+            encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
+        )
 
     if config['do_plot']:
         # ————————————————————————————————————————————————————————————————
