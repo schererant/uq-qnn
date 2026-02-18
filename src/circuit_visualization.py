@@ -29,6 +29,7 @@ def display_circuit_annotated(
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
     phases: Optional[np.ndarray] = None,
     enc_phi: float = np.pi / 4,
+    encoding_phase_idx: Optional[int] = None,
     path: Optional[str] = None,
     show: bool = True,
     skin=None,
@@ -45,6 +46,8 @@ def display_circuit_annotated(
         memristive_output_modes: For each memristive phase, (mode_p1, mode_p2) for feedback.
         phases: Phase values for the circuit. If None, uses π/4 for all.
         enc_phi: Encoding phase value (radians).
+        encoding_phase_idx: If provided, enc_phi is embedded into this phase index
+            inside the Clements mesh instead of using a separate encoding_circuit.
         path: If set, save the annotated figure to this file path.
         show: If True, display the figure (e.g. plt.show()).
         skin: Perceval skin (e.g. SymbSkin()). If None, uses default.
@@ -63,7 +66,13 @@ def display_circuit_annotated(
     )
 
     # Build circuit and save to temp file
-    circ = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=encoding_mode)
+    circ = build_circuit(
+        phases,
+        enc_phi,
+        n_modes=n_modes,
+        encoding_mode=encoding_mode,
+        encoding_phase_idx=encoding_phase_idx,
+    )
     proc = pcvl.Processor("SLOS", circ)
     input_modes = [0] * n_modes
     input_modes[encoding_mode] = 1

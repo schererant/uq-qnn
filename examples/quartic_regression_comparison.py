@@ -53,6 +53,8 @@ def run_experiment(
 ):
     """Train and evaluate one configuration."""
     print(f"\n--- {label} ---")
+    # Use inline encoding on the first MZI internal phase (phase index 0)
+    ENCODING_PHASE_IDX = 0
     theta, history = train_pytorch(
         X_train, y_train,
         memory_depth=memory_depth,
@@ -67,6 +69,7 @@ def run_experiment(
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
         verbose=verbose,
+        encoding_phase_idx=ENCODING_PHASE_IDX,
     )
     enc_test = 2 * np.arccos(X_test)
     preds = run_simulation_sequence_np(
@@ -81,6 +84,7 @@ def run_experiment(
         target_mode=(N_MODES - 1,),
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=ENCODING_PHASE_IDX,
     )
     mse = np.mean((preds - y_test) ** 2)
     print(f"MSE: {mse:.6f}")
@@ -100,6 +104,8 @@ def main():
 
     # Save annotated circuit diagram (encoding, target, memristive phases)
     print("Saving annotated circuit diagram...")
+    # Visualize the same inline-encoding configuration used in training
+    ENCODING_PHASE_IDX = 0
     save_circuit_annotated(
         "quartic_circuit_annotated.png",
         n_modes=N_MODES,
@@ -107,6 +113,7 @@ def main():
         target_mode=(N_MODES - 1,),
         memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
         memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+        encoding_phase_idx=ENCODING_PHASE_IDX,
     )
 
     print("Generating quartic data (y = x^4)...")

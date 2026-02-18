@@ -49,10 +49,41 @@ def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> pcvl.Cir
     return c
 
 
+def _clements_mzi_pairs(n_modes: int) -> list[Tuple[int, int]]:
+    """
+    Return the ordered list of MZI mode pairs for a rectangular Clements mesh.
+
+    For n_modes = 6 this gives the familiar 3×2×3×2×3×2 layout:
+    (0,1),(2,3),(4,5),(1,2),(3,4), repeated three times.
+    For n_modes = 3 it yields (0,1),(1,2),(0,1), matching the tests.
+    """
+    if n_modes < 2:
+        raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
+
+    pairs: list[Tuple[int, int]] = []
+
+    # Repeat (even-layer, odd-layer) blocks
+    full_blocks = n_modes // 2
+    for _ in range(full_blocks):
+        # Even-start layer: (0,1), (2,3), ...
+        for j in range(0, n_modes - 1, 2):
+            pairs.append((j, j + 1))
+        # Odd-start layer: (1,2), (3,4), ...
+        for j in range(1, n_modes - 1, 2):
+            pairs.append((j, j + 1))
+
+    # For odd n_modes, add a final even-start layer
+    if n_modes % 2 == 1:
+        for j in range(0, n_modes - 1, 2):
+            pairs.append((j, j + 1))
+
+    return pairs
+
+
 def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
     """
     Maps a phase index to the mode pair (m1, m2) of the MZI that contains it.
-    Uses the same layer ordering as clements_circuit.
+    Uses the same ordering as clements_circuit, with two consecutive phases per MZI.
     
     Args:
         phase_idx (int): Index into the phases array (0 to n_modes*(n_modes-1)-1).
@@ -63,21 +94,16 @@ def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
     """
     if n_modes < 2:
         raise ValueError(f"Requires at least 2 modes, got {n_modes}")
-    expected_phases = n_modes * (n_modes - 1)
+
+    pairs = _clements_mzi_pairs(n_modes)
+    expected_phases = 2 * len(pairs)
     if phase_idx < 0 or phase_idx >= expected_phases:
         raise ValueError(
             f"phase_idx must be in [0, {expected_phases-1}] for {n_modes} modes, got {phase_idx}"
         )
-    idx = 0
-    for layer in range(n_modes - 1):
-        is_even_layer = (layer % 2 == 0)
-        start_mode = 0 if is_even_layer else 1
-        for m in range(start_mode, n_modes - 1, 2):
-            if m + 1 < n_modes:
-                if phase_idx in (idx, idx + 1):
-                    return (m, m + 1)
-                idx += 2
-    return (0, 1)  # Fallback (should not reach)
+
+    mzi_idx = phase_idx // 2
+    return pairs[mzi_idx]
 
 
 def memristor_circuit(phases: np.ndarray) -> pcvl.Circuit:
@@ -116,45 +142,32 @@ def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
     # Validate inputs
     if n_modes < 2:
         raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
-    
-    # Calculate expected number of phases (2 per MZI)
-    expected_phases = n_modes * (n_modes - 1)
-    
+
+    # Determine MZI ordering and required number of phases
+    pairs = _clements_mzi_pairs(n_modes)
+    expected_phases = 2 * len(pairs)
+
+    # Sanity check: this should match n_modes * (n_modes - 1) for a universal mesh
+    if expected_phases != n_modes * (n_modes - 1):
+        raise RuntimeError(
+            f"Internal error: Clements pattern inconsistent for n_modes={n_modes} "
+            f"(expected {n_modes * (n_modes - 1)} phases, got {expected_phases})"
+        )
+
     if len(phases) != expected_phases:
         raise ValueError(
             f"Expected {expected_phases} phases for {n_modes} modes Clements circuit, "
             f"but got {len(phases)}. Each MZI requires 2 phases."
         )
-    
+
     c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}")
-    
-    # Phase index counter
-    idx = 0
-    
-    # Layer pattern depends on number of modes
-    for layer in range(n_modes - 1):
-        # Determine if this is an even or odd layer (affects starting position)
-        is_even_layer = (layer % 2 == 0)
-        
-        # For even layers, start from the top (mode 0)
-        # For odd layers, start from the second mode (mode 1)
-        start_mode = 0 if is_even_layer else 1
-        
-        # Iterate through pairs of modes for this layer
-        for m in range(start_mode, n_modes - 1, 2):
-            if m + 1 < n_modes:  # Ensure the second mode exists
-                # Extract the two phases for this MZI
-                if idx + 1 < len(phases):  # Check array bounds
-                    phi_int = phases[idx]
-                    phi_ext = phases[idx + 1]
-                    idx += 2
-                    
-                    # Add the MZI to the circuit (merge=True flattens to show BS/PS)
-                    c.add(0, mzi_unit((m, m+1), phi_int, phi_ext), merge=True)
-                else:
-                    print(f"Warning: Not enough phases provided. Expected at least {idx+2}, got {len(phases)}")
-                    break
-    
+
+    # Add one MZI per pair, using two consecutive phases
+    for mzi_idx, (m1, m2) in enumerate(pairs):
+        phi_int = phases[2 * mzi_idx]
+        phi_ext = phases[2 * mzi_idx + 1]
+        c.add(0, mzi_unit((m1, m2), phi_int, phi_ext), merge=True)
+
     return c
 
 
@@ -163,6 +176,7 @@ def build_circuit(
     enc_phi: float,
     n_modes: int = 3,
     encoding_mode: int = 0,
+    encoding_phase_idx: Optional[int] = None,
 ) -> pcvl.Circuit:
     """
     Builds a full Clements circuit by combining encoding and main circuit.
@@ -175,9 +189,17 @@ def build_circuit(
         enc_phi (float): Encoding phase.
         n_modes (int): Number of modes (3 for 3x3, 6 for 6x6, etc.).
         encoding_mode (int): Mode to apply encoding to (default: 0).
+        encoding_phase_idx (Optional[int]): If provided, enc_phi is folded into this
+            phase inside the Clements mesh instead of using a separate encoding block.
 
     Returns:
         pcvl.Circuit: The complete circuit.
+
+    Notes:
+        - When encoding_phase_idx is None (default), a separate 2‑mode encoding_circuit
+          is prepended on encoding_mode (legacy behavior).
+        - When encoding_phase_idx is provided, enc_phi is embedded directly into that
+          phase index inside the Clements mesh (hardware-style encoding).
     """
     enc_phi = float(enc_phi) % (2 * np.pi)
     if encoding_mode < 0:
@@ -193,7 +215,21 @@ def build_circuit(
         )
 
     c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
-    valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
-    c.add(valid_encoding_mode, encoding_circuit(enc_phi), merge=True)
-    c.add(0, clements_circuit(phases, n_modes), merge=True)
+
+    if encoding_phase_idx is None:
+        # Legacy behavior: explicit 2‑mode encoding block on encoding_mode
+        valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
+        c.add(valid_encoding_mode, encoding_circuit(enc_phi), merge=True)
+        mesh_phases = phases
+    else:
+        # Inline encoding: fold enc_phi into a chosen phase of the Clements mesh
+        if encoding_phase_idx < 0 or encoding_phase_idx >= expected_phases:
+            raise ValueError(
+                f"encoding_phase_idx must be in [0, {expected_phases-1}] for {n_modes} modes, "
+                f"got {encoding_phase_idx}"
+            )
+        mesh_phases = np.array(phases, dtype=float).copy()
+        mesh_phases[encoding_phase_idx] = (mesh_phases[encoding_phase_idx] + enc_phi) % (2 * np.pi)
+
+    c.add(0, clements_circuit(mesh_phases, n_modes), merge=True)
     return c

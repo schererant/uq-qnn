@@ -123,6 +123,7 @@ def run_simulation_sequence_np(
     return_class_probs: bool = False,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    encoding_phase_idx: Optional[int] = None,
 ) -> np.ndarray:
     """
     Runs a sequence of photonic-circuit simulations. Architecture is always Clements (3x3, 6x6, etc.).
@@ -249,7 +250,13 @@ def run_simulation_sequence_np(
             else:
                 phases = params.copy()
 
-            circ = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=encoding_mode)
+            circ = build_circuit(
+                phases,
+                enc_phi,
+                n_modes=n_modes,
+                encoding_mode=encoding_mode,
+                encoding_phase_idx=encoding_phase_idx,
+            )
             proc = pcvl.Processor("SLOS", circ)
             proc.with_input(input_state)
             t0 = time.perf_counter()
@@ -279,7 +286,13 @@ def run_simulation_sequence_np(
                 phases = params[:-n_memristive].copy()
                 for j, idx in enumerate(memristive_indices):
                     phases[idx] = mem_phis[j]
-                circ = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=encoding_mode)
+                circ = build_circuit(
+                    phases,
+                    enc_phi,
+                    n_modes=n_modes,
+                    encoding_mode=encoding_mode,
+                    encoding_phase_idx=encoding_phase_idx,
+                )
                 proc = pcvl.Processor("SLOS", circ)
                 proc.with_input(input_state)
                 t0 = time.perf_counter()

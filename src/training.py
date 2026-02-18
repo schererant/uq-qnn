@@ -47,6 +47,7 @@ def train_pytorch_generic(
     seed: int = 42,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    encoding_phase_idx: Optional[int] = None,
     verbose: bool = False,
 ) -> Tuple[np.ndarray, List[float]]:
     """
@@ -106,6 +107,7 @@ def train_pytorch_generic(
             "seed": seed,
             "memristive_phase_idx": memristive_phase_idx,
             "memristive_output_modes": memristive_output_modes,
+            "encoding_phase_idx": encoding_phase_idx,
         }
         print("\n--- Run parameters ---")
         for k, v in sorted(params.items()):
@@ -127,7 +129,8 @@ def train_pytorch_generic(
         encoding_mode=encoding_mode, target_mode=target_mode,
         loss_type=loss_type, n_classes=n_classes,
         memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes
+        memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=encoding_phase_idx,
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
@@ -171,6 +174,7 @@ def train_pytorch(
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
     verbose: bool = False,
+    encoding_phase_idx: Optional[int] = None,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Unified training path for both discrete and continuous modes.
@@ -202,6 +206,7 @@ def train_pytorch(
         n_classes=n_classes,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=encoding_phase_idx,
         verbose=verbose,
     )
 
