@@ -59,9 +59,12 @@ def main():
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        n_swipe=0,
         n_samples=n_samples,
+        n_swipe=0,
+        swipe_span=0.0,
         n_modes=n_modes,
+        encoding_mode=0,
+        target_mode=(n_modes - 1,),
         memristive_phase_idx=[2]  # Phase 2 (MZI 1,2) is memristive
     )
     
@@ -73,7 +76,11 @@ def main():
         config['memory_depth'],
         n_samples,
         encoded_phases=enc_test,
+        n_swipe=0,
+        swipe_span=0.0,
         n_modes=n_modes,
+        encoding_mode=0,
+        target_mode=(n_modes - 1,),
         memristive_phase_idx=[2]
     )
     
@@ -101,7 +108,11 @@ def main():
             config['memory_depth'],
             sample_count,
             encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,),
             memristive_phase_idx=[2]
         )
         all_preds[:, i] = preds

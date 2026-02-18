@@ -150,11 +150,17 @@ X_train, y_train, X_test, y_test = get_classification_data(
 # Train with cross-entropy loss
 theta, history = train_pytorch(
     X_train, y_train,
+    memory_depth=2,
+    lr=0.03,
+    epochs=30,
+    n_samples=500,
+    n_swipe=0,
+    swipe_span=0.0,
+    n_modes=3,
+    encoding_mode=0,
     loss_type='cross_entropy',
     n_classes=2,
-    target_mode=(1, 2),  # Use modes 1 and 2 for binary classification
-    epochs=30,
-    n_samples=500
+    target_mode=(1, 2)  # Use modes 1 and 2 for binary classification
 )
 ```
 
@@ -172,12 +178,17 @@ X_train, y_train, X_test, y_test = get_classification_data(
 # Train with Clements architecture (more modes needed)
 theta, history = train_pytorch(
     X_train, y_train,
+    memory_depth=2,
+    lr=0.03,
+    epochs=40,
+    n_samples=500,
+    n_swipe=0,
+    swipe_span=0.0,
     n_modes=4,  # Need at least n_classes modes
+    encoding_mode=0,
     loss_type='cross_entropy',
     n_classes=3,
-    target_mode=(0, 1, 2),  # Use first 3 modes for 3 classes
-    epochs=40,
-    n_samples=500
+    target_mode=(0, 1, 2)  # Use first 3 modes for 3 classes
 )
 ```
 
@@ -243,11 +254,17 @@ enc_test = encode_2d_to_phase(X_test, method='weighted_sum')
 # Train with cross-entropy loss
 theta, history = train_pytorch_generic(
     enc_train, y_train,
+    memory_depth=2,
+    lr=0.03,
+    epochs=50,
+    n_samples=500,
+    n_swipe=0,
+    swipe_span=0.0,
+    n_modes=3,
+    encoding_mode=0,
     loss_type='cross_entropy',
     n_classes=2,
-    target_mode=(1, 2),
-    epochs=50,
-    n_samples=500
+    target_mode=(1, 2)
 )
 ```
 

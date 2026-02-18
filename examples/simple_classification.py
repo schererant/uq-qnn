@@ -62,13 +62,15 @@ def main():
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        n_swipe=0,
         n_samples=n_samples,
+        n_swipe=0,
+        swipe_span=0.0,
         n_modes=n_modes,
-        memristive_phase_idx=[2],
+        encoding_mode=0,
         loss_type='cross_entropy',
         n_classes=n_classes,
-        target_mode=(1, 2)  # Use modes 1 and 2 for binary classification
+        target_mode=(1, 2),  # Use modes 1 and 2 for binary classification
+        memristive_phase_idx=[2]
     )
     
     # Generate predictions
@@ -79,9 +81,12 @@ def main():
         config['memory_depth'],
         n_samples,
         encoded_phases=enc_test,
+        n_swipe=0,
+        swipe_span=0.0,
         n_modes=n_modes,
-        memristive_phase_idx=[2],
+        encoding_mode=0,
         target_mode=(1, 2),
+        memristive_phase_idx=[2],
         return_class_probs=True
     )
     
@@ -118,9 +123,12 @@ def main():
             config['memory_depth'],
             sample_count,
             encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=n_modes,
-            memristive_phase_idx=[2],
+            encoding_mode=0,
             target_mode=(1, 2),
+            memristive_phase_idx=[2],
             return_class_probs=True
         )
         all_preds_probs[:, :, i] = preds

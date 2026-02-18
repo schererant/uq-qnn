@@ -63,12 +63,11 @@ def main():
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        phase_idx=config['phase_idx'],
-        n_photons=config['n_photons'],
-        n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases,
+        n_swipe=0,
+        swipe_span=0.0,
         n_modes=n_modes,
+        encoding_mode=0,
         loss_type='cross_entropy',
         n_classes=n_classes,
         target_mode=(0, 1, 2)  # Use first 3 modes for 3 classes
@@ -78,11 +77,14 @@ def main():
     print("Generating predictions...")
     enc_test = 2 * np.arccos(X_test)
     preds_probs = run_simulation_sequence_np(
-        theta_discrete, 
-        config['memory_depth'], 
-        n_samples, 
+        theta_discrete,
+        config['memory_depth'],
+        n_samples,
         encoded_phases=enc_test,
+        n_swipe=0,
+        swipe_span=0.0,
         n_modes=n_modes,
+        encoding_mode=0,
         target_mode=(0, 1, 2),
         return_class_probs=True
     )
@@ -113,11 +115,14 @@ def main():
         perturbed_theta[:-1] = perturbed_theta[:-1] % (2 * np.pi)
         
         preds = run_simulation_sequence_np(
-            perturbed_theta, 
-            config['memory_depth'], 
-            sample_count, 
+            perturbed_theta,
+            config['memory_depth'],
+            sample_count,
             encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=n_modes,
+            encoding_mode=0,
             target_mode=(0, 1, 2),
             return_class_probs=True
         )

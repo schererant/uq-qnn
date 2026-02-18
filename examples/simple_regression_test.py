@@ -68,25 +68,25 @@ def main():
         n_swipe=n_swipe,
         swipe_span=swipe_span,
         n_modes=n_modes,
-        memristive_phase_idx=memristive_phase_idx,
         encoding_mode=encoding_mode,
-        target_mode=target_mode
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx
     )
     
     # Generate predictions
     print("Generating predictions...")
     enc_test = 2 * np.arccos(X_test)
     preds_discrete = run_simulation_sequence_np(
-        params=theta_discrete,
-        memory_depth=config['memory_depth'],
-        n_samples=n_samples,
+        theta_discrete,
+        config['memory_depth'],
+        n_samples,
         encoded_phases=enc_test,
-        n_swipe= n_swipe,
+        n_swipe=n_swipe,
         swipe_span=swipe_span,
         n_modes=n_modes,
-        memristive_phase_idx=memristive_phase_idx,
         encoding_mode=encoding_mode,
-        target_mode=target_mode
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx
     )
     
     # Compute MSE
@@ -109,16 +109,16 @@ def main():
         perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
         
         preds = run_simulation_sequence_np(
-            params=perturbed_theta,
-            memory_depth=config['memory_depth'],
-            n_samples=n_samples,
+            perturbed_theta,
+            config['memory_depth'],
+            sample_count,
             encoded_phases=enc_test,
-            n_swipe= n_swipe,
+            n_swipe=n_swipe,
             swipe_span=swipe_span,
             n_modes=n_modes,
-            memristive_phase_idx=memristive_phase_idx,
             encoding_mode=encoding_mode,
-            target_mode=target_mode
+            target_mode=target_mode,
+            memristive_phase_idx=memristive_phase_idx
         )
         all_preds[:, i] = preds
     

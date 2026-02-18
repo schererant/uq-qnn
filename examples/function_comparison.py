@@ -42,17 +42,19 @@ def train_and_evaluate(datafunction, n_data=80, sigma_noise=0.05, n_samples=500,
         n_data, sigma_noise, datafunction
     )
 
-    # Train the model
+    # Train the model (3 modes for Clements 3x3)
+    n_modes = 3
     theta_opt, history = train_pytorch(
         X_train, y_train,
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=epochs,
-        phase_idx=config['phase_idx'],
-        n_photons=config['n_photons'],
-        n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases
+        n_swipe=0,
+        swipe_span=0.0,
+        n_modes=n_modes,
+        encoding_mode=0,
+        target_mode=(n_modes - 1,)
     )
 
     # Uncertainty estimation through multiple forward passes
@@ -71,10 +73,15 @@ def train_and_evaluate(datafunction, n_data=80, sigma_noise=0.05, n_samples=500,
         
         enc_test = 2 * np.arccos(X_test)
         preds = run_simulation_sequence_np(
-            perturbed_theta, 
-            config['memory_depth'], 
-            sample_count, 
-            encoded_phases=enc_test
+            perturbed_theta,
+            config['memory_depth'],
+            sample_count,
+            encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,)
         )
         all_preds[:, i] = preds
 

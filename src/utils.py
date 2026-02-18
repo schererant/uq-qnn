@@ -93,11 +93,12 @@ def _run_training(
             memory_depth=config['memory_depth'],
             lr=config['lr'],
             epochs=config['epochs'],
-            phase_idx=config['phase_idx'],
-            n_photons=config['n_photons'],
+            n_samples=n_samples,
             n_swipe=config['n_swipe'],
             swipe_span=config['swipe_span'],
-            n_samples=n_samples
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
         )
     else:
         theta_opt, history = train_pytorch(
@@ -105,11 +106,12 @@ def _run_training(
             memory_depth=config['memory_depth'],
             lr=config['lr'],
             epochs=config['epochs'],
-            phase_idx=config['phase_idx'],
-            n_photons=config['n_photons'],
+            n_samples=n_samples,
             n_swipe=0,
             swipe_span=0.0,
-            n_samples=n_samples
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
         )
 
     print("Optimized θ:", theta_opt)
@@ -118,11 +120,24 @@ def _run_training(
     if cont:
         preds = run_simulation_sequence_np(
             theta_opt, config['memory_depth'], n_samples,
-            encoded_phases=2 * np.arccos(X_test), n_swipe=config['n_swipe'], swipe_span=config['swipe_span']
+            encoded_phases=2 * np.arccos(X_test),
+            n_swipe=config['n_swipe'],
+            swipe_span=config['swipe_span'],
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
         )
     else:
         enc_test = 2 * np.arccos(X_test)
-        preds = run_simulation_sequence_np(theta_opt, config['memory_depth'], n_samples, encoded_phases=enc_test)
+        preds = run_simulation_sequence_np(
+            theta_opt, config['memory_depth'], n_samples,
+            encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=3,
+            encoding_mode=0,
+            target_mode=(2,)
+        )
 
     if config['do_plot']:
         # ————————————————————————————————————————————————————————————————

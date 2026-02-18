@@ -114,7 +114,7 @@ def run_simulation_sequence_np(
     params: np.ndarray,
     memory_depth: int,
     n_samples: int,
-    encoded_phases: Optional[np.ndarray] = None,
+    encoded_phases: np.ndarray,
     n_swipe: int = 0,
     swipe_span: float = 0.0,
     n_modes: int = 3,
@@ -149,8 +149,6 @@ def run_simulation_sequence_np(
         np.ndarray: Predicted probability per input point, or class probabilities if return_class_probs.
     """
     start_time = time.perf_counter()
-    if encoded_phases is None:
-        raise ValueError("encoded_phases must be provided.")
     if n_swipe < 0:
         raise ValueError("n_swipe must be >= 0.")
     if not isinstance(n_samples, int) or n_samples <= 0:

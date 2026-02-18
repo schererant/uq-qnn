@@ -141,7 +141,11 @@ class TestCircuitArchitectures(unittest.TestCase):
         preds = run_simulation_sequence_np(
             params, memory_depth=2, n_samples=100,
             encoded_phases=enc,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,),
             memristive_phase_idx=memristive_phase_idx
         )
         self.assertEqual(len(preds), 5)
@@ -158,7 +162,11 @@ class TestCircuitArchitectures(unittest.TestCase):
         preds = run_simulation_sequence_np(
             params, memory_depth=2, n_samples=100,
             encoded_phases=enc,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,),
             memristive_phase_idx=None
         )
         self.assertEqual(len(preds), 5)

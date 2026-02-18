@@ -31,20 +31,20 @@ def train_pytorch_generic(
     enc_np: np.ndarray,
     y_np: np.ndarray,
     *,
-    memory_depth: int = 2,
-    lr: float = 0.03,
-    epochs: int = 150,
-    phase_idx: Optional[Sequence[int]] = None,
-    n_photons: Optional[Sequence[int]] = None,
-    seed: int = 42,
-        n_samples: int,
-    n_swipe: int = 0,
-    swipe_span: float = 0.0,
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    memory_depth: int,
+    lr: float,
+    epochs: int,
+    n_samples: int,
+    n_swipe: int,
+    swipe_span: float,
+    n_modes: int,
+    encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]] = None,
     loss_type: str = 'mse',
     n_classes: int = 1,
+    phase_idx: Optional[Sequence[int]] = None,
+    n_photons: Optional[Sequence[int]] = None,
+    seed: int = 42,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
 ) -> Tuple[np.ndarray, List[float]]:
@@ -127,16 +127,19 @@ def train_pytorch(
     X: np.ndarray,
     y: np.ndarray,
     *,
-    n_swipe: int = 0,
-    swipe_span: float = 0.0,
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    memory_depth: int,
+    lr: float,
+    epochs: int,
+    n_samples: int,
+    n_swipe: int,
+    swipe_span: float,
+    n_modes: int,
+    encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]] = None,
     loss_type: str = 'mse',
     n_classes: int = 1,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
-    **kwargs
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Unified training path for both discrete and continuous modes.
@@ -155,6 +158,10 @@ def train_pytorch(
     enc = 2 * np.arccos(X)
     return train_pytorch_generic(
         enc, y,
+        memory_depth=memory_depth,
+        lr=lr,
+        epochs=epochs,
+        n_samples=n_samples,
         n_swipe=n_swipe,
         swipe_span=swipe_span,
         n_modes=n_modes,
@@ -164,7 +171,6 @@ def train_pytorch(
         n_classes=n_classes,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
-        **kwargs
     )
 
 
@@ -194,7 +200,11 @@ def gradient_check(n_modes: int = 3, memristive_phase_idx: Optional[Union[int, S
         return 0.5 * ((run_simulation_sequence_np(
             params, mem_depth, n_samples,
             encoded_phases=enc,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,) if n_modes else None,
             memristive_phase_idx=memristive_phase_idx
         ) - y) ** 2).mean()
 
@@ -210,8 +220,10 @@ def gradient_check(n_modes: int = 3, memristive_phase_idx: Optional[Union[int, S
     loss = MemristorLossPSR.apply(
         th_t, torch.from_numpy(enc).double(), torch.from_numpy(y).double(),
         mem_depth, phase_idx, n_photons, n_samples,
-        n_modes=n_modes,
-        memristive_phase_idx=memristive_phase_idx
+        0, 0.0,  # n_swipe, swipe_span
+        n_modes, 0, (n_modes - 1,) if n_modes else None,  # n_modes, encoding_mode, target_mode
+        'mse', 1,  # loss_type, n_classes
+        memristive_phase_idx, None  # memristive_phase_idx, memristive_output_modes
     )
     loss.backward()
     psr_grad = th_t.grad.detach().cpu().numpy()

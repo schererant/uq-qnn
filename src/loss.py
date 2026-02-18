@@ -26,8 +26,9 @@ class PhotonicModel(torch.nn.Module):
     """
     def __init__(self, init_theta: Sequence[float], enc_np: np.ndarray, y_np: np.ndarray,
                  memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int],
-                 n_modes: int = 3, 
-                 encoding_mode: int = 0, target_mode: Optional[Tuple[int, ...]] = None,
+                 n_modes: int,
+                 encoding_mode: int,
+                 target_mode: Optional[Tuple[int, ...]] = None,
                  loss_type: str = 'mse', n_classes: int = 1,
                  memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
                  memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None) -> None:
@@ -75,7 +76,7 @@ class PhotonicModel(torch.nn.Module):
                         f"got {y_np.shape[1]}"
                     )
 
-    def forward(self, n_samples: int, n_swipe: int = 0, swipe_span: float = 0.0) -> Tensor:
+    def forward(self, n_samples: int, n_swipe: int, swipe_span: float) -> Tensor:
         """
         Computes the loss using the custom autograd function.
         Args:

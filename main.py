@@ -178,10 +178,9 @@ def run_training(X_train, y_train, X_test, y_test, args):
             memory_depth=config['memory_depth'],
             lr=config['lr'],
             epochs=config['epochs'],
+            n_samples=args.n_samples,
             n_swipe=config['n_swipe'],
             swipe_span=config['swipe_span'],
-            n_samples=args.n_samples,
-            seed=args.seed,
             n_modes=args.n_modes,
             encoding_mode=args.encoding_mode,
             target_mode=config['target_mode'],
@@ -194,10 +193,9 @@ def run_training(X_train, y_train, X_test, y_test, args):
             memory_depth=config['memory_depth'],
             lr=config['lr'],
             epochs=config['epochs'],
+            n_samples=args.n_samples,
             n_swipe=0,
             swipe_span=0.0,
-            n_samples=args.n_samples,
-            seed=args.seed,
             n_modes=args.n_modes,
             encoding_mode=args.encoding_mode,
             target_mode=config['target_mode'],
@@ -210,21 +208,27 @@ def run_training(X_train, y_train, X_test, y_test, args):
     
     # Generate predictions on test data
     try:
+        enc_test = 2 * np.arccos(X_test)
         if continuous_mode:
             preds = run_simulation_sequence_np(
                 theta_opt, config['memory_depth'], args.n_samples,
-                encoded_phases=2 * np.arccos(X_test), n_swipe=config['n_swipe'], swipe_span=config['swipe_span'],
+                encoded_phases=enc_test,
+                n_swipe=config['n_swipe'],
+                swipe_span=config['swipe_span'],
                 n_modes=args.n_modes,
-                encoding_mode=args.encoding_mode, target_mode=config['target_mode'],
+                encoding_mode=args.encoding_mode,
+                target_mode=config['target_mode'],
                 memristive_phase_idx=args.memristive_phase_idx
             )
         else:
-            enc_test = 2 * np.arccos(X_test)
             preds = run_simulation_sequence_np(
                 theta_opt, config['memory_depth'], args.n_samples,
                 encoded_phases=enc_test,
+                n_swipe=0,
+                swipe_span=0.0,
                 n_modes=args.n_modes,
-                encoding_mode=args.encoding_mode, target_mode=config['target_mode'],
+                encoding_mode=args.encoding_mode,
+                target_mode=config['target_mode'],
                 memristive_phase_idx=args.memristive_phase_idx
             )
     except Exception as e:
@@ -236,8 +240,11 @@ def run_training(X_train, y_train, X_test, y_test, args):
         preds = run_simulation_sequence_np(
             theta_opt, config['memory_depth'], args.n_samples,
             encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
             n_modes=args.n_modes,
-            encoding_mode=0, target_mode=(args.n_modes - 1,),
+            encoding_mode=0,
+            target_mode=(args.n_modes - 1,),
             memristive_phase_idx=args.memristive_phase_idx
         )
     

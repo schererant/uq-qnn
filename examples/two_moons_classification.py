@@ -64,16 +64,17 @@ def main():
     
     # Train the model with discrete phases
     print("Training model with discrete phases...")
+    n_modes = 3  # Need at least 3 for binary (modes 1, 2)
     theta_discrete, history_discrete = train_pytorch_generic(
         enc_train, y_train,
         memory_depth=config['memory_depth'],
         lr=config['lr'],
         epochs=config['epochs'],
-        phase_idx=config['phase_idx'],
-        n_photons=config['n_photons'],
-        n_swipe=0,
         n_samples=n_samples,
-        n_phases=n_phases,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_modes=n_modes,
+        encoding_mode=0,
         loss_type='cross_entropy',
         n_classes=n_classes,
         target_mode=(1, 2)  # Use modes 1 and 2 for binary classification
@@ -82,10 +83,14 @@ def main():
     # Generate predictions
     print("Generating predictions...")
     preds_probs = run_simulation_sequence_np(
-        theta_discrete, 
-        config['memory_depth'], 
-        n_samples, 
+        theta_discrete,
+        config['memory_depth'],
+        n_samples,
         encoded_phases=enc_test,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_modes=n_modes,
+        encoding_mode=0,
         target_mode=(1, 2),
         return_class_probs=True
     )
@@ -114,10 +119,14 @@ def main():
         perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
         
         preds = run_simulation_sequence_np(
-            perturbed_theta, 
-            config['memory_depth'], 
-            sample_count, 
+            perturbed_theta,
+            config['memory_depth'],
+            sample_count,
             encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=n_modes,
+            encoding_mode=0,
             target_mode=(1, 2),
             return_class_probs=True
         )
@@ -151,6 +160,10 @@ def main():
         config['memory_depth'],
         n_samples,
         encoded_phases=enc_grid,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_modes=n_modes,
+        encoding_mode=0,
         target_mode=(1, 2),
         return_class_probs=True
     )
