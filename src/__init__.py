@@ -27,7 +27,7 @@ from .simulation import run_simulation_sequence_np, SimulationLogger
 from .autograd import photonic_psr_coeffs_torch, MemristorLossPSR
 from .loss import PhotonicModel
 from .training import train_pytorch, train_pytorch_generic, gradient_check
-from .utils import main, config
+from .utils import main, config, print_run_params
 
 __all__ = [
     # Modules
@@ -57,4 +57,5 @@ __all__ = [
     "gradient_check",
     "main",
     "config",
+    "print_run_params",
 ]

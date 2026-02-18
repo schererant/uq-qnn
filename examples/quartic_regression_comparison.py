@@ -25,7 +25,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.data import get_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
-from src.utils import config
+from src.utils import config, print_run_params
 
 
 # 6x6 Clements: 4th MZI = phases 6,7 (modes 1,2) | 5th MZI = phases 8,9 (modes 3,4)
@@ -34,6 +34,7 @@ MEMRISTIVE_PHASE_IDX = [6, 8]  # 4th and 5th MZI (first phase of each)
 # Custom output modes for feedback: (mode_p1, mode_p2) per memristive phase.
 # Default (None) uses each MZI's own output modes. Example: [(1, 2), (3, 4)]
 MEMRISTIVE_OUTPUT_MODES = [(1, 2), (3, 4)]  # 4th MZI outputs, 5th MZI outputs
+VERBOSE = False  # Set True for per-epoch loss and parameter printing
 #TODO: make output modes choosable 
 #TODO: circuit printer in example
 #TODO: print gradient methods (consistent?)
@@ -49,9 +50,19 @@ def run_experiment(
     lr: float,
     epochs: int,
     memristive_output_modes=None,
+    verbose: bool = VERBOSE,
 ):
     """Train and evaluate one configuration."""
     print(f"\n--- {label} ---")
+    print_run_params(
+        f"Experiment: {label}",
+        memory_depth=memory_depth,
+        n_samples=n_samples,
+        lr=lr,
+        epochs=epochs,
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
+    )
     theta, history = train_pytorch(
         X_train, y_train,
         memory_depth=memory_depth,
@@ -65,6 +76,7 @@ def run_experiment(
         target_mode=(N_MODES - 1,),
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
+        verbose=verbose,
     )
     enc_test = 2 * np.arccos(X_test)
     preds = run_simulation_sequence_np(
@@ -93,8 +105,20 @@ def main():
     config['n_data'] = 80
     config['sigma_noise'] = 0.05
     config['lr'] = 0.03
-    config['epochs'] = 30
+    config['epochs'] = 2
     n_samples = 500
+
+    print_run_params(
+        "Global parameters",
+        n_data=config['n_data'],
+        sigma_noise=config['sigma_noise'],
+        lr=config['lr'],
+        epochs=config['epochs'],
+        n_samples=n_samples,
+        n_modes=N_MODES,
+        memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
+        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+    )
 
     print("Generating quartic data (y = x^4)...")
     X_train, y_train, X_test, y_test = get_data(

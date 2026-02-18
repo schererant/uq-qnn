@@ -47,6 +47,7 @@ def train_pytorch_generic(
     seed: int = 42,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -71,6 +72,7 @@ def train_pytorch_generic(
             None or empty = no memristive. e.g. [2] or (2, 5) for one or two MZIs.
         memristive_output_modes (Optional[Sequence[Tuple[int, int]]]): For each memristive phase,
             the (mode_p1, mode_p2) output modes for feedback. None = use MZI's own modes.
+        verbose (bool): If True, print per-epoch loss and final parameters.
     Returns:
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
@@ -106,7 +108,10 @@ def train_pytorch_generic(
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
-    for _ in tqdm(range(epochs), desc="Training", ncols=100):
+    iterator = range(epochs)
+    if not verbose:
+        iterator = tqdm(iterator, desc="Training", ncols=100)
+    for e in iterator:
         optim.zero_grad()
         loss = model(n_samples=n_samples, n_swipe=n_swipe, swipe_span=swipe_span)
         loss.backward()
@@ -120,7 +125,12 @@ def train_pytorch_generic(
                 model.theta.data[idx].remainder_(2 * np.pi)
         
         hist.append(loss.item())
-    return model.theta.detach().cpu().numpy(), hist
+        if verbose:
+            print(f"  Epoch {e + 1}/{epochs}: loss = {loss.item():.6f}")
+    theta_opt = model.theta.detach().cpu().numpy()
+    if verbose:
+        print(f"  Final parameters: {theta_opt}")
+    return theta_opt, hist
 
 
 def train_pytorch(
@@ -140,6 +150,7 @@ def train_pytorch(
     n_classes: int = 1,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    verbose: bool = False,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Unified training path for both discrete and continuous modes.
@@ -171,6 +182,7 @@ def train_pytorch(
         n_classes=n_classes,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
+        verbose=verbose,
     )
 
 

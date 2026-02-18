@@ -89,6 +89,8 @@ def parse_arguments():
     
     # Output options
     output_group = parser.add_argument_group('Output')
+    output_group.add_argument("--verbose", action="store_true",
+                             help="Print per-epoch loss and final parameters")
     output_group.add_argument("--no-plot", action="store_true",
                              help="Disable plotting")
     output_group.add_argument("--save-model", type=str, default=None,
@@ -184,7 +186,8 @@ def run_training(X_train, y_train, X_test, y_test, args):
             n_modes=args.n_modes,
             encoding_mode=args.encoding_mode,
             target_mode=config['target_mode'],
-            memristive_phase_idx=args.memristive_phase_idx
+            memristive_phase_idx=args.memristive_phase_idx,
+            verbose=args.verbose
         )
     else:
         print("Running in discrete mode")
@@ -199,7 +202,8 @@ def run_training(X_train, y_train, X_test, y_test, args):
             n_modes=args.n_modes,
             encoding_mode=args.encoding_mode,
             target_mode=config['target_mode'],
-            memristive_phase_idx=args.memristive_phase_idx
+            memristive_phase_idx=args.memristive_phase_idx,
+            verbose=args.verbose
         )
     
     training_time = time.time() - start_time

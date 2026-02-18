@@ -46,6 +46,21 @@ config = {
 # =========================================================
 
 
+def print_run_params(title: str = "Run parameters", **params) -> None:
+    """
+    Print all set parameters at the beginning of a run for reproducibility.
+
+    Args:
+        title (str): Header for the parameter block.
+        **params: Parameter names and values to print (e.g. n_modes=6, lr=0.03).
+    """
+    print(f"\n--- {title} ---")
+    for k, v in sorted(params.items()):
+        if v is not None:
+            print(f"  {k}: {v}")
+    print()
+
+
 def _resolve_n_swipe() -> int:
     """
     Resolves the number of swipes to use, either from config or by computing it.
