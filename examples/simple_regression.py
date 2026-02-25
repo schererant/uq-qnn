@@ -33,16 +33,17 @@ def main():
     np.random.seed(42)
     
     # Configure parameters
-    config['n_data'] = 80
-    config['sigma_noise'] = 0.05
-    config['lr'] = 0.03
-    config['epochs'] = 30
+    config['n_data'] = 150
+    config['sigma_noise'] = 0.005
+    config['lr'] = 0.05
+    config['epochs'] = 300
     config['memory_depth'] = 2
-    n_modes = 3
+    n_modes = 4
     n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
     config['phase_idx'] = tuple(range(n_phases))
     config['n_photons'] = tuple([1] * n_phases)
-    n_samples = 500
+    n_samples = 20
+    target_mode=(n_modes - 2,)
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -64,7 +65,7 @@ def main():
         swipe_span=0.0,
         n_modes=n_modes,
         encoding_mode=0,
-        target_mode=(n_modes - 1,),
+        target_mode=target_mode,
         memristive_phase_idx=[2]  # Phase 2 (MZI 1,2) is memristive
     )
     
@@ -80,7 +81,7 @@ def main():
         swipe_span=0.0,
         n_modes=n_modes,
         encoding_mode=0,
-        target_mode=(n_modes - 1,),
+        target_mode=target_mode,
         memristive_phase_idx=[2]
     )
     
@@ -112,7 +113,7 @@ def main():
             swipe_span=0.0,
             n_modes=n_modes,
             encoding_mode=0,
-            target_mode=(n_modes - 1,),
+            target_mode=target_mode,
             memristive_phase_idx=[2]
         )
         all_preds[:, i] = preds

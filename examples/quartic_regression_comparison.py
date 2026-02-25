@@ -106,11 +106,11 @@ def main():
 
     np.random.seed(42)
 
-    config['n_data'] = 80
-    config['sigma_noise'] = 0.05
-    config['lr'] = 0.03
-    config['epochs'] = 2
-    n_samples = 500
+    config['n_data'] = 100
+    config['sigma_noise'] = 0.02
+    config['lr'] = 0.04
+    config['epochs'] = 300
+    n_samples = 20
 
     # Save annotated circuit diagram (encoding, target, memristive phases)
     print("Saving annotated circuit diagram...")

@@ -23,7 +23,7 @@ from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
 
 
-def train_and_evaluate(datafunction, n_data=80, sigma_noise=0.05, n_samples=500, epochs=30, n_phases=2):
+def train_and_evaluate(datafunction, encoding_mode, target_mode, n_data: int, sigma_noise: float, n_samples: int, epochs: int, n_phases: int, n_modes: int, memory_depth: int, lr: float): 
     """
     Train and evaluate a model on the specified data function.
 
@@ -43,18 +43,18 @@ def train_and_evaluate(datafunction, n_data=80, sigma_noise=0.05, n_samples=500,
     )
 
     # Train the model (3 modes for Clements 3x3)
-    n_modes = 3
+    n_modes = n_modes
     theta_opt, history = train_pytorch(
         X_train, y_train,
-        memory_depth=config['memory_depth'],
-        lr=config['lr'],
+        memory_depth=memory_depth,
+        lr=lr,
         epochs=epochs,
         n_samples=n_samples,
         n_swipe=0,
         swipe_span=0.0,
         n_modes=n_modes,
-        encoding_mode=0,
-        target_mode=(n_modes - 1,)
+        encoding_mode= encoding_mode,
+        target_mode=target_mode
     )
 
     # Uncertainty estimation through multiple forward passes
@@ -81,7 +81,7 @@ def train_and_evaluate(datafunction, n_data=80, sigma_noise=0.05, n_samples=500,
             swipe_span=0.0,
             n_modes=n_modes,
             encoding_mode=0,
-            target_mode=(n_modes - 1,)
+            target_mode=target_mode
         )
         all_preds[:, i] = preds
 
@@ -212,11 +212,12 @@ def main():
     np.random.seed(42)
 
     # Configure parameters
-    config['lr'] = 0.03
-    config['memory_depth'] = 2
-    config['phase_idx'] = (0, 1)
-    config['n_photons'] = (1, 1)
-    n_phases = 2  # Number of external phase parameters (excluding memory phase)
+    lr = 0.05
+    memory_depth = 1
+    n_modes = 3
+    config['phase_idx'] = (0, 1, 2)
+    config['n_photons'] = (1, 1, 1)
+    n_phases = n_modes * (n_modes - 1)  # Number of external phase parameters (excluding memory phase)
 
     # Functions to compare
     functions = [
@@ -233,9 +234,12 @@ def main():
 
     # Parameters
     n_data = 80
-    sigma_noise = 0.05
-    n_samples = 500
-    epochs = 60
+    sigma_noise = 0.02
+    n_samples = 20
+    epochs = 300
+    encoding_mode = 2
+    target_mode = (n_phases - 1,)  # Last mode as target
+    lr=0.05
 
     # Store results
     results = {}
@@ -244,7 +248,9 @@ def main():
     for func_name in functions:
         print(f"\n=== Training on {func_name} ===")
         X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = train_and_evaluate(
-            func_name, n_data, sigma_noise, n_samples, epochs, n_phases
+            datafunction=func_name, encoding_mode=encoding_mode, target_mode=target_mode, n_data=n_data, 
+            sigma_noise= sigma_noise, n_samples=n_samples, 
+            epochs=epochs, n_phases=n_phases, n_modes=n_modes, memory_depth=memory_depth, lr=lr
         )
 
         metrics = compute_metrics(y_test, mean_preds, std_preds)
