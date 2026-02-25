@@ -29,12 +29,22 @@ from src.utils import config
 from src.circuit_visualization import save_circuit_annotated
 
 
+# # 6x6 Clements: 4th MZI = phases 6,7 (modes 1,2) | 5th MZI = phases 8,9 (modes 3,4)
+# N_MODES = 6
+# MEMRISTIVE_PHASE_IDX = [6, 8]  # 4th and 5th MZI (first phase of each)
+# # Custom output modes for feedback: (mode_p1, mode_p2) per memristive phase.
+# # Default (None) uses each MZI's own output modes. Example: [(1, 2), (3, 4)]
+# MEMRISTIVE_OUTPUT_MODES = [(1, 2), (3, 4)]  # 4th MZI outputs, 5th MZI outputs
+# VERBOSE = True  # Set True for per-epoch loss and parameter printing
+# #TODO: print gradient methods (consistent?)
+# #TODO: desfault psr? 
+
 # 6x6 Clements: 4th MZI = phases 6,7 (modes 1,2) | 5th MZI = phases 8,9 (modes 3,4)
-N_MODES = 6
-MEMRISTIVE_PHASE_IDX = [6, 8]  # 4th and 5th MZI (first phase of each)
+N_MODES = 3
+MEMRISTIVE_PHASE_IDX = [2]  # 4th and 5th MZI (first phase of each)
 # Custom output modes for feedback: (mode_p1, mode_p2) per memristive phase.
 # Default (None) uses each MZI's own output modes. Example: [(1, 2), (3, 4)]
-MEMRISTIVE_OUTPUT_MODES = [(1, 2), (3, 4)]  # 4th MZI outputs, 5th MZI outputs
+MEMRISTIVE_OUTPUT_MODES = [(1, 2)]  # 4th MZI outputs, 5th MZI outputs
 VERBOSE = True  # Set True for per-epoch loss and parameter printing
 #TODO: print gradient methods (consistent?)
 #TODO: desfault psr? 
