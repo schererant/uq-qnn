@@ -36,9 +36,9 @@ def main():
     config['n_data'] = 150
     config['sigma_noise'] = 0.005
     config['lr'] = 0.05
-    config['epochs'] = 300
+    config['epochs'] = 3
     config['memory_depth'] = 2
-    n_modes = 4
+    n_modes = 6
     n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
     config['phase_idx'] = tuple(range(n_phases))
     config['n_photons'] = tuple([1] * n_phases)
@@ -66,7 +66,7 @@ def main():
         n_modes=n_modes,
         encoding_mode=0,
         target_mode=target_mode,
-        memristive_phase_idx=[2]  # Phase 2 (MZI 1,2) is memristive
+        memristive_phase_idx=None  # Phase 2 (MZI 1,2) is memristive
     )
     
     # Generate predictions
@@ -82,7 +82,7 @@ def main():
         n_modes=n_modes,
         encoding_mode=0,
         target_mode=target_mode,
-        memristive_phase_idx=[2]
+        memristive_phase_idx=None
     )
     
     # Compute MSE
@@ -114,7 +114,7 @@ def main():
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=target_mode,
-            memristive_phase_idx=[2]
+            memristive_phase_idx=None
         )
         all_preds[:, i] = preds
     
