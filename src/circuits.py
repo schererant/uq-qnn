@@ -174,8 +174,8 @@ def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
 def build_circuit(
     phases: np.ndarray,
     enc_phi: float,
-    n_modes: int = 3,
-    encoding_mode: int = 0,
+    n_modes: int,
+    encoding_mode: int,
     encoding_phase_idx: Optional[int] = None,
 ) -> pcvl.Circuit:
     """
