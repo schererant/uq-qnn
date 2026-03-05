@@ -121,11 +121,11 @@ def run_simulation_sequence_np(
     swipe_span: float,
     n_modes: int,
     encoding_mode: int,
-    target_mode: Optional[Tuple[int, ...]] = None,
-    return_class_probs: bool = False,
-    memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
+    target_mode: Optional[Tuple[int, ...]],
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]]=None,
     encoding_phase_idx: Optional[int] = None,
+    return_class_probs: bool = False,
 ) -> np.ndarray:
     """
     Runs a sequence of photonic-circuit simulations. Architecture is always Clements (3x3, 6x6, etc.).

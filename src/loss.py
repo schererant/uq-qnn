@@ -28,11 +28,11 @@ class PhotonicModel(torch.nn.Module):
                  memory_depth: int, phase_idx: Sequence[int], n_photons: Sequence[int],
                  n_modes: int,
                  encoding_mode: int,
-                 target_mode: Optional[Tuple[int, ...]] = None,
-                 loss_type: str = 'mse', n_classes: int = 1,
-                 memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
-                 memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
-                 encoding_phase_idx: Optional[int] = None) -> None:
+                 target_mode: Optional[Tuple[int, ...]],
+                 memristive_phase_idx: Optional[Union[int, Sequence[int]]],
+                 memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
+                 encoding_phase_idx: Optional[int],
+                 loss_type: str = 'mse', n_classes: int = 1) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
         self.register_buffer("enc", torch.from_numpy(enc_np).double())
