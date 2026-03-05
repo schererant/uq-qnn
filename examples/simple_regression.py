@@ -44,6 +44,9 @@ def main():
     config['n_photons'] = tuple([1] * n_phases)
     n_samples = 20
     target_mode=(n_modes - 2,)
+    memristive_output_modes = None
+    memristive_phase_idx=None
+    #encoding_phase_idx=[0]
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -66,7 +69,9 @@ def main():
         n_modes=n_modes,
         encoding_mode=0,
         target_mode=target_mode,
-        memristive_phase_idx=None  # Phase 2 (MZI 1,2) is memristive
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
+        #encoding_phase_idx=encoding_phase_idx # Phase 2 (MZI 1,2) is memristive
     )
     
     # Generate predictions
@@ -82,7 +87,7 @@ def main():
         n_modes=n_modes,
         encoding_mode=0,
         target_mode=target_mode,
-        memristive_phase_idx=None
+        memristive_phase_idx=memristive_phase_idx
     )
     
     # Compute MSE
@@ -114,7 +119,7 @@ def main():
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=target_mode,
-            memristive_phase_idx=None
+            memristive_phase_idx=memristive_phase_idx
         )
         all_preds[:, i] = preds
     
