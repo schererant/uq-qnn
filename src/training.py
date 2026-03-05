@@ -42,7 +42,7 @@ def train_pytorch_generic(
     target_mode: Optional[Tuple[int, ...]],
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    encoding_phase_idx: Optional[int]=None,
+    encoding_phase_idx: Optional[int],
     verbose: bool = False,
     loss_type: str = 'mse',
     n_classes: int = 1,

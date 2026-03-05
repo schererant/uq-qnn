@@ -46,7 +46,7 @@ def main():
     target_mode=(n_modes - 2,)
     memristive_output_modes = None
     memristive_phase_idx=None
-    #encoding_phase_idx=[0]
+    encoding_phase_idx=None
     
     # Generate synthetic data
     print("Generating synthetic data...")
@@ -71,7 +71,7 @@ def main():
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
-        #encoding_phase_idx=encoding_phase_idx # Phase 2 (MZI 1,2) is memristive
+        encoding_phase_idx=encoding_phase_idx 
     )
     
     # Generate predictions
@@ -87,7 +87,9 @@ def main():
         n_modes=n_modes,
         encoding_mode=0,
         target_mode=target_mode,
-        memristive_phase_idx=memristive_phase_idx
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=encoding_phase_idx 
     )
     
     # Compute MSE
@@ -119,7 +121,9 @@ def main():
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx
+            memristive_phase_idx=memristive_phase_idx,
+            memristive_output_modes=memristive_output_modes,
+            encoding_phase_idx=encoding_phase_idx 
         )
         all_preds[:, i] = preds
     

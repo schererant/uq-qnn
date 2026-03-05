@@ -123,8 +123,8 @@ def run_simulation_sequence_np(
     encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]],
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]]=None,
-    encoding_phase_idx: Optional[int] = None,
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
+    encoding_phase_idx: Optional[int],
     return_class_probs: bool = False,
 ) -> np.ndarray:
     """

@@ -176,7 +176,7 @@ def build_circuit(
     enc_phi: float,
     n_modes: int,
     encoding_mode: int,
-    encoding_phase_idx: Optional[int] = None,
+    encoding_phase_idx: Optional[int],
 ) -> pcvl.Circuit:
     """
     Builds a full Clements circuit by combining encoding and main circuit.
