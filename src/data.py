@@ -131,6 +131,26 @@ def quartic_data(x: np.ndarray) -> np.ndarray:
     """
     return np.power(x, 4)
 
+def neg_quadratic_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes the negative quadratic (1 - x^2) of the input array.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with 1.0 minus each element raised to the 2nd power.
+    """
+    return 1.0-np.power(x, 2)
+
+def neg_qubic_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes the negative cubic (1 - x^3) of the input array.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with 1.0 minus each element raised to the 3rd power.
+    """
+    return 1.0-np.power(x, 3)
+
 
 def sinusoid_data(x: np.ndarray) -> np.ndarray:
     """
@@ -138,9 +158,9 @@ def sinusoid_data(x: np.ndarray) -> np.ndarray:
     Args:
         x (np.ndarray): Input array.
     Returns:
-        np.ndarray: Output array with sin(2πx) * 0.5 + 0.5
+        np.ndarray: Output array with sin(0.5πx) * 0.5 + 0.5
     """
-    return np.sin(2 * np.pi * x) * 0.5 + 0.5
+    return np.sin(0.7*np.pi * x) * 0.5 +0.1
 
 
 def multi_modal_data(x: np.ndarray) -> np.ndarray:
@@ -397,11 +417,13 @@ def get_data(
     Returns:
         Tuple: (X_train, y_train, X_test, y_test) arrays.
     """
-    x_min, x_max = 0.0, 1.0
+    x_min, x_max = 0.1, 0.9
     X = np.linspace(x_min, x_max, n_data)
     # Explicit mapping of string to function
     datafunction_map = {
         'quartic_data': quartic_data,
+        'neg_quadratic_data': neg_quadratic_data,
+        'neg_qubic_data': neg_qubic_data,
         'sinusoid_data': sinusoid_data,
         'multi_modal_data': multi_modal_data,
         'step_function_data': step_function_data,
@@ -412,7 +434,7 @@ def get_data(
         raise ValueError(f"Unknown datafunction: {datafunction}. Available functions: {list(datafunction_map.keys())}")
     datafunc = datafunction_map[datafunction]
     y = datafunc(X) + np.random.normal(0, sigma_noise, size=n_data)
-    gap = (x_min + 0.35 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))
+    gap = (x_min + 0.55 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))
     mask = ~((X > gap[0]) & (X < gap[1]))
     X_train, y_train = X[mask], y[mask]
     X_test = np.linspace(x_min, x_max, 500)

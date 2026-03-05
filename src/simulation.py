@@ -9,6 +9,8 @@ from perceval.algorithm import Sampler
 
 from .circuits import build_circuit, get_mzi_modes_for_phase
 
+import pdb
+
 
 class SimulationLogger:
     def __init__(self):
@@ -196,6 +198,7 @@ def run_simulation_sequence_np(
         state_m1_list.append(pcvl.BasicState(s1))
         state_m2_list.append(pcvl.BasicState(s2))
 
+    #pdb.set_trace()  # Debugging: check parameter normalization and setup before running simulations
     # Build target states list for multi-class / probability extraction
     target_modes_list = []
     for m in target_mode:

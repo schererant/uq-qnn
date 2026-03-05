@@ -84,6 +84,9 @@ def _run_training(
     y_train: np.ndarray,
     X_test: np.ndarray,
     y_test: np.ndarray,
+    n_modes: int,
+    encoding_mode: int,
+    target_mode: tuple[int, ...],
     *,
     cont: bool,
     n_samples: int
@@ -111,9 +114,9 @@ def _run_training(
             n_samples=n_samples,
             n_swipe=config['n_swipe'],
             swipe_span=config['swipe_span'],
-            n_modes=3,
-            encoding_mode=0,
-            target_mode=(2,)
+            n_modes=n_modes,
+            encoding_mode=encoding_mode,
+            target_mode=target_mode
         )
     else:
         theta_opt, history = train_pytorch(
@@ -124,9 +127,9 @@ def _run_training(
             n_samples=n_samples,
             n_swipe=0,
             swipe_span=0.0,
-            n_modes=3,
-            encoding_mode=0,
-            target_mode=(2,)
+            n_modes=n_modes,
+            encoding_mode=encoding_mode,
+            target_mode=target_mode
         )
 
     print("Optimized θ:", theta_opt)
@@ -138,9 +141,9 @@ def _run_training(
             encoded_phases=2 * np.arccos(X_test),
             n_swipe=config['n_swipe'],
             swipe_span=config['swipe_span'],
-            n_modes=3,
-            encoding_mode=0,
-            target_mode=(2,)
+            n_modes=n_modes,
+            encoding_mode=encoding_mode,
+            target_mode=target_mode
         )
     else:
         enc_test = 2 * np.arccos(X_test)
@@ -149,9 +152,9 @@ def _run_training(
             encoded_phases=enc_test,
             n_swipe=0,
             swipe_span=0.0,
-            n_modes=3,
-            encoding_mode=0,
-            target_mode=(2,)
+            n_modes=n_modes,
+            encoding_mode=encoding_mode,
+            target_mode=target_mode
         )
 
     if config['do_plot']:
@@ -200,11 +203,14 @@ def _run_training(
         plt.show()
 
 
-def main(n_samples: int, measured_data: Optional[str] = None, use_continuous: bool = False) -> None:
+def main(n_samples: int, n_modes: int, encoding_mode: int, target_mode: tuple[int, ...], measured_data: Optional[str] = None, use_continuous: bool = False) -> None:
     """
     Main entry point for running the training and evaluation pipeline.
     Args:
         n_samples (int): Number of samples for the Sampler.
+        n_modes (int): Number of modes in the QNN.
+        encoding_mode (int): Encoding mode to use.
+        target_mode (int): Target mode to use.
         measured_data (str | None): Path to measured data pickle file, or None for synthetic data.
         use_continuous (bool): Whether to use continuous-swipe training.
     Returns:
@@ -223,7 +229,7 @@ def main(n_samples: int, measured_data: Optional[str] = None, use_continuous: bo
             config['sigma_noise'],
             config['datafunction']
         )
-    _run_training(X_train, y_train, X_test, y_test, cont=use_continuous, n_samples=n_samples)
+    _run_training(X_train, y_train, X_test, y_test, n_modes=n_modes, encoding_mode=encoding_mode, target_mode=target_mode, cont=use_continuous, n_samples=n_samples)
     sim_logger.report()
 
 
