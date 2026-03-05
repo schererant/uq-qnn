@@ -33,7 +33,7 @@ def main():
     np.random.seed(42)
     
     # Configure parameters
-    config['n_data'] = 150
+    config['n_data'] = 20
     config['sigma_noise'] = 0.005
     config['lr'] = 0.05
     config['epochs'] = 3

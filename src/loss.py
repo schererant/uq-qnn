@@ -93,8 +93,8 @@ class PhotonicModel(torch.nn.Module):
             self.memory_depth, self.phase_idx, self.n_photons, n_samples,
             n_swipe, swipe_span,
             self.n_modes, self.encoding_mode, self.target_mode,
-            self.loss_type, self.n_classes,
             self.memristive_phase_idx,
             self.memristive_output_modes,
             self.encoding_phase_idx,
+            self.loss_type, self.n_classes,
         )

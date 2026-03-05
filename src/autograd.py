@@ -65,11 +65,11 @@ class MemristorLossPSR(torch.autograd.Function):
         n_modes: int,
         encoding_mode: int,
         target_mode: Optional[Tuple[int, ...]],
+        memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]],
+        memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
+        encoding_phase_idx: Optional[int] = None,
         loss_type: str = 'mse',
         n_classes: int = 1,
-        memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]] = None,
-        memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
-        encoding_phase_idx: Optional[int] = None,
     ) -> Tensor:
         theta_np = theta.detach().cpu().double().numpy()
         enc_np   = enc_phases.detach().cpu().double().numpy()

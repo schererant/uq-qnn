@@ -39,16 +39,16 @@ def train_pytorch_generic(
     swipe_span: float,
     n_modes: int,
     encoding_mode: int,
-    target_mode: Optional[Tuple[int, ...]] = None,
-    loss_type: str = 'mse',
-    n_classes: int = 1,
-    phase_idx: Optional[Sequence[int]] = None,
+    target_mode: Optional[Tuple[int, ...]],
+    phase_idx: Optional[Sequence[int]]=None,
     n_photons: Optional[Sequence[int]] = None,
     seed: int = 42,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
     encoding_phase_idx: Optional[int] = None,
     verbose: bool = False,
+    loss_type: str = 'mse',
+    n_classes: int = 1,
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
