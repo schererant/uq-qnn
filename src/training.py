@@ -40,7 +40,6 @@ def train_pytorch_generic(
     n_modes: int,
     encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]],
-    phase_idx: Optional[Sequence[int]]=None,
     n_photons: Optional[Sequence[int]] = None,
     seed: int = 42,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
