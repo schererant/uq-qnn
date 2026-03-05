@@ -41,7 +41,7 @@ def main():
     n_modes = 6
     n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
     config['phase_idx'] = tuple(range(n_phases))
-    config['n_photons'] = tuple([1] * n_phases)
+    n_photons = tuple([1] * n_phases)
     n_samples = 20
     target_mode=(n_modes - 2,)
     memristive_output_modes = None
@@ -68,6 +68,7 @@ def main():
         swipe_span=0.0,
         n_modes=n_modes,
         encoding_mode=0,
+        n_photons=n_photons,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
