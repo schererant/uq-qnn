@@ -40,7 +40,6 @@ def train_pytorch_generic(
     n_modes: int,
     encoding_mode: int,
     target_mode: Optional[Tuple[int, ...]],
-    n_photons: Optional[Sequence[int]] = None,
     seed: int = 42,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
@@ -57,8 +56,6 @@ def train_pytorch_generic(
         memory_depth (int): Memory buffer depth.
         lr (float): Learning rate.
         epochs (int): Number of training epochs.
-        phase_idx (Sequence[int]): Indices of phase parameters.
-        n_photons (Sequence[int]): Number of photons for each phase.
         seed (int): Random seed for reproducibility.
         n_samples (int): Number of samples for the Sampler.
         n_swipe (int): Number of phase points per data point (0 for discrete).
