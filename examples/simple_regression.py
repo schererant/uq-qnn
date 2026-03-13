@@ -33,15 +33,15 @@ def main():
     np.random.seed(42)
     
     # Configure parameters
-    config['n_data'] = 20
+    config['n_data'] = 80
     config['sigma_noise'] = 0.005
     config['lr'] = 0.05
-    config['epochs'] = 3
+    config['epochs'] = 100
     config['memory_depth'] = 2
     n_modes = 6
     n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
     config['phase_idx'] = tuple(range(n_phases))
-    n_photons = tuple([1] * n_phases)
+    n_photons = tuple([2] * n_phases)
     n_samples = 20
     target_mode=(n_modes - 2,)
     memristive_output_modes = None
@@ -53,7 +53,7 @@ def main():
     X_train, y_train, X_test, y_test = get_data(
         config['n_data'],
         config['sigma_noise'],
-        'quartic_data'
+        'neg_qubic_data'
     )
     
     # Train the model with discrete phases

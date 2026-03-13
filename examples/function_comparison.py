@@ -13,6 +13,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from typing import List, Optional, Sequence, Tuple, Union
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,7 +24,24 @@ from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config
 
 
-def train_and_evaluate(datafunction, encoding_mode, target_mode, n_data: int, sigma_noise: float, n_samples: int, epochs: int, n_phases: int, n_modes: int, memory_depth: int, lr: float): 
+def train_and_evaluate(
+    n_data: int,
+    sigma_noise: float,
+    datafunction: str,
+    memory_depth: int,
+    lr: float,
+    epochs: int,
+    n_samples: int,
+    n_swipe: int,
+    swipe_span: float,
+    n_modes: int,
+    encoding_mode: int,
+    n_photons: Sequence[int],
+    target_mode: Optional[Tuple[int, ...]],
+    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
+    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
+    encoding_phase_idx: Optional[Union[int, Sequence[int]]]
+    ): 
     """
     Train and evaluate a model on the specified data function.
 
@@ -53,8 +71,12 @@ def train_and_evaluate(datafunction, encoding_mode, target_mode, n_data: int, si
         n_swipe=0,
         swipe_span=0.0,
         n_modes=n_modes,
-        encoding_mode= encoding_mode,
-        target_mode=target_mode
+        encoding_mode=encoding_mode,
+        n_photons=n_photons,
+        target_mode=target_mode,
+        memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=memristive_output_modes,
+        encoding_phase_idx=encoding_phase_idx 
     )
 
     # Uncertainty estimation through multiple forward passes
@@ -63,26 +85,29 @@ def train_and_evaluate(datafunction, encoding_mode, target_mode, n_data: int, si
 
     for i in range(n_forward_passes):
         # Each forward pass with a different sample count introduces some randomness
-        sample_count = n_samples + np.random.randint(-100, 100)
-        sample_count = max(100, sample_count)  # Ensure at least 100 samples
+        sample_count = n_samples + np.random.randint(-10, 10)
+        sample_count = max(10, sample_count)  # Ensure at least 10 samples
         
         # Small random perturbation to parameters to simulate quantum noise
         perturbed_theta = theta_opt.copy()
         # Only perturb phases slightly, not the weight
-        perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
+        perturbed_theta[:-1] += np.random.normal(0, 0.03, size=len(perturbed_theta)-1)
         
         enc_test = 2 * np.arccos(X_test)
         preds = run_simulation_sequence_np(
             perturbed_theta,
-            config['memory_depth'],
+            memory_depth,
             sample_count,
             encoded_phases=enc_test,
             n_swipe=0,
             swipe_span=0.0,
             n_modes=n_modes,
             encoding_mode=0,
-            target_mode=target_mode
-        )
+            target_mode=target_mode,
+            memristive_phase_idx=memristive_phase_idx,
+            memristive_output_modes=memristive_output_modes,
+            encoding_phase_idx=encoding_phase_idx 
+            )
         all_preds[:, i] = preds
 
     # Compute mean and standard deviation of predictions
@@ -210,36 +235,34 @@ def main():
 
     # Set random seed for reproducibility
     np.random.seed(42)
-
+    
     # Configure parameters
-    lr = 0.05
-    memory_depth = 1
-    n_modes = 3
-    config['phase_idx'] = (0, 1, 2)
-    config['n_photons'] = (1, 1, 1)
-    n_phases = n_modes * (n_modes - 1)  # Number of external phase parameters (excluding memory phase)
+    n_data = 100
+    sigma_noise = 0.002
+    lr = 0.04
+    epochs = 120
+    memory_depth = 2
+    n_modes = 6
+    n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
+    phase_idx = tuple(range(n_phases))
+    n_photons = tuple([2] * n_phases)
+    n_samples = 20
+    encoding_mode = 2
+    target_mode=(n_modes - 2,)
+    memristive_output_modes = None
+    memristive_phase_idx=None
+    encoding_phase_idx=None
+
 
     # Functions to compare
     functions = [
-        'quartic_data', 
-        'sinusoid_data', 
-        'multi_modal_data',
-        'step_function_data',
-        'oscillating_poly_data',
-        'damped_cosine_data'
+        'quartic_data',  
+        'neg_qubic_data',
+        'sinusoid_data'
     ]
     
     # Print parameter structure info
     print(f"Using array-based circuit structure with {n_phases} phase parameters (+ memory phase)")
-
-    # Parameters
-    n_data = 80
-    sigma_noise = 0.02
-    n_samples = 20
-    epochs = 300
-    encoding_mode = 2
-    target_mode = (n_phases - 1,)  # Last mode as target
-    lr=0.05
 
     # Store results
     results = {}
@@ -248,9 +271,22 @@ def main():
     for func_name in functions:
         print(f"\n=== Training on {func_name} ===")
         X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = train_and_evaluate(
-            datafunction=func_name, encoding_mode=encoding_mode, target_mode=target_mode, n_data=n_data, 
-            sigma_noise= sigma_noise, n_samples=n_samples, 
-            epochs=epochs, n_phases=n_phases, n_modes=n_modes, memory_depth=memory_depth, lr=lr
+            datafunction=func_name, 
+            n_data=n_data,
+            sigma_noise=sigma_noise,
+            memory_depth=memory_depth,
+            lr=lr,
+            epochs=epochs,
+            n_samples=n_samples,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=n_modes,
+            encoding_mode=encoding_mode,
+            n_photons=n_photons,
+            target_mode=target_mode,
+            memristive_phase_idx=memristive_phase_idx,
+            memristive_output_modes=memristive_output_modes,
+            encoding_phase_idx=encoding_phase_idx
         )
 
         metrics = compute_metrics(y_test, mean_preds, std_preds)
