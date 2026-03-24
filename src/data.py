@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import pickle
-from typing import Tuple
+from typing import Dict, Optional, Sequence, Tuple, Union
 import numpy as np
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
+
+from .coincidence import (
+    accidental_correction,
+    get_cc_labels,
+    working_detectors_to_cc_indices,
+)
 
 
 def load_measurement_pickle(path: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -18,6 +24,84 @@ def load_measurement_pickle(path: str) -> Tuple[np.ndarray, np.ndarray]:
     with open(path, "rb") as fh:
         X, y = pickle.load(fh)
     return np.asarray(X), np.asarray(y)
+
+
+def load_timetags_measurement(
+    path: str,
+    int_time_ms: Optional[float] = None,
+) -> Dict[str, Union[int, float]]:
+    """
+    Load TIMETAGS-style hardware measurement data.
+
+    Expects a dict with keys C0..C(n-1) (singles) and CC01..CC45 (coincidences),
+    possibly suffixed with integration time e.g. C0_60000, CC01_60000.
+
+    Args:
+        path: Path to pickle or JSON file containing the measurement dict.
+        int_time_ms: Integration time in ms. If None, tries to infer from keys or use 1.0.
+
+    Returns:
+        Dict with C0..C5, CC01..CC45 (or suffixed keys). Values are counts.
+    """
+    with open(path, "rb") as fh:
+        data = pickle.load(fh)
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected dict, got {type(data)}")
+    # If int_time_ms given, prefer suffixed keys
+    suffix = f"_{int(int_time_ms)}" if int_time_ms is not None else ""
+    result = {}
+    for k, v in data.items():
+        if suffix and k.endswith(suffix):
+            result[k[: -len(suffix)]] = v
+        elif not suffix and isinstance(k, str) and ("_" not in k or k.startswith("C")):
+            result[k] = v
+    return result
+
+
+def timetags_to_probabilities(
+    data: Dict[str, Union[int, float]],
+    working_detectors: Sequence[int],
+    n_modes: int,
+    int_time_sec: float,
+    c_win_ns: float = 170.0,
+    window_factor: float = 27e-12,
+) -> np.ndarray:
+    """
+    Convert raw TIMETAGS counts to normalized probabilities.
+
+    Applies accidental correction per working pair, then normalizes over
+    working coincidence channels only.
+
+    Args:
+        data: Dict with C0..C(n-1), CC01..CC45 (or similar) keys.
+        working_detectors: Mode indices of functioning detectors (e.g. [0, 1, 5]).
+        n_modes: Number of modes.
+        int_time_sec: Total integration time in seconds.
+        c_win_ns: Coincidence window in ns.
+        window_factor: Hardware-dependent factor (default 27e-12).
+
+    Returns:
+        Array of shape (n_working_cc,) with normalized probabilities.
+    """
+    labels = get_cc_labels(n_modes)
+    working_cc_indices = working_detectors_to_cc_indices(working_detectors, n_modes)
+    corrected = []
+    for idx in working_cc_indices:
+        lab = labels[idx]
+        j, k = int(lab[2]), int(lab[3])
+        c1_key, c2_key = f"C{j}", f"C{k}"
+        cc_raw = float(data.get(lab, 0))
+        c1 = float(data.get(c1_key, 0))
+        c2 = float(data.get(c2_key, 0))
+        cc_corr = accidental_correction(
+            cc_raw, c1, c2, int_time_sec, c_win_ns=c_win_ns, window_factor=window_factor
+        )
+        corrected.append(cc_corr)
+    corrected = np.array(corrected)
+    total = corrected.sum()
+    if total > 0:
+        return corrected / total
+    return np.ones(len(corrected)) / len(corrected)  # fallback uniform
 
 
 def compute_n_swipe(

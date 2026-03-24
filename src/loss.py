@@ -32,6 +32,10 @@ class PhotonicModel(torch.nn.Module):
                  memristive_phase_idx: Optional[Union[int, Sequence[int]]],
                  memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
                  encoding_phase_idx: Optional[int],
+                 output_mode: str = "singles",
+                 input_modes: Optional[Sequence[int]] = None,
+                 working_detectors: Optional[Sequence[int]] = None,
+                 noise_std: Optional[Union[float, Sequence[float]]] = None,
                  loss_type: str = 'mse', n_classes: int = 1) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
@@ -49,7 +53,11 @@ class PhotonicModel(torch.nn.Module):
         self.memristive_phase_idx = memristive_phase_idx
         self.memristive_output_modes = memristive_output_modes
         self.encoding_phase_idx = encoding_phase_idx
-        
+        self.output_mode = output_mode
+        self.input_modes = tuple(input_modes) if input_modes else None
+        self.working_detectors = tuple(working_detectors) if working_detectors else None
+        self.noise_std = noise_std
+
         # Validate inputs for classification
         if loss_type == 'cross_entropy':
             if target_mode is None or len(target_mode) != n_classes:
@@ -97,4 +105,5 @@ class PhotonicModel(torch.nn.Module):
             self.memristive_output_modes,
             self.encoding_phase_idx,
             self.loss_type, self.n_classes,
+            self.output_mode, self.input_modes, self.working_detectors, self.noise_std,
         )

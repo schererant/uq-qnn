@@ -5,6 +5,7 @@ A modular package for training photonic quantum neural networks with uncertainty
 
 from . import autograd
 from . import circuits
+from . import coincidence
 from . import data
 from . import loss
 from . import simulation
@@ -15,7 +16,7 @@ __version__ = "0.1.0"
 __author__ = "UQ-QNN Team"
 
 # Main imports for convenience
-from .data import get_data, load_measurement_pickle, quartic_data, neg_quadratic_data, neg_qubic_data, sinusoid_data, multi_modal_data, step_function_data
+from .data import get_data, load_measurement_pickle, load_timetags_measurement, timetags_to_probabilities, quartic_data, neg_quadratic_data, neg_qubic_data, sinusoid_data, multi_modal_data, step_function_data
 from .circuits import (
     encoding_circuit,
     memristor_circuit,
@@ -29,6 +30,16 @@ from .loss import PhotonicModel
 from .training import train_pytorch, train_pytorch_generic, gradient_check
 from .utils import main, config, print_run_params
 from .circuit_visualization import display_circuit_annotated, save_circuit_annotated
+from .coincidence import (
+    get_cc_labels,
+    get_cc_mode_pairs,
+    working_detectors_to_cc_indices,
+    probs_to_singles,
+    probs_to_coincidences,
+    postselect_measurement,
+    apply_noise_to_outcomes,
+    accidental_correction,
+)
 
 __all__ = [
     # Modules
@@ -64,4 +75,15 @@ __all__ = [
     "print_run_params",
     "display_circuit_annotated",
     "save_circuit_annotated",
+    "coincidence",
+    "load_timetags_measurement",
+    "timetags_to_probabilities",
+    "get_cc_labels",
+    "get_cc_mode_pairs",
+    "working_detectors_to_cc_indices",
+    "probs_to_singles",
+    "probs_to_coincidences",
+    "postselect_measurement",
+    "apply_noise_to_outcomes",
+    "accidental_correction",
 ]
