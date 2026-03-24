@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import time
 from collections import Counter
-from typing import Optional, Union, Tuple, Sequence
+from typing import Optional, Union, Tuple, Sequence, Literal
 import numpy as np
 import perceval as pcvl
 from perceval.algorithm import Sampler
 
 from .circuits import build_circuit, get_mzi_modes_for_phase
-
-import pdb
+from .coincidence import (
+    get_cc_labels,
+    working_detectors_to_cc_indices,
+    probs_to_coincidences,
+    postselect_measurement,
+    apply_noise_to_outcomes,
+)
 
 
 class SimulationLogger:
@@ -126,6 +131,10 @@ def run_simulation_sequence_np(
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
     encoding_phase_idx: Optional[int],
     return_class_probs: bool = False,
+    output_mode: Literal["singles", "coincidence"] = "singles",
+    input_modes: Optional[Sequence[int]] = None,
+    working_detectors: Optional[Sequence[int]] = None,
+    noise_std: Optional[Union[float, Sequence[float]]] = None,
 ) -> np.ndarray:
     """
     Runs a sequence of photonic-circuit simulations. Architecture is always Clements (3x3, 6x6, etc.).
@@ -147,6 +156,10 @@ def run_simulation_sequence_np(
         memristive_output_modes (Optional[Sequence[Tuple[int, int]]]): For each memristive phase index,
             the (mode_p1, mode_p2) output modes to use for feedback. When None, uses the MZI's
             own output modes. e.g. [(1, 2), (3, 4)] for two memristive phases.
+        output_mode: "singles" (1-photon) or "coincidence" (2-photon).
+        input_modes: For coincidence, mode indices for 2-photon input (e.g. [1, 4]). Default [1, 4] for 6 modes.
+        working_detectors: For coincidence, mode indices of functioning detectors (e.g. [0, 1, 5]).
+        noise_std: For coincidence, Gaussian noise std (float or per-channel). 0/None = no noise.
 
     Returns:
         np.ndarray: Predicted probability per input point, or class probabilities if return_class_probs.
@@ -182,9 +195,33 @@ def run_simulation_sequence_np(
 
     weights = params[-n_memristive:] if n_memristive else None
 
-    input_modes = [0] * n_modes
-    input_modes[encoding_mode] = 1
-    input_state = pcvl.BasicState(input_modes)
+    # Input state: singles (1 photon) or coincidence (2 photons)
+    if output_mode == "coincidence":
+        if n_memristive > 0:
+            raise ValueError("Coincidence mode does not support memristive phases yet")
+        in_modes = (1, 4) if n_modes >= 6 else (0, 1) if input_modes is None else tuple(int(m) for m in input_modes)
+        if len(in_modes) != 2:
+            raise ValueError(f"Coincidence mode requires exactly 2 input modes, got {in_modes}")
+        inp = [0] * n_modes
+        for m in in_modes:
+            if m < 0 or m >= n_modes:
+                raise ValueError(f"input_modes {input_modes} out of range [0, {n_modes-1}]")
+            inp[m] += 1
+        input_state = pcvl.BasicState(inp)
+        working_detectors = tuple(working_detectors) if working_detectors is not None else (0, 1, 5)
+        working_cc_indices = working_detectors_to_cc_indices(working_detectors, n_modes)
+        cc_labels = get_cc_labels(n_modes)
+        add_noise = noise_std is not None and (
+            (isinstance(noise_std, (int, float)) and float(noise_std) > 0)
+            or (hasattr(noise_std, "__len__") and len(noise_std) > 0 and any(float(s) > 0 for s in noise_std))
+        )
+    else:
+        inp = [0] * n_modes
+        inp[encoding_mode] = 1
+        input_state = pcvl.BasicState(inp)
+        working_cc_indices: Tuple[int, ...] = ()
+        cc_labels = []
+        add_noise = False
 
     if target_mode is None:
         target_mode = (n_modes - 1,)
@@ -210,9 +247,12 @@ def run_simulation_sequence_np(
         mem_p1 = np.zeros((memory_depth, n_memristive), dtype=float)
         mem_p2 = np.zeros((memory_depth, n_memristive), dtype=float)
     num_pts = len(encoded_phases)
-    
+
     # Determine if we need multi-class output
-    n_classes = len(target_mode) if target_mode is not None else 1
+    if output_mode == "coincidence" and working_cc_indices:
+        n_classes = len(working_cc_indices)
+    else:
+        n_classes = len(target_mode) if target_mode is not None else 1
     if return_class_probs and n_classes > 1:
         preds = np.zeros((num_pts, n_classes), dtype=float)
     else:
@@ -270,7 +310,16 @@ def run_simulation_sequence_np(
                 for j in range(n_memristive):
                     mem_p1[t, j] = probs.get(state_m1_list[j], 0.0)
                     mem_p2[t, j] = probs.get(state_m2_list[j], 0.0)
-            if return_class_probs and n_classes > 1:
+            if output_mode == "coincidence":
+                coinc = probs_to_coincidences(probs, n_modes)
+                out = postselect_measurement(coinc, working_cc_indices, cc_labels, fallback_uniform=True)
+                if add_noise:
+                    out = apply_noise_to_outcomes(out, noise_std, working_cc_indices, cc_labels, seed=i)
+                if return_class_probs and len(working_cc_indices) > 1:
+                    preds[i, :] = out[working_cc_indices]
+                else:
+                    preds[i] = out[working_cc_indices[0]] if working_cc_indices else 0.0
+            elif return_class_probs and n_classes > 1:
                 for c, target_state in enumerate(target_modes_list):
                     preds[i, c] = probs.get(target_state, 0.0)
             else:
@@ -304,14 +353,28 @@ def run_simulation_sequence_np(
                 for j in range(n_memristive):
                     p1_swipe[k, j] = probs.get(state_m1_list[j], 0.0)
                     p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
-                if return_class_probs and n_classes > 1:
+                if output_mode == "coincidence":
+                    coinc = probs_to_coincidences(probs, n_modes)
+                    out = postselect_measurement(coinc, working_cc_indices, cc_labels, fallback_uniform=True)
+                    if add_noise:
+                        out = apply_noise_to_outcomes(out, noise_std, working_cc_indices, cc_labels, seed=i * 1000 + k)
+                    if return_class_probs and len(working_cc_indices) > 1:
+                        target_swipe[k, :] = out[working_cc_indices]
+                    else:
+                        target_swipe[k] = out[working_cc_indices[0]] if working_cc_indices else 0.0
+                elif return_class_probs and n_classes > 1:
                     for c, ts in enumerate(target_modes_list):
                         target_swipe[k, c] = probs.get(ts, 0.0)
                 else:
                     target_swipe[k] = sum(probs.get(ts, 0.0) for ts in target_modes_list)
                     if len(target_modes_list) > 1:
                         target_swipe[k] /= len(target_modes_list)
-            if return_class_probs and n_classes > 1:
+            if output_mode == "coincidence" and working_cc_indices:
+                if return_class_probs and len(working_cc_indices) > 1:
+                    preds[i] = target_swipe.mean(axis=0)
+                else:
+                    preds[i] = target_swipe.mean()
+            elif return_class_probs and n_classes > 1:
                 preds[i] = target_swipe.mean(axis=0)
             else:
                 preds[i] = target_swipe.mean()

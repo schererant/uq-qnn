@@ -44,6 +44,10 @@ def train_pytorch_generic(
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
     encoding_phase_idx: Optional[int],
+    output_mode: str = "singles",
+    input_modes: Optional[Sequence[int]] = None,
+    working_detectors: Optional[Sequence[int]] = None,
+    noise_std: Optional[Union[float, Sequence[float]]] = None,
     verbose: bool = False,
     loss_type: str = 'mse',
     n_classes: int = 1,
@@ -128,6 +132,10 @@ def train_pytorch_generic(
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
         encoding_phase_idx=encoding_phase_idx,
+        output_mode=output_mode,
+        input_modes=input_modes,
+        working_detectors=working_detectors,
+        noise_std=noise_std,
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
@@ -169,7 +177,11 @@ def train_pytorch(
     target_mode: Optional[Tuple[int, ...]],
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    encoding_phase_idx: Optional[int]=None,
+    encoding_phase_idx: Optional[int] = None,
+    output_mode: str = "singles",
+    input_modes: Optional[Sequence[int]] = None,
+    working_detectors: Optional[Sequence[int]] = None,
+    noise_std: Optional[Union[float, Sequence[float]]] = None,
     verbose: bool = False,
     loss_type: str = 'mse',
     n_classes: int = 1,
@@ -206,6 +218,10 @@ def train_pytorch(
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
         encoding_phase_idx=encoding_phase_idx,
+        output_mode=output_mode,
+        input_modes=input_modes,
+        working_detectors=working_detectors,
+        noise_std=noise_std,
         verbose=verbose,
     )
 

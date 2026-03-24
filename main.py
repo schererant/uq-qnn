@@ -60,6 +60,15 @@ def parse_arguments():
                               help="Mode to apply encoding to")
     circuit_group.add_argument("--target-mode", type=str, default=None,
                               help="Target output mode(s) as comma-separated list (e.g., '2,3')")
+    circuit_group.add_argument("--output-mode", type=str, default="singles",
+                              choices=["singles", "coincidence"],
+                              help="Output mode: singles (1-photon) or coincidence (2-photon)")
+    circuit_group.add_argument("--input-modes", type=str, default=None,
+                              help="For coincidence: comma-separated input mode indices (e.g. '1,4')")
+    circuit_group.add_argument("--working-detectors", type=str, default=None,
+                              help="For coincidence: comma-separated mode indices of functioning detectors (e.g. '0,1,5')")
+    circuit_group.add_argument("--noise-std", type=str, default=None,
+                              help="For coincidence: Gaussian noise std (float or comma-separated per-channel, e.g. '0.05' or '0.076,0.094,0.106'). 0 = no noise")
     
     # Continuous swipe options
     swipe_group = parser.add_argument_group('Continuous Swipe')
@@ -162,6 +171,22 @@ def update_config_from_args(args):
     # Sampler settings
     config['n_samples'] = args.n_samples
 
+    # Coincidence mode settings
+    config['output_mode'] = args.output_mode
+    config['input_modes'] = (
+        tuple(int(m) for m in args.input_modes.split(','))
+        if args.input_modes else None
+    )
+    config['working_detectors'] = (
+        tuple(int(m) for m in args.working_detectors.split(','))
+        if args.working_detectors else (0, 1, 5) if args.n_modes >= 6 else (0, 1)
+    ) if args.output_mode == "coincidence" else None
+    if args.noise_std is not None and args.output_mode == "coincidence":
+        parts = [float(x.strip()) for x in args.noise_std.split(',')]
+        config['noise_std'] = parts[0] if len(parts) == 1 else parts
+    else:
+        config['noise_std'] = None
+
 
 def run_training(X_train, y_train, X_test, y_test, args):
     """Run the training process with the given data."""
@@ -185,8 +210,15 @@ def run_training(X_train, y_train, X_test, y_test, args):
             swipe_span=config['swipe_span'],
             n_modes=args.n_modes,
             encoding_mode=args.encoding_mode,
+            n_photons=config['n_photons'],
             target_mode=config['target_mode'],
             memristive_phase_idx=args.memristive_phase_idx,
+            memristive_output_modes=None,
+            encoding_phase_idx=None,
+            output_mode=config['output_mode'],
+            input_modes=config['input_modes'],
+            working_detectors=config['working_detectors'],
+            noise_std=config['noise_std'],
             verbose=args.verbose
         )
     else:
@@ -201,8 +233,15 @@ def run_training(X_train, y_train, X_test, y_test, args):
             swipe_span=0.0,
             n_modes=args.n_modes,
             encoding_mode=args.encoding_mode,
+            n_photons=config['n_photons'],
             target_mode=config['target_mode'],
             memristive_phase_idx=args.memristive_phase_idx,
+            memristive_output_modes=None,
+            encoding_phase_idx=None,
+            output_mode=config['output_mode'],
+            input_modes=config['input_modes'],
+            working_detectors=config['working_detectors'],
+            noise_std=config['noise_std'],
             verbose=args.verbose
         )
     
@@ -222,7 +261,13 @@ def run_training(X_train, y_train, X_test, y_test, args):
                 n_modes=args.n_modes,
                 encoding_mode=args.encoding_mode,
                 target_mode=config['target_mode'],
-                memristive_phase_idx=args.memristive_phase_idx
+                memristive_phase_idx=args.memristive_phase_idx,
+                memristive_output_modes=None,
+                encoding_phase_idx=None,
+                output_mode=config['output_mode'],
+                input_modes=config['input_modes'],
+                working_detectors=config['working_detectors'],
+                noise_std=config['noise_std'],
             )
         else:
             preds = run_simulation_sequence_np(
@@ -233,7 +278,13 @@ def run_training(X_train, y_train, X_test, y_test, args):
                 n_modes=args.n_modes,
                 encoding_mode=args.encoding_mode,
                 target_mode=config['target_mode'],
-                memristive_phase_idx=args.memristive_phase_idx
+                memristive_phase_idx=args.memristive_phase_idx,
+                memristive_output_modes=None,
+                encoding_phase_idx=None,
+                output_mode=config['output_mode'],
+                input_modes=config['input_modes'],
+                working_detectors=config['working_detectors'],
+                noise_std=config['noise_std'],
             )
     except Exception as e:
         print(f"Error during prediction: {e}")
@@ -249,7 +300,13 @@ def run_training(X_train, y_train, X_test, y_test, args):
             n_modes=args.n_modes,
             encoding_mode=0,
             target_mode=(args.n_modes - 1,),
-            memristive_phase_idx=args.memristive_phase_idx
+            memristive_phase_idx=args.memristive_phase_idx,
+            memristive_output_modes=None,
+            encoding_phase_idx=None,
+            output_mode=config['output_mode'],
+            input_modes=config['input_modes'],
+            working_detectors=config['working_detectors'],
+            noise_std=config['noise_std'],
         )
     
     # Calculate metrics
