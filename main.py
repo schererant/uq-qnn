@@ -133,9 +133,8 @@ def update_config_from_args(args):
         memristive_phase_idx = None
     args.memristive_phase_idx = memristive_phase_idx
         
-    # Update phase_idx and n_photons based on n_phases
+    # Update phase_idx based on n_phases (n_photons set after output_mode is known)
     config['phase_idx'] = tuple(range(n_phases))
-    config['n_photons'] = tuple([1] * n_phases)
     
     # Parse target mode if provided
     if args.target_mode:
@@ -186,6 +185,14 @@ def update_config_from_args(args):
         config['noise_std'] = parts[0] if len(parts) == 1 else parts
     else:
         config['noise_std'] = None
+
+    # n_photons for PSR must match total photon count in the system:
+    # coincidence mode injects 2 photons, singles mode injects 1.
+    if args.output_mode == "coincidence":
+        n_input_photons = len(config['input_modes']) if config['input_modes'] else 2
+    else:
+        n_input_photons = 1
+    config['n_photons'] = tuple([n_input_photons] * n_phases)
 
 
 def run_training(X_train, y_train, X_test, y_test, args):

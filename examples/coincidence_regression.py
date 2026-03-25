@@ -8,7 +8,7 @@ Two photons are injected into modes 1 and 4 of a 6-mode Clements circuit.
 The output observable is the probability of the first working coincidence
 channel (CC01 by default), used as a scalar regression target.
 
-Working detectors: modes 0, 1, 5  →  CC channels: CC01, CC05, CC15
+Working detectors: all modes active by default
 """
 
 import sys
@@ -34,17 +34,37 @@ def main():
     n_modes = 6
     n_phases = n_modes * (n_modes - 1)
     encoding_mode = 0
-    input_modes = (1, 4)        # 2-photon input ports
-    working_detectors = (0, 1, 5)  # functioning detectors
+    input_modes = (1, 4)              # 2-photon input ports
+    working_detectors = tuple(range(n_modes))  # all detectors active
 
-    config['n_data'] = 20
+    config['n_data'] = 100
     config['sigma_noise'] = 0.005
     config['lr'] = 0.05
-    config['epochs'] = 3
+    config['epochs'] = 60
     config['memory_depth'] = 2
     config['phase_idx'] = tuple(range(n_phases))
-    n_photons = tuple([1] * n_phases)
-    n_samples = 20
+    n_input_photons = len(input_modes)
+    n_photons = tuple([n_input_photons] * n_phases)
+    n_samples = 100
+
+    # --- Print settings ---
+    from src.coincidence import get_cc_labels, working_detectors_to_cc_indices
+    cc_labels = get_cc_labels(n_modes)
+    active_cc_indices = working_detectors_to_cc_indices(working_detectors, n_modes)
+    print("\n--- Settings ---")
+    print(f"  n_modes:           {n_modes}")
+    print(f"  n_phases:          {n_phases}")
+    print(f"  encoding_mode:     {encoding_mode}")
+    print(f"  input_modes:       {input_modes}")
+    print(f"  working_detectors: {working_detectors}")
+    print(f"  active CC channels ({len(active_cc_indices)}): {[cc_labels[i] for i in active_cc_indices]}")
+    print(f"  n_data:            {config['n_data']}")
+    print(f"  sigma_noise:       {config['sigma_noise']}")
+    print(f"  memory_depth:      {config['memory_depth']}")
+    print(f"  n_samples:         {n_samples}")
+    print(f"  lr:                {config['lr']}")
+    print(f"  epochs:            {config['epochs']}")
+    print()
 
     # --- Data ---
     print("Generating synthetic data...")
