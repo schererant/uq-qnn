@@ -32,6 +32,8 @@ config = {
     'lr': 0.03,
     'epochs': 50,
     'phase_idx': (0, 1),
+    # PSR photon count per phase: must equal total photons in input state
+    # (1 for singles, 2 for coincidence). Overridden at runtime.
     'n_photons': (1, 1),
     
     # Model initialization
