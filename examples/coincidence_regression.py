@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -36,6 +38,9 @@ SIM_BACKEND = "numpy"
 
 def main():
     print("=== UQ-QNN: Coincidence Regression Example ===")
+
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
 
     np.random.seed(42)
 
@@ -233,8 +238,14 @@ def main():
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig("coincidence_regression_with_uncertainty.png", dpi=300)
+    plt.savefig(report_dir / "coincidence_regression_with_uncertainty.png", dpi=300)
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={"test_mse": float(mse)},
+        artifacts=["coincidence_regression_with_uncertainty.png"],
+    )
 
     sim_logger.report()
 

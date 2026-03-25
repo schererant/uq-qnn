@@ -20,6 +20,8 @@ import random
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 import perceval as pcvl
 from src.circuits import memristor_circuit, build_circuit
@@ -139,6 +141,9 @@ def main():
 
     print("=== Memristor Circuit Visualization ===")
 
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
+
     # 1. Create a standalone memristor circuit
     mem_circuit, phases = create_memristor_circuit()
 
@@ -185,11 +190,19 @@ def main():
 
         # Plot output distribution
         fig1 = plot_output_distribution(results, input_state, f"Input State {i + 1}")
-        fig1.savefig(f"memristor_output_dist_{i + 1}.png", dpi=300, bbox_inches="tight")
+        fig1.savefig(
+            report_dir / f"memristor_output_dist_{i + 1}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
 
         # Plot mode probabilities
         fig2 = plot_mode_probabilities(mode_probs, f"Input State {i + 1}")
-        fig2.savefig(f"memristor_mode_probs_{i + 1}.png", dpi=300, bbox_inches="tight")
+        fig2.savefig(
+            report_dir / f"memristor_mode_probs_{i + 1}.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
 
     # 5. Now simulate quartic function training with the memristor circuit
     print("\n=== Simulating Quartic Function Training ===")
@@ -266,7 +279,7 @@ def main():
     plt.ylabel("y")
     plt.legend()
     plt.grid(True)
-    plt.savefig("memristor_quartic_function.png", dpi=300, bbox_inches="tight")
+    plt.savefig(report_dir / "memristor_quartic_function.png", dpi=300, bbox_inches="tight")
 
     # Plot training loss
     plt.figure(figsize=(8, 5))
@@ -276,12 +289,27 @@ def main():
     plt.ylabel("Loss")
     plt.title("Training Loss")
     plt.grid(True)
-    plt.savefig("memristor_training_loss.png", dpi=300, bbox_inches="tight")
+    plt.savefig(report_dir / "memristor_training_loss.png", dpi=300, bbox_inches="tight")
 
     # Show all plots
     plt.show()
 
-    print("\nVisualization complete. Output images saved to current directory.")
+    n_in = len(input_states)
+    artifacts = (
+        [f"memristor_output_dist_{j}.png" for j in range(1, n_in + 1)]
+        + [f"memristor_mode_probs_{j}.png" for j in range(1, n_in + 1)]
+        + [
+            "memristor_quartic_function.png",
+            "memristor_training_loss.png",
+        ]
+    )
+    write_run_summary(
+        report_dir,
+        metrics={"quartic_test_mse": float(mse)},
+        artifacts=artifacts,
+    )
+
+    print(f"\nVisualization complete. Artifacts saved under {report_dir.resolve()}.")
 
 
 if __name__ == "__main__":

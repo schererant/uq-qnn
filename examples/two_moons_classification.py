@@ -20,6 +20,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 from src.data import get_two_moons_data, encode_2d_to_phase
 from src.training import train_pytorch_generic
@@ -30,6 +32,9 @@ from src.utils import config
 def main():
     """Run a Two Moons classification example."""
     print("=== UQ-QNN: Two Moons Classification Example ===")
+
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
 
     # Set random seed for reproducibility
     np.random.seed(42)
@@ -289,8 +294,14 @@ def main():
     plt.xlabel("Predicted label")
 
     plt.tight_layout()
-    plt.savefig("two_moons_classification.png", dpi=300, bbox_inches="tight")
+    plt.savefig(report_dir / "two_moons_classification.png", dpi=300, bbox_inches="tight")
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={"test_accuracy": float(accuracy)},
+        artifacts=["two_moons_classification.png"],
+    )
 
     # Print simulation statistics
     sim_logger.report()

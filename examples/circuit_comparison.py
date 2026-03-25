@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -299,6 +301,9 @@ def main():
     """Main function to run the comparison."""
     print("=== UQ-QNN: Circuit Architecture Comparison ===")
 
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
+
     # Set random seed for reproducibility
     np.random.seed(42)
 
@@ -399,8 +404,17 @@ def main():
     fig = plot_comparison(results, X_train, y_train, X_test, y_test)
 
     # Save the figure
-    fig.savefig("circuit_comparison.png", dpi=300, bbox_inches="tight")
+    fig.savefig(report_dir / "circuit_comparison.png", dpi=300, bbox_inches="tight")
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={
+            "memristive": results["memristive"]["metrics"],
+            "standard": results["standard"]["metrics"],
+        },
+        artifacts=["circuit_comparison.png"],
+    )
 
     # Print simulation statistics
     sim_logger.report()

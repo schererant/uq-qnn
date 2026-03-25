@@ -1,5 +1,7 @@
 # Folder
-reports/
+reports/*
+!reports/README.md
+!reports/.gitkeep
 tmp/
 
 # OS specific

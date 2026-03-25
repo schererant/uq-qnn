@@ -20,6 +20,8 @@ from tqdm import tqdm
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -36,6 +38,9 @@ SIM_BACKEND = "numpy"
 def main():
     """Run a simple regression example."""
     print("=== UQ-QNN: Simple Regression Example ===")
+
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
 
     # Set random seed for reproducibility
     np.random.seed(42)
@@ -216,8 +221,14 @@ def main():
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig("regression_with_uncertainty.png", dpi=300)
+    plt.savefig(report_dir / "regression_with_uncertainty.png", dpi=300)
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={"test_mse_discrete": float(mse_discrete)},
+        artifacts=["regression_with_uncertainty.png"],
+    )
 
     # Print simulation statistics
     sim_logger.report()

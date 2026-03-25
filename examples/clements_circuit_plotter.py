@@ -14,6 +14,8 @@ import numpy as np
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 import perceval as pcvl
 from src.circuits import clements_circuit, build_circuit
@@ -189,6 +191,9 @@ def main():
     """Main function to create and plot Clements circuits."""
     print("=== Clements Circuit Plotter ===")
 
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
+
     # Create and plot Clements circuits with different numbers of modes
     for n_modes in [3, 6]:
         print(f"\nCreating {n_modes}-mode Clements circuit...")
@@ -224,11 +229,15 @@ def main():
         # run_and_plot_circuit(full_circuit, input_state, f"Full Clements {n_modes}x{n_modes}")
         # analyze_circuit(full_circuit, input_state, f"Full Clements {n_modes}x{n_modes}")
 
-    print("\nCircuit plotting complete. Output images saved to current directory.")
-    print("The images show:")
-    print("1. Custom visualizations of the circuit structure")
-    print("2. Output state distributions")
-    print("3. Mode occupation probabilities")
+    write_run_summary(
+        report_dir,
+        extra={
+            "note": "Interactive Perceval display only; no image files saved by this script.",
+        },
+    )
+
+    print("\nCircuit plotting complete. Perceval display output is interactive.")
+    print(f"Run metadata and summary JSON: {report_dir.resolve()}")
 
 
 if __name__ == "__main__":
