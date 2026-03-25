@@ -16,7 +16,18 @@ __version__ = "0.1.0"
 __author__ = "UQ-QNN Team"
 
 # Main imports for convenience
-from .data import get_data, load_measurement_pickle, load_timetags_measurement, timetags_to_probabilities, quartic_data, neg_quadratic_data, neg_qubic_data, sinusoid_data, multi_modal_data, step_function_data
+from .data import (
+    get_data,
+    load_measurement_pickle,
+    load_timetags_measurement,
+    timetags_to_probabilities,
+    quartic_data,
+    neg_quadratic_data,
+    neg_qubic_data,
+    sinusoid_data,
+    multi_modal_data,
+    step_function_data,
+)
 from .circuits import (
     encoding_circuit,
     memristor_circuit,
@@ -44,7 +55,7 @@ from .coincidence import (
 __all__ = [
     # Modules
     "autograd",
-    "circuits", 
+    "circuits",
     "data",
     "loss",
     "simulation",

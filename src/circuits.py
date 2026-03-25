@@ -23,24 +23,24 @@ def encoding_circuit(encoded_phase: float) -> pcvl.Circuit:
 def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> pcvl.Circuit:
     """
     Creates a basic Mach-Zehnder Interferometer (MZI) unit with two phase shifters.
-    
+
     Args:
         modes (Tuple[int, int]): The two modes the MZI acts on
         phi_int (float): Internal phase shift (between beamsplitters)
         phi_ext (float): External phase shift (after beamsplitters)
-        
+
     Returns:
         pcvl.Circuit: MZI circuit component
     """
     # Ensure phases are within valid range
     phi_int = float(phi_int) % (2 * np.pi)
     phi_ext = float(phi_ext) % (2 * np.pi)
-    
+
     # Ensure modes are consecutive to avoid Perceval error
     if abs(modes[1] - modes[0]) != 1:
         mode1, mode2 = min(modes[0], modes[1]), min(modes[0], modes[1]) + 1
         modes = (mode1, mode2)
-    
+
     c = pcvl.Circuit(max(modes) + 1)
     c.add(modes, pcvl.BS())
     c.add((modes[1],), pcvl.PS(phi=phi_int))
@@ -58,7 +58,9 @@ def _clements_mzi_pairs(n_modes: int) -> list[Tuple[int, int]]:
     For n_modes = 3 it yields (0,1),(1,2),(0,1), matching the tests.
     """
     if n_modes < 2:
-        raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
+        raise ValueError(
+            f"Clements architecture requires at least 2 modes, got {n_modes}"
+        )
 
     pairs: list[Tuple[int, int]] = []
 
@@ -84,11 +86,11 @@ def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
     """
     Maps a phase index to the mode pair (m1, m2) of the MZI that contains it.
     Uses the same ordering as clements_circuit, with two consecutive phases per MZI.
-    
+
     Args:
         phase_idx (int): Index into the phases array (0 to n_modes*(n_modes-1)-1).
         n_modes (int): Number of modes in the circuit.
-        
+
     Returns:
         Tuple[int, int]: (mode_low, mode_high) for the MZI containing this phase.
     """
@@ -99,7 +101,7 @@ def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
     expected_phases = 2 * len(pairs)
     if phase_idx < 0 or phase_idx >= expected_phases:
         raise ValueError(
-            f"phase_idx must be in [0, {expected_phases-1}] for {n_modes} modes, got {phase_idx}"
+            f"phase_idx must be in [0, {expected_phases - 1}] for {n_modes} modes, got {phase_idx}"
         )
 
     mzi_idx = phase_idx // 2
@@ -111,7 +113,7 @@ def memristor_circuit(phases: np.ndarray) -> pcvl.Circuit:
     Builds a 3-mode memristor circuit with phase shifters and beamsplitters.
     DEPRECATED: Use build_circuit(phases, enc_phi, n_modes) with memristive_phase_idx
     in simulation/training for Clements-based memristive behavior. Kept for compatibility.
-    
+
     Args:
         phases (np.ndarray): Array of phases [phi1, mem_phi, phi3] for the three PS elements.
     Returns:
@@ -129,19 +131,21 @@ def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
     """
     Builds a rectangular Clements architecture circuit with the given number of modes.
     The circuit consists of a mesh of MZIs arranged in a rectangular grid pattern.
-    
+
     Args:
         phases (np.ndarray): Array of phases for all MZIs in the circuit.
                            Each MZI requires 2 phases, so the array length should be
                            n_phases = n_modes * (n_modes - 1)
         n_modes (int): Number of modes in the circuit
-        
+
     Returns:
         pcvl.Circuit: The constructed Clements circuit
     """
     # Validate inputs
     if n_modes < 2:
-        raise ValueError(f"Clements architecture requires at least 2 modes, got {n_modes}")
+        raise ValueError(
+            f"Clements architecture requires at least 2 modes, got {n_modes}"
+        )
 
     # Determine MZI ordering and required number of phases
     pairs = _clements_mzi_pairs(n_modes)
@@ -225,11 +229,13 @@ def build_circuit(
         # Inline encoding: fold enc_phi into a chosen phase of the Clements mesh
         if encoding_phase_idx < 0 or encoding_phase_idx >= expected_phases:
             raise ValueError(
-                f"encoding_phase_idx must be in [0, {expected_phases-1}] for {n_modes} modes, "
+                f"encoding_phase_idx must be in [0, {expected_phases - 1}] for {n_modes} modes, "
                 f"got {encoding_phase_idx}"
             )
         mesh_phases = np.array(phases, dtype=float).copy()
-        mesh_phases[encoding_phase_idx] = (mesh_phases[encoding_phase_idx] + enc_phi) % (2 * np.pi)
+        mesh_phases[encoding_phase_idx] = (
+            mesh_phases[encoding_phase_idx] + enc_phi
+        ) % (2 * np.pi)
 
     c.add(0, clements_circuit(mesh_phases, n_modes), merge=True)
     return c

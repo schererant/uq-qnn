@@ -2,12 +2,13 @@ import numpy as np
 from utils.helpers import load_model_params
 from typing import Any
 
+
 def run_inference(
     simulation_runner: Any,
     params: np.ndarray,
     X: np.ndarray,
     n_samples: int,
-    data_source: Any
+    data_source: Any,
 ) -> np.ndarray:
     """
     Run inference using the simulation runner and given parameters.
@@ -30,7 +31,7 @@ def run_inference_from_file(
     param_path: str,
     X: np.ndarray,
     n_samples: int,
-    data_source: Any
+    data_source: Any,
 ) -> np.ndarray:
     params = load_model_params(param_path)
-    return run_inference(simulation_runner, params, X, n_samples, data_source) 
+    return run_inference(simulation_runner, params, X, n_samples, data_source)

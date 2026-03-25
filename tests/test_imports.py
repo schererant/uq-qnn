@@ -16,13 +16,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class TestImports(unittest.TestCase):
     """Test that all modules can be imported."""
-    
+
     def test_package_import(self):
         """Test that the package can be imported."""
         import src
+
         self.assertIsNotNone(src)
         self.assertIsNotNone(src.__version__)
-    
+
     def test_module_imports(self):
         """Test that all modules can be imported."""
         from src import autograd
@@ -32,7 +33,7 @@ class TestImports(unittest.TestCase):
         from src import simulation
         from src import training
         from src import utils
-        
+
         self.assertIsNotNone(autograd)
         self.assertIsNotNone(circuits)
         self.assertIsNotNone(data)
@@ -40,7 +41,7 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(simulation)
         self.assertIsNotNone(training)
         self.assertIsNotNone(utils)
-    
+
     def test_function_imports(self):
         """Test that key functions can be imported."""
         from src.data import get_data, quartic_data
@@ -50,7 +51,7 @@ class TestImports(unittest.TestCase):
         from src.loss import PhotonicModel
         from src.training import train_pytorch, train_pytorch_generic
         from src.utils import config
-        
+
         self.assertIsNotNone(get_data)
         self.assertIsNotNone(quartic_data)
         self.assertIsNotNone(encoding_circuit)

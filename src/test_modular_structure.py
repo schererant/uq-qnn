@@ -7,7 +7,9 @@ def test_modular_imports():
     from training.trainer import Trainer
 
     config = default_config
-    data_source = QuarticData(n_data=config['n_data'], sigma_noise=config['sigma_noise'])
+    data_source = QuarticData(
+        n_data=config["n_data"], sigma_noise=config["sigma_noise"]
+    )
     circuit = EncodingCircuit()
     grad_method = PSRGradient()
     loss_fn = MSELoss()
@@ -18,5 +20,6 @@ def test_modular_imports():
     assert trainer.loss_fn is not None
     print("All modular components imported and instantiated successfully.")
 
+
 if __name__ == "__main__":
-    test_modular_imports() 
+    test_modular_imports()

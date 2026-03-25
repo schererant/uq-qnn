@@ -12,8 +12,8 @@ BACKEND = "SLOS"
 circuit = pcvl.Circuit(SIZE)
 param_idx = 0
 
-#TODO: Add source
-#TODO: Add noise
+# TODO: Add source
+# TODO: Add noise
 
 # Add a single-photon source to the circuit
 # source = pcvl.Source(emission_probability=1.0, indistinguishability=0.95)
@@ -22,14 +22,14 @@ param_idx = 0
 # Implement the rectangular mesh (Clements layout)
 for layer in range(SIZE):
     start_idx = layer % 2  # Alternating between even and odd layers
-    
+
     for i in range(start_idx, SIZE - 1, 2):
         # Add a Mach-Zehnder interferometer
-        circuit.add((i, i+1), pcvl.BS())
-        circuit.add((i+1,), pcvl.PS(phi=PHASES[param_idx]))
-        circuit.add((i, i+1), pcvl.BS())
+        circuit.add((i, i + 1), pcvl.BS())
+        circuit.add((i + 1,), pcvl.PS(phi=PHASES[param_idx]))
+        circuit.add((i, i + 1), pcvl.BS())
         param_idx += 1
-        
+
         if param_idx >= len(PHASES):
             break
 
@@ -53,9 +53,9 @@ proc.with_input(INPUT_FOCK)
 sampler = Sampler(proc)
 counts = sampler.sample_count(100)
 probs = sampler.probs(100)
-print("Counts:", counts['results'])
-print("Probabilities:", probs['results'])
+print("Counts:", counts["results"])
+print("Probabilities:", probs["results"])
 
 # 5) Analyze the results
 analyzer = Analyzer(proc, INPUT_FOCK)
-analyzer.analyze(counts['results'], probs['results'])
+analyzer.analyze(counts["results"], probs["results"])

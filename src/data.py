@@ -111,10 +111,10 @@ def compute_n_swipe(
     max_swipe: int = 201,
 ) -> int:
     """
-    Translates hardware-timing limits into a safe, odd swipe count. 
-    It divides the heater's settle time by the slower of the laser 
-    period and detector window to see how many optical "slots" fit, 
-    then forces the result to be odd (so the original point stays centered) 
+    Translates hardware-timing limits into a safe, odd swipe count.
+    It divides the heater's settle time by the slower of the laser
+    period and detector window to see how many optical "slots" fit,
+    then forces the result to be odd (so the original point stays centered)
     and caps it at `max_swipe` to keep memory footprint reasonable.
     Args:
         t_phase_ms (float): Heater settle time in milliseconds.
@@ -130,7 +130,7 @@ def compute_n_swipe(
     period_laser_us = 1_000 / f_laser_khz  # µs
     slot_us = max(period_laser_us, det_window_us)
     slots_total = int((t_phase_ms * 1_000) // slot_us)  # integer slots
-    n_swipe = max(1, 2 * (slots_total // 2) + 1)        # force odd
+    n_swipe = max(1, 2 * (slots_total // 2) + 1)  # force odd
     return min(n_swipe, max_swipe)
 
 
@@ -153,16 +153,16 @@ def get_cont_swipe_data(
     if n_swipe < 1 or n_swipe % 2 == 0:
         raise ValueError(f"n_swipe must be a positive odd integer (got {n_swipe})")
     enc_base = 2 * np.arccos(X)
-    offsets = np.linspace(-swipe_span / 2, swipe_span / 2, n_swipe, dtype=enc_base.dtype)
+    offsets = np.linspace(
+        -swipe_span / 2, swipe_span / 2, n_swipe, dtype=enc_base.dtype
+    )
     enc_swipe = np.concatenate([enc + offsets for enc in enc_base])
     y_swipe = np.repeat(y, n_swipe)
     return enc_swipe, y_swipe
 
 
 def get_measured_swipe_data(
-    encoded_phases: np.ndarray,
-    measured_phases: np.ndarray,
-    n_swipe: int
+    encoded_phases: np.ndarray, measured_phases: np.ndarray, n_swipe: int
 ) -> np.ndarray:
     """
     For each encoded phase, find the closest measured phase and select a window of n_swipe measured phases
@@ -198,9 +198,9 @@ def get_measured_swipe_data(
         # If window is too short (at edges), pad with edge values
         if len(window) < n_swipe:
             if start == 0:
-                window = np.pad(window, (0, n_swipe - len(window)), mode='edge')
+                window = np.pad(window, (0, n_swipe - len(window)), mode="edge")
             else:
-                window = np.pad(window, (n_swipe - len(window), 0), mode='edge')
+                window = np.pad(window, (n_swipe - len(window), 0), mode="edge")
         enc_samples[i, :] = window
     return enc_samples
 
@@ -215,6 +215,7 @@ def quartic_data(x: np.ndarray) -> np.ndarray:
     """
     return np.power(x, 4)
 
+
 def neg_quadratic_data(x: np.ndarray) -> np.ndarray:
     """
     Computes the negative quadratic (1 - x^2) of the input array.
@@ -223,7 +224,8 @@ def neg_quadratic_data(x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: Output array with 1.0 minus each element raised to the 2nd power.
     """
-    return 1.0-np.power(x, 2)
+    return 1.0 - np.power(x, 2)
+
 
 def neg_qubic_data(x: np.ndarray) -> np.ndarray:
     """
@@ -233,7 +235,7 @@ def neg_qubic_data(x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: Output array with 1.0 minus each element raised to the 3rd power.
     """
-    return 1.0-np.power(x, 3)
+    return 1.0 - np.power(x, 3)
 
 
 def sinusoid_data(x: np.ndarray) -> np.ndarray:
@@ -244,7 +246,7 @@ def sinusoid_data(x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: Output array with sin(0.5πx) * 0.5 + 0.5
     """
-    return np.sin(0.7*np.pi * x) * 0.5 +0.1
+    return np.sin(0.7 * np.pi * x) * 0.5 + 0.1
 
 
 def multi_modal_data(x: np.ndarray) -> np.ndarray:
@@ -312,7 +314,7 @@ def one_hot_encode(labels: np.ndarray, n_classes: int) -> np.ndarray:
 def generate_classification_data(
     n_data: int = 100,
     n_classes: int = 2,
-    data_type: str = 'binary_threshold',
+    data_type: str = "binary_threshold",
     noise_level: float = 0.0,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -329,24 +331,24 @@ def generate_classification_data(
         Tuple[np.ndarray, np.ndarray]: (X, y) where y is integer labels.
     """
     X = np.linspace(0.0, 1.0, n_data)
-    
-    if data_type == 'binary_threshold':
+
+    if data_type == "binary_threshold":
         if n_classes != 2:
             raise ValueError("binary_threshold only supports 2 classes")
         y = (X > 0.5).astype(int)
-    elif data_type == 'multi_class_regions':
+    elif data_type == "multi_class_regions":
         y = np.zeros(n_data, dtype=int)
         y[(X > 0.33) & (X <= 0.66)] = 1
         y[X > 0.66] = 2
         if n_classes != 3:
             raise ValueError("multi_class_regions only supports 3 classes")
-    elif data_type == 'sinusoidal':
+    elif data_type == "sinusoidal":
         if n_classes != 2:
             raise ValueError("sinusoidal only supports 2 classes")
         y = (np.sin(2 * np.pi * X) > 0).astype(int)
     else:
         raise ValueError(f"Unknown data_type: {data_type}")
-    
+
     # Add noise by randomly flipping labels
     if noise_level > 0:
         flip_mask = np.random.random(n_data) < noise_level
@@ -357,7 +359,7 @@ def generate_classification_data(
             for i in np.where(flip_mask)[0]:
                 other_classes = [c for c in range(n_classes) if c != y[i]]
                 y[i] = np.random.choice(other_classes)
-    
+
     return X, y
 
 
@@ -369,17 +371,17 @@ def get_two_moons_data(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate the Two Moons (half-moons) classification dataset.
-    
+
     This is a 2D binary classification dataset that creates two interleaving
     half-circles. It's commonly used for visualization and testing classification
     algorithms.
-    
+
     Args:
         n_samples (int): Total number of samples to generate.
         noise (float): Standard deviation of Gaussian noise added to the data.
         random_state (int): Random seed for reproducibility.
         return_one_hot (bool): If True, return one-hot encoded labels.
-    
+
     Returns:
         Tuple: (X_train, y_train, X_test, y_test) arrays.
             - X arrays have shape (n_samples, 2) for 2D features
@@ -387,7 +389,7 @@ def get_two_moons_data(
     """
     # Generate the two moons dataset
     X, y = make_moons(n_samples=n_samples, noise=noise, random_state=random_state)
-    
+
     # Normalize X to [0, 1] range for each dimension
     X_normalized = X.copy()
     for dim in range(X.shape[1]):
@@ -396,44 +398,46 @@ def get_two_moons_data(
             X_normalized[:, dim] = (X[:, dim] - x_min) / (x_max - x_min)
         else:
             X_normalized[:, dim] = 0.5  # All same value
-    
+
     # Split into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(
         X_normalized, y, test_size=0.2, random_state=random_state
     )
-    
+
     if return_one_hot:
         y_train = one_hot_encode(y_train, n_classes=2)
         y_test = one_hot_encode(y_test, n_classes=2)
-    
+
     return X_train, y_train, X_test, y_test
 
 
-def encode_2d_to_phase(X_2d: np.ndarray, method: str = 'weighted_sum') -> np.ndarray:
+def encode_2d_to_phase(X_2d: np.ndarray, method: str = "weighted_sum") -> np.ndarray:
     """
     Encode 2D input data to a single phase value for photonic circuit encoding.
-    
+
     Args:
         X_2d (np.ndarray): 2D input data of shape (n_samples, 2), values in [0, 1].
         method (str): Encoding method:
             - 'weighted_sum': Linear combination of both dimensions
             - 'first_dim': Use only first dimension
             - 'radial': Use radial distance from center
-    
+
     Returns:
         np.ndarray: Encoded phases of shape (n_samples,) in [0, 2π].
     """
     if X_2d.ndim != 2 or X_2d.shape[1] != 2:
-        raise ValueError(f"Expected 2D array with shape (n_samples, 2), got {X_2d.shape}")
-    
-    if method == 'weighted_sum':
+        raise ValueError(
+            f"Expected 2D array with shape (n_samples, 2), got {X_2d.shape}"
+        )
+
+    if method == "weighted_sum":
         # Weighted combination: 0.5 * x0 + 0.5 * x1, normalized to [0, 1]
         X_combined = 0.5 * X_2d[:, 0] + 0.5 * X_2d[:, 1]
         X_combined = np.clip(X_combined, 0.0, 1.0)
-    elif method == 'first_dim':
+    elif method == "first_dim":
         # Use only first dimension
         X_combined = X_2d[:, 0]
-    elif method == 'radial':
+    elif method == "radial":
         # Radial distance from center (0.5, 0.5)
         center = np.array([0.5, 0.5])
         distances = np.sqrt(np.sum((X_2d - center) ** 2, axis=1))
@@ -442,7 +446,7 @@ def encode_2d_to_phase(X_2d: np.ndarray, method: str = 'weighted_sum') -> np.nda
         X_combined = np.clip(distances / max_dist, 0.0, 1.0)
     else:
         raise ValueError(f"Unknown encoding method: {method}")
-    
+
     # Convert to phase encoding: 2 * arccos(X) (same as 1D case)
     encoded_phases = 2 * np.arccos(X_combined)
     return encoded_phases
@@ -451,7 +455,7 @@ def encode_2d_to_phase(X_2d: np.ndarray, method: str = 'weighted_sum') -> np.nda
 def get_classification_data(
     n_data: int = 100,
     n_classes: int = 2,
-    data_type: str = 'binary_threshold',
+    data_type: str = "binary_threshold",
     noise_level: float = 0.0,
     return_one_hot: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -470,27 +474,27 @@ def get_classification_data(
     x_min, x_max = 0.0, 1.0
     X = np.linspace(x_min, x_max, n_data)
     y = generate_classification_data(n_data, n_classes, data_type, noise_level)[1]
-    
+
     # Create train/test split with gap (similar to regression)
     gap = (x_min + 0.35 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))
     mask = ~((X > gap[0]) & (X < gap[1]))
     X_train, y_train = X[mask], y[mask]
-    
+
     # Generate test data
     X_test = np.linspace(x_min, x_max, 500)
     y_test = generate_classification_data(500, n_classes, data_type, 0.0)[1]
-    
+
     if return_one_hot:
         y_train = one_hot_encode(y_train, n_classes)
         y_test = one_hot_encode(y_test, n_classes)
-    
+
     return X_train, y_train, X_test, y_test
 
 
 def get_data(
     n_data: int = 100,
     sigma_noise: float = 0.0,
-    datafunction: str = 'quartic_data',
+    datafunction: str = "quartic_data",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Generates synthetic training and test data, with a gap in the training set.
@@ -505,17 +509,19 @@ def get_data(
     X = np.linspace(x_min, x_max, n_data)
     # Explicit mapping of string to function
     datafunction_map = {
-        'quartic_data': quartic_data,
-        'neg_quadratic_data': neg_quadratic_data,
-        'neg_qubic_data': neg_qubic_data,
-        'sinusoid_data': sinusoid_data,
-        'multi_modal_data': multi_modal_data,
-        'step_function_data': step_function_data,
-        'oscillating_poly_data': oscillating_poly_data,
-        'damped_cosine_data': damped_cosine_data,
+        "quartic_data": quartic_data,
+        "neg_quadratic_data": neg_quadratic_data,
+        "neg_qubic_data": neg_qubic_data,
+        "sinusoid_data": sinusoid_data,
+        "multi_modal_data": multi_modal_data,
+        "step_function_data": step_function_data,
+        "oscillating_poly_data": oscillating_poly_data,
+        "damped_cosine_data": damped_cosine_data,
     }
     if datafunction not in datafunction_map:
-        raise ValueError(f"Unknown datafunction: {datafunction}. Available functions: {list(datafunction_map.keys())}")
+        raise ValueError(
+            f"Unknown datafunction: {datafunction}. Available functions: {list(datafunction_map.keys())}"
+        )
     datafunc = datafunction_map[datafunction]
     y = datafunc(X) + np.random.normal(0, sigma_noise, size=n_data)
     gap = (x_min + 0.55 * (x_max - x_min), x_min + 0.60 * (x_max - x_min))

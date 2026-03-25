@@ -79,11 +79,13 @@ def display_circuit_annotated(
     proc.with_input(pcvl.BasicState(input_modes))
 
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         tmp_path = f.name
     try:
         if skin is None:
             from perceval.rendering.circuit import SymbSkin
+
             skin = SymbSkin(compact_display=False)
         pcvl.pdisplay_to_file(proc, tmp_path, skin=skin, recursive=True)
     except Exception:
@@ -109,7 +111,9 @@ def display_circuit_annotated(
         lines.append("Memristive phases:")
         for j, idx in enumerate(memristive_indices):
             m1, m2 = get_mzi_modes_for_phase(idx, n_modes)
-            modes_str = f"  phase[{idx}] = {phases[idx]:.4f} rad → MZI modes ({m1}, {m2})"
+            modes_str = (
+                f"  phase[{idx}] = {phases[idx]:.4f} rad → MZI modes ({m1}, {m2})"
+            )
             if memristive_output_modes and j < len(memristive_output_modes):
                 m1_out, m2_out = memristive_output_modes[j]
                 modes_str += f", feedback from ({m1_out}, {m2_out})"
@@ -122,8 +126,7 @@ def display_circuit_annotated(
     Path(tmp_path).unlink(missing_ok=True)
 
     fig, (ax_circ, ax_cfg) = plt.subplots(
-        2, 1, figsize=(14, 10),
-        gridspec_kw={"height_ratios": [1.2, 0.8], "hspace": 0.3}
+        2, 1, figsize=(14, 10), gridspec_kw={"height_ratios": [1.2, 0.8], "hspace": 0.3}
     )
 
     ax_circ.imshow(img)
@@ -133,12 +136,19 @@ def display_circuit_annotated(
     ax_cfg.axis("off")
     text = "\n".join(lines)
     ax_cfg.text(
-        0.02, 0.98, text,
+        0.02,
+        0.98,
+        text,
         transform=ax_cfg.transAxes,
         fontsize=11,
         family="monospace",
         verticalalignment="top",
-        bbox=dict(boxstyle="round,pad=0.8", facecolor="white", edgecolor="black", linewidth=1.5),
+        bbox=dict(
+            boxstyle="round,pad=0.8",
+            facecolor="white",
+            edgecolor="black",
+            linewidth=1.5,
+        ),
     )
 
     fig.subplots_adjust(left=0.02, right=0.98, top=0.96, bottom=0.02, hspace=0.3)
@@ -159,7 +169,7 @@ def save_circuit_annotated(
     target_mode: Optional[Tuple[int, ...]] = None,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """
     Save the annotated circuit to a file. Convenience wrapper around display_circuit_annotated.
@@ -172,5 +182,5 @@ def save_circuit_annotated(
         memristive_output_modes=memristive_output_modes,
         path=path,
         show=False,
-        **kwargs
+        **kwargs,
     )

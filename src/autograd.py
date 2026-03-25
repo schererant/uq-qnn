@@ -47,9 +47,10 @@ class MemristorLossPSR(torch.autograd.Function):
     """
     Autograd Function using PSR for photonic‐phase parameters and
     finite‐difference only for memristor weights, in both discrete‐phase
-    and continuous‐swipe modes. Supports both regression (MSE) and 
+    and continuous‐swipe modes. Supports both regression (MSE) and
     classification (cross-entropy) loss functions.
     """
+
     @staticmethod
     def forward(
         ctx,
@@ -68,7 +69,7 @@ class MemristorLossPSR(torch.autograd.Function):
         memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]],
         memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
         encoding_phase_idx: Optional[int],
-        loss_type: str = 'mse',
+        loss_type: str = "mse",
         n_classes: int = 1,
         output_mode: str = "singles",
         input_modes: Optional[Sequence[int]] = None,
@@ -76,11 +77,11 @@ class MemristorLossPSR(torch.autograd.Function):
         noise_std: Optional[Union[float, Sequence[float]]] = None,
     ) -> Tensor:
         theta_np = theta.detach().cpu().double().numpy()
-        enc_np   = enc_phases.detach().cpu().double().numpy()
-        y_np     = y.detach().cpu().double().numpy()
+        enc_np = enc_phases.detach().cpu().double().numpy()
+        y_np = y.detach().cpu().double().numpy()
 
         # Determine if we need multi-class output
-        return_class_probs = (loss_type == 'cross_entropy' and n_classes > 1)
+        return_class_probs = loss_type == "cross_entropy" and n_classes > 1
 
         preds = run_simulation_sequence_np(
             params=theta_np,
@@ -103,7 +104,7 @@ class MemristorLossPSR(torch.autograd.Function):
         )
 
         # Compute loss based on loss_type
-        if loss_type == 'cross_entropy':
+        if loss_type == "cross_entropy":
             # Classification: cross-entropy loss
             # y_np should be shape (K, n_classes) for multi-class or (K,) for binary
             # preds should be shape (K, n_classes)
@@ -112,11 +113,11 @@ class MemristorLossPSR(torch.autograd.Function):
                 preds_2d = np.stack([1 - preds, preds], axis=1)
             else:
                 preds_2d = preds
-            
+
             # Add small epsilon to avoid log(0)
             eps = 1e-15
             preds_2d = np.clip(preds_2d, eps, 1 - eps)
-            
+
             if y_np.ndim == 1:
                 # Binary: convert to one-hot if needed
                 if n_classes == 2:
@@ -127,7 +128,7 @@ class MemristorLossPSR(torch.autograd.Function):
                     y_2d[np.arange(len(y_np)), y_np.astype(int)] = 1.0
             else:
                 y_2d = y_np
-            
+
             # Cross-entropy: -Σ_c y_c * log(F^c_Θ(x))
             loss_val = -np.mean(np.sum(y_2d * np.log(preds_2d), axis=1))
             preds = preds_2d  # Store 2D predictions for backward
@@ -135,21 +136,19 @@ class MemristorLossPSR(torch.autograd.Function):
             # Regression: MSE loss
             loss_val = 0.5 * np.mean((preds - y_np) ** 2)
 
-        ctx.save_for_backward(theta.detach(),
-                              enc_phases.detach(),
-                              y.detach())
-        ctx.phase_idx    = list(phase_idx)
-        ctx.n_photons    = list(n_photons)
-        ctx.n_swipe      = n_swipe
-        ctx.swipe_span   = swipe_span
+        ctx.save_for_backward(theta.detach(), enc_phases.detach(), y.detach())
+        ctx.phase_idx = list(phase_idx)
+        ctx.n_photons = list(n_photons)
+        ctx.n_swipe = n_swipe
+        ctx.swipe_span = swipe_span
         ctx.memory_depth = memory_depth
-        ctx.n_samples    = n_samples
-        ctx.preds_np     = preds
-        ctx.n_modes      = n_modes
+        ctx.n_samples = n_samples
+        ctx.preds_np = preds
+        ctx.n_modes = n_modes
         ctx.encoding_mode = encoding_mode
-        ctx.target_mode  = target_mode
-        ctx.loss_type    = loss_type
-        ctx.n_classes    = n_classes
+        ctx.target_mode = target_mode
+        ctx.loss_type = loss_type
+        ctx.n_classes = n_classes
         ctx.memristive_phase_idx = memristive_phase_idx
         ctx.memristive_output_modes = memristive_output_modes
         ctx.encoding_phase_idx = encoding_phase_idx
@@ -164,21 +163,21 @@ class MemristorLossPSR(torch.autograd.Function):
     def backward(ctx, g_out: Tensor):
         theta, enc_tensor, y = ctx.saved_tensors
         theta_np = theta.cpu().double().numpy()
-        enc_np   = enc_tensor.cpu().double().numpy()
-        y_np     = y.cpu().double().numpy()
-        preds    = ctx.preds_np
-        N        = y.numel()
-        
+        enc_np = enc_tensor.cpu().double().numpy()
+        y_np = y.cpu().double().numpy()
+        preds = ctx.preds_np
+        N = y.numel()
+
         # Prepare predictions and targets based on loss type
-        return_class_probs = (ctx.loss_type == 'cross_entropy' and ctx.n_classes > 1)
-        
-        if ctx.loss_type == 'cross_entropy':
+        return_class_probs = ctx.loss_type == "cross_entropy" and ctx.n_classes > 1
+
+        if ctx.loss_type == "cross_entropy":
             # Classification: prepare y and preds for Equation (15)
             if preds.ndim == 1:
                 preds_2d = np.stack([1 - preds, preds], axis=1)
             else:
                 preds_2d = preds
-            
+
             if y_np.ndim == 1:
                 if ctx.n_classes == 2:
                     y_2d = np.stack([1 - y_np, y_np], axis=1)
@@ -187,7 +186,7 @@ class MemristorLossPSR(torch.autograd.Function):
                     y_2d[np.arange(len(y_np)), y_np.astype(int)] = 1.0
             else:
                 y_2d = y_np
-            
+
             # For classification, dL_df = -y_c / F^c_Θ(x) / K (from chain rule)
             eps = 1e-15
             preds_2d_clipped = np.clip(preds_2d, eps, 1 - eps)
@@ -197,13 +196,13 @@ class MemristorLossPSR(torch.autograd.Function):
             dL_df = (preds - y_np) / N
 
         grads = np.zeros_like(theta_np)
-        eps   = 1e-3
+        eps = 1e-3
 
         # PSR gradients for photonic phases
         for gate_i, p_idx in enumerate(ctx.phase_idx):
             shifts, coeffs = photonic_psr_coeffs_torch(ctx.n_photons[gate_i])
-            
-            if ctx.loss_type == 'cross_entropy' and ctx.n_classes > 1:
+
+            if ctx.loss_type == "cross_entropy" and ctx.n_classes > 1:
                 # Classification PSR: Equation (15)
                 # ∂L/∂θ = -(1/K) Σ_q c_q Σ_c (y_c / F^c_Θ(x)) · F^c_{Θ+Θ^q}(x)
                 df_dθ = np.zeros((len(enc_np), ctx.n_classes))
@@ -237,7 +236,9 @@ class MemristorLossPSR(torch.autograd.Function):
                 grads[p_idx] = np.real(np.sum(dL_df * df_dθ))
             else:
                 # Regression PSR: Equation (8)
-                df_dθ = np.zeros_like(preds) if preds.ndim == 1 else np.zeros(len(preds))
+                df_dθ = (
+                    np.zeros_like(preds) if preds.ndim == 1 else np.zeros(len(preds))
+                )
                 for s, c in zip(shifts.numpy(), coeffs.numpy()):
                     θ_shift = theta_np.copy()
                     θ_shift[p_idx] += s
@@ -268,8 +269,10 @@ class MemristorLossPSR(torch.autograd.Function):
         # Finite-difference for memristor weight parameters
         weight_idxs = set(range(len(theta_np))) - set(ctx.phase_idx)
         for idx in weight_idxs:
-            θ_p = theta_np.copy(); θ_m = theta_np.copy()
-            θ_p[idx] += eps; θ_m[idx] -= eps
+            θ_p = theta_np.copy()
+            θ_m = theta_np.copy()
+            θ_p[idx] += eps
+            θ_m[idx] -= eps
             # Only clip the weight parameter (last index), not the phases
             if idx == len(theta_np) - 1:  # weight parameter
                 θ_p[idx] = np.clip(θ_p[idx], 0.01, 1)
@@ -278,7 +281,7 @@ class MemristorLossPSR(torch.autograd.Function):
                 θ_p[idx] = θ_p[idx] % (2 * np.pi)
                 θ_m[idx] = θ_m[idx] % (2 * np.pi)
 
-            return_class_probs = (ctx.loss_type == 'cross_entropy' and ctx.n_classes > 1)
+            return_class_probs = ctx.loss_type == "cross_entropy" and ctx.n_classes > 1
 
             pred_p = run_simulation_sequence_np(
                 params=θ_p,
@@ -320,7 +323,7 @@ class MemristorLossPSR(torch.autograd.Function):
             )
 
             # Compute loss based on loss_type
-            if ctx.loss_type == 'cross_entropy':
+            if ctx.loss_type == "cross_entropy":
                 # Classification loss
                 if pred_p.ndim == 1:
                     pred_p_2d = np.stack([1 - pred_p, pred_p], axis=1)
@@ -330,11 +333,11 @@ class MemristorLossPSR(torch.autograd.Function):
                     pred_m_2d = np.stack([1 - pred_m, pred_m], axis=1)
                 else:
                     pred_m_2d = pred_m
-                
+
                 eps_loss = 1e-15
                 pred_p_2d = np.clip(pred_p_2d, eps_loss, 1 - eps_loss)
                 pred_m_2d = np.clip(pred_m_2d, eps_loss, 1 - eps_loss)
-                
+
                 if y_np.ndim == 1:
                     if ctx.n_classes == 2:
                         y_2d = np.stack([1 - y_np, y_np], axis=1)
@@ -343,7 +346,7 @@ class MemristorLossPSR(torch.autograd.Function):
                         y_2d[np.arange(len(y_np)), y_np.astype(int)] = 1.0
                 else:
                     y_2d = y_np
-                
+
                 loss_p = -np.mean(np.sum(y_2d * np.log(pred_p_2d), axis=1))
                 loss_m = -np.mean(np.sum(y_2d * np.log(pred_m_2d), axis=1))
             else:
@@ -354,7 +357,24 @@ class MemristorLossPSR(torch.autograd.Function):
 
         return (
             g_out * torch.from_numpy(grads).to(theta),
-            None, None, None, None, None, None, None, None,
-            None, None, None, None, None, None, None, None,
-            None, None, None, None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
