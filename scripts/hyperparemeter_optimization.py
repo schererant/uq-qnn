@@ -2,10 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.config import config
 from datetime import datetime
-from src.model.mlp import train_mlp_baseline, predict_mlp_baseline
-import numpy as np
 from src.uq.compute_eval_metrics import compute_eval_metrics
 from src.uq.selective_prediction import selective_prediction
 from src.model.train import train_memristor

@@ -3,13 +3,10 @@ import tensorflow as tf
 import strawberryfields as sf
 from strawberryfields.ops import *
 import random as rd
-from datetime import datetime
 from tqdm import tqdm, trange
-import pickle
 
 
 from src.plotting import plot_training_results, plot_predictions_new
-from src.utils import log_training_loss
 from src.logger import ExperimentLogger
 from src.quantum import MemristorCircuit, MemristorMegaCircuit
 

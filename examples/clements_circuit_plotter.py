@@ -11,9 +11,6 @@ and visualizes it using Perceval's plotting capabilities.
 import sys
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle, Circle
-import matplotlib.colors as mcolors
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -16,7 +16,7 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import perceval as pcvl
-from src.circuits import clements_circuit, build_circuit, encoding_circuit
+from src.circuits import clements_circuit, build_circuit
 
 def print_circuit_matrix(circuit):
     """Print the unitary matrix of the circuit."""
@@ -99,7 +99,7 @@ def print_circuit_details(circuit, input_state, measurement_mode, title):
         input_mode = input_state.photon2mode(0) if input_state.n > 0 else 0
         print(f"  1. Input: Photon enters mode {input_mode} of {circuit.m} modes")
         print(f"  2. Mesh of {circuit.m * (circuit.m - 1) // 2} MZIs in rectangular grid pattern")
-        print(f"  3. Each MZI has two phase shifters (internal and external)")
+        print("  3. Each MZI has two phase shifters (internal and external)")
         print(f"  4. Output: Measure probability of photon in mode {measurement_mode[0]}")
 
 def create_clements_with_memristive(n_modes=3, memristive_phase_idx=None):

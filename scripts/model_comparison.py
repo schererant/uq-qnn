@@ -10,7 +10,7 @@ from src.uq.compute_eval_metrics import compute_eval_metrics
 from src.uq.selective_prediction import selective_prediction
 from src.model.train import train_memristor
 from src.model.predict import predict_memristor
-from src.utils.formatting import format_metrics, format_hyperparameters
+from src.utils.formatting import format_metrics
 
 
 

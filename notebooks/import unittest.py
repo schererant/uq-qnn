@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import os
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from playground.pml_psr import train_memristor
 import shutil
 

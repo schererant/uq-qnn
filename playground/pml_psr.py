@@ -2,13 +2,10 @@ import perceval as pcvl
 import numpy as np
 # from scipy.optimize import minimize # Optional for more advanced optimizers
 import random as rd
-from tqdm import trange, tqdm
-import pickle
-import math # For pi
+from tqdm import trange
 
 # Assuming these imports are still valid or adapted
 from src.plotting import plot_training_results
-from src.utils import log_training_loss # May need adaptation
 from src.logger import ExperimentLogger # May need adaptation
 
 # --- Helper Functions ---
