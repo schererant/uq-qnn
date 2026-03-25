@@ -26,6 +26,11 @@
 - **NumPy + memristive** is supported for **singles** only (sequential loop). Coincidence + memristive remains unsupported; use **`backend="perceval"`** if that path is added later.
 - **Perceval** remains the full SLOS pipeline when `backend="perceval"`; parametric reuse does not apply when `encoding_phase_idx` is set (inline mesh encoding).
 
+### Example run reports
+
+- **`examples/reporting.py`** — `make_run_dir(__file__)`, `write_run_summary` (writes `run_summary.json` with schema `uq-qnn.example_run.v1`), optional **`tee_stdout`** for text-only examples.
+- **All example scripts** — Save figures and optional metrics under **`reports/<example_stem>/<YYYY-mm-dd_HHMMSS>/`**; repo **`.gitignore`** ignores generated run folders but keeps **`reports/README.md`** and **`reports/.gitkeep`**.
+
 ## 2026-03-24 — Fix broken PSR gradients for coincidence (2-photon) mode
 
 ### Bug: Wrong `n_photons` in Parameter Shift Rule (Critical)

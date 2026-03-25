@@ -21,6 +21,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -108,6 +110,9 @@ def run_experiment(
 def main():
     print("=== Quartic Regression: 6x6 Architecture Comparison ===")
 
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
+
     np.random.seed(42)
 
     config["n_data"] = 100
@@ -121,7 +126,7 @@ def main():
     # Visualize the same inline-encoding configuration used in training
     ENCODING_PHASE_IDX = 0
     save_circuit_annotated(
-        "quartic_circuit_annotated.png",
+        str(report_dir / "quartic_circuit_annotated.png"),
         n_modes=N_MODES,
         encoding_mode=0,
         target_mode=(N_MODES - 1,),
@@ -231,7 +236,7 @@ def main():
         "Quartic Regression: 6x6 Clements, Memristors on 4th & 5th MZI", fontsize=12
     )
     plt.tight_layout()
-    plt.savefig("quartic_regression_comparison.png", dpi=300)
+    plt.savefig(report_dir / "quartic_regression_comparison.png", dpi=300)
     plt.show()
 
     # Plot: training loss comparison
@@ -245,8 +250,20 @@ def main():
     ax2.legend()
     ax2.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig("quartic_regression_loss_comparison.png", dpi=300)
+    plt.savefig(report_dir / "quartic_regression_loss_comparison.png", dpi=300)
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={
+            key: float(mse) for key, (_, _, _, mse) in results.items()
+        },
+        artifacts=[
+            "quartic_circuit_annotated.png",
+            "quartic_regression_comparison.png",
+            "quartic_regression_loss_comparison.png",
+        ],
+    )
 
     sim_logger.report()
 

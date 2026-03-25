@@ -19,6 +19,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 from src.data import get_classification_data
 from src.training import train_pytorch
@@ -29,6 +31,9 @@ from src.utils import config
 def main():
     """Run a multi-class classification example."""
     print("=== UQ-QNN: Multi-Class Classification Example ===")
+
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
 
     # Set random seed for reproducibility
     np.random.seed(42)
@@ -250,8 +255,14 @@ def main():
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig("multi_class_classification.png", dpi=300)
+    plt.savefig(report_dir / "multi_class_classification.png", dpi=300)
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={"test_accuracy": float(accuracy)},
+        artifacts=["multi_class_classification.png"],
+    )
 
     # Print simulation statistics
     sim_logger.report()

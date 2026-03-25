@@ -18,6 +18,8 @@ import matplotlib.pyplot as plt
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from reporting import make_run_dir, print_report_banner, write_run_summary
 
 import perceval as pcvl
 from src.data import get_data, quartic_data
@@ -227,7 +229,7 @@ def train_and_evaluate(
     }
 
 
-def plot_results(results, X_train, y_train, X_test, y_test):
+def plot_results(results, X_train, y_train, X_test, y_test, report_dir):
     """Plots the training history and predictions for each circuit type."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
@@ -339,7 +341,7 @@ def plot_results(results, X_train, y_train, X_test, y_test):
     )
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.97])
-    plt.savefig("circuit_training_comparison.png", dpi=300)
+    plt.savefig(report_dir / "circuit_training_comparison.png", dpi=300)
 
     return fig
 
@@ -347,6 +349,9 @@ def plot_results(results, X_train, y_train, X_test, y_test):
 def main():
     """Main function to create circuits, visualize them, and train on quartic function."""
     print("=== UQ-QNN: Circuit Visualization and Training Example ===")
+
+    report_dir = make_run_dir(__file__)
+    print_report_banner(report_dir)
 
     # Set random seed for reproducibility
     np.random.seed(42)
@@ -386,7 +391,7 @@ def main():
     plt.ylabel("y")
     plt.legend()
     plt.grid(True)
-    plt.savefig("quartic_function.png", dpi=300)
+    plt.savefig(report_dir / "quartic_function.png", dpi=300)
 
     # Train and evaluate both circuit types
     results = {}
@@ -419,8 +424,16 @@ def main():
         }
 
     # Plot and compare results
-    fig = plot_results(results, X_train, y_train, X_test, y_test)
+    fig = plot_results(results, X_train, y_train, X_test, y_test, report_dir)
     plt.show()
+
+    write_run_summary(
+        report_dir,
+        metrics={
+            k: results[k]["metrics"] for k in ("memristive", "standard") if k in results
+        },
+        artifacts=["quartic_function.png", "circuit_training_comparison.png"],
+    )
 
     # Print simulation statistics
     sim_logger.report()
