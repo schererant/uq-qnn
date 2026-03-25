@@ -8,6 +8,7 @@ from . import circuits
 from . import coincidence
 from . import data
 from . import loss
+from . import numpy_backend
 from . import simulation
 from . import training
 from . import utils
@@ -30,12 +31,18 @@ from .data import (
 )
 from .circuits import (
     encoding_circuit,
+    encoding_circuit_parametric,
     memristor_circuit,
     clements_circuit,
     build_circuit,
+    build_parametric_circuit,
     get_mzi_modes_for_phase,
 )
-from .simulation import run_simulation_sequence_np, SimulationLogger
+from .simulation import (
+    run_simulation_sequence_np,
+    SimulationLogger,
+    uncertainty_forward_pass,
+)
 from .autograd import photonic_psr_coeffs_torch, MemristorLossPSR
 from .loss import PhotonicModel
 from .training import train_pytorch, train_pytorch_generic, gradient_check
@@ -58,6 +65,7 @@ __all__ = [
     "circuits",
     "data",
     "loss",
+    "numpy_backend",
     "simulation",
     "training",
     "utils",
@@ -72,9 +80,12 @@ __all__ = [
     "memristor_circuit",
     "clements_circuit",
     "build_circuit",
+    "build_parametric_circuit",
+    "encoding_circuit_parametric",
     "get_mzi_modes_for_phase",
     "run_simulation_sequence_np",
     "SimulationLogger",
+    "uncertainty_forward_pass",
     "photonic_psr_coeffs_torch",
     "MemristorLossPSR",
     "PhotonicModel",

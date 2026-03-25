@@ -75,6 +75,7 @@ class MemristorLossPSR(torch.autograd.Function):
         input_modes: Optional[Sequence[int]] = None,
         working_detectors: Optional[Sequence[int]] = None,
         noise_std: Optional[Union[float, Sequence[float]]] = None,
+        backend: str = "numpy",
     ) -> Tensor:
         theta_np = theta.detach().cpu().double().numpy()
         enc_np = enc_phases.detach().cpu().double().numpy()
@@ -101,6 +102,7 @@ class MemristorLossPSR(torch.autograd.Function):
             input_modes=input_modes,
             working_detectors=working_detectors,
             noise_std=noise_std,
+            backend=backend,
         )
 
         # Compute loss based on loss_type
@@ -156,6 +158,7 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.input_modes = tuple(input_modes) if input_modes else None
         ctx.working_detectors = tuple(working_detectors) if working_detectors else None
         ctx.noise_std = noise_std
+        ctx.backend = backend
 
         return torch.tensor(loss_val, dtype=theta.dtype, device=theta.device)
 
@@ -227,6 +230,7 @@ class MemristorLossPSR(torch.autograd.Function):
                         input_modes=ctx.input_modes,
                         working_detectors=ctx.working_detectors,
                         noise_std=ctx.noise_std,
+                        backend=ctx.backend,
                     )
                     if out.ndim == 1:
                         out = np.stack([1 - out, out], axis=1)
@@ -260,6 +264,7 @@ class MemristorLossPSR(torch.autograd.Function):
                         input_modes=ctx.input_modes,
                         working_detectors=ctx.working_detectors,
                         noise_std=ctx.noise_std,
+                        backend=ctx.backend,
                     )
                     if out.ndim > 1:
                         out = out[:, -1]  # Use last class for regression
@@ -301,6 +306,7 @@ class MemristorLossPSR(torch.autograd.Function):
                 input_modes=ctx.input_modes,
                 working_detectors=ctx.working_detectors,
                 noise_std=ctx.noise_std,
+                backend=ctx.backend,
             )
             pred_m = run_simulation_sequence_np(
                 params=θ_m,
@@ -320,6 +326,7 @@ class MemristorLossPSR(torch.autograd.Function):
                 input_modes=ctx.input_modes,
                 working_detectors=ctx.working_detectors,
                 noise_std=ctx.noise_std,
+                backend=ctx.backend,
             )
 
             # Compute loss based on loss_type
@@ -357,6 +364,7 @@ class MemristorLossPSR(torch.autograd.Function):
 
         return (
             g_out * torch.from_numpy(grads).to(theta),
+            None,
             None,
             None,
             None,

@@ -44,6 +44,8 @@ config = {
     "do_plot": True,
     # Sampler
     "n_samples": 1000,
+    # Simulation backend: "numpy" (fast) or "perceval" (full pipeline)
+    "sim_backend": "numpy",
 }
 # =========================================================
 

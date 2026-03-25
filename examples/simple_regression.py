@@ -12,6 +12,8 @@ This example demonstrates how to:
 
 import sys
 import os
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -21,8 +23,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import get_data
 from src.training import train_pytorch
-from src.simulation import run_simulation_sequence_np, sim_logger
+from src.simulation import (
+    run_simulation_sequence_np,
+    sim_logger,
+    uncertainty_forward_pass,
+)
 from src.utils import config
+
+SIM_BACKEND = "numpy"
 
 
 def main():
@@ -72,6 +80,7 @@ def main():
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
         encoding_phase_idx=encoding_phase_idx,
+        backend=SIM_BACKEND,
     )
 
     # Generate predictions
@@ -90,6 +99,7 @@ def main():
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
         encoding_phase_idx=encoding_phase_idx,
+        backend=SIM_BACKEND,
     )
 
     # Compute MSE
@@ -101,30 +111,44 @@ def main():
     n_forward_passes = 10
     all_preds = np.zeros((len(X_test), n_forward_passes))
 
-    for i in tqdm(range(n_forward_passes), desc="Forward passes"):
-        # Each forward pass with a different sample count introduces some randomness
-        sample_count = n_samples + np.random.randint(-100, 100)
-        sample_count = max(100, sample_count)  # Ensure at least 100 samples
-
-        # Small random perturbation to parameters to simulate quantum noise
+    unc_cfg = {
+        "memory_depth": config["memory_depth"],
+        "n_swipe": 0,
+        "swipe_span": 0.0,
+        "n_modes": n_modes,
+        "encoding_mode": 0,
+        "target_mode": target_mode,
+        "memristive_phase_idx": memristive_phase_idx,
+        "memristive_output_modes": memristive_output_modes,
+        "encoding_phase_idx": encoding_phase_idx,
+        "output_mode": "singles",
+        "input_modes": None,
+        "working_detectors": None,
+        "noise_std": None,
+        "backend": SIM_BACKEND,
+    }
+    rng = np.random.default_rng(123)
+    jobs = []
+    for _ in range(n_forward_passes):
+        sample_count = n_samples + int(rng.integers(-100, 101))
+        sample_count = max(100, sample_count)
         perturbed_theta = theta_discrete.copy()
-        # Only perturb phases slightly, not the weight
-        perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta) - 1)
+        if memristive_phase_idx is not None:
+            perturbed_theta[:-1] += rng.normal(0, 0.05, size=len(perturbed_theta) - 1)
+        else:
+            perturbed_theta += rng.normal(0, 0.05, size=len(perturbed_theta))
+        jobs.append((perturbed_theta, sample_count, enc_test, unc_cfg))
 
-        preds = run_simulation_sequence_np(
-            perturbed_theta,
-            config["memory_depth"],
-            sample_count,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=0,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx,
+    max_workers = min(n_forward_passes, (os.cpu_count() or 2))
+    with ProcessPoolExecutor(max_workers=max_workers) as pool:
+        results = list(
+            tqdm(
+                pool.map(uncertainty_forward_pass, jobs),
+                total=n_forward_passes,
+                desc="Forward passes",
+            )
         )
+    for i, preds in enumerate(results):
         all_preds[:, i] = preds
 
     # Compute mean and standard deviation of predictions

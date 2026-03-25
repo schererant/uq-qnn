@@ -13,6 +13,8 @@ Working detectors: all modes active by default
 
 import sys
 import os
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -21,8 +23,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import get_data
 from src.training import train_pytorch
-from src.simulation import run_simulation_sequence_np, sim_logger
+from src.simulation import (
+    run_simulation_sequence_np,
+    sim_logger,
+    uncertainty_forward_pass,
+)
 from src.utils import config
+
+# Default simulation backend (fast NumPy unitary); use "perceval" for full Perceval pipeline
+SIM_BACKEND = "numpy"
 
 
 def main():
@@ -98,6 +107,7 @@ def main():
         output_mode="coincidence",
         input_modes=input_modes,
         working_detectors=working_detectors,
+        backend=SIM_BACKEND,
     )
 
     # --- Predictions ---
@@ -119,6 +129,7 @@ def main():
         output_mode="coincidence",
         input_modes=input_modes,
         working_detectors=working_detectors,
+        backend=SIM_BACKEND,
     )
 
     mse = np.mean((preds - y_test) ** 2)
@@ -129,28 +140,40 @@ def main():
     n_forward_passes = 10
     all_preds = np.zeros((len(X_test), n_forward_passes))
 
-    for i in tqdm(range(n_forward_passes), desc="Forward passes"):
-        sample_count = max(100, n_samples + np.random.randint(-10, 10))
+    unc_cfg = {
+        "memory_depth": config["memory_depth"],
+        "n_swipe": 0,
+        "swipe_span": 0.0,
+        "n_modes": n_modes,
+        "encoding_mode": encoding_mode,
+        "target_mode": None,
+        "memristive_phase_idx": None,
+        "memristive_output_modes": None,
+        "encoding_phase_idx": None,
+        "output_mode": "coincidence",
+        "input_modes": input_modes,
+        "working_detectors": working_detectors,
+        "noise_std": None,
+        "backend": SIM_BACKEND,
+    }
+    rng = np.random.default_rng(123)
+    jobs = []
+    for _ in range(n_forward_passes):
+        sample_count = max(100, n_samples + int(rng.integers(-10, 11)))
         perturbed_theta = theta_opt.copy()
-        perturbed_theta += np.random.normal(0, 0.05, size=len(perturbed_theta))
+        perturbed_theta += rng.normal(0, 0.05, size=len(perturbed_theta))
+        jobs.append((perturbed_theta, sample_count, enc_test, unc_cfg))
 
-        p = run_simulation_sequence_np(
-            perturbed_theta,
-            config["memory_depth"],
-            sample_count,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            target_mode=None,
-            memristive_phase_idx=None,
-            memristive_output_modes=None,
-            encoding_phase_idx=None,
-            output_mode="coincidence",
-            input_modes=input_modes,
-            working_detectors=working_detectors,
+    max_workers = min(n_forward_passes, (os.cpu_count() or 2))
+    with ProcessPoolExecutor(max_workers=max_workers) as pool:
+        results = list(
+            tqdm(
+                pool.map(uncertainty_forward_pass, jobs),
+                total=n_forward_passes,
+                desc="Forward passes",
+            )
         )
+    for i, p in enumerate(results):
         all_preds[:, i] = p
 
     mean_preds = np.mean(all_preds, axis=1)
