@@ -38,14 +38,22 @@ class SimulationLogger:
         print(f"[SimulationLogger] Circuit sequence runs: {self.call_count}")
         print(f"[SimulationLogger] Total sequence time: {self.total_time:.3f} seconds")
         if self.call_count > 0:
-            print(f"[SimulationLogger] Avg time per sequence: {self.total_time / self.call_count:.6f} seconds")
+            print(
+                f"[SimulationLogger] Avg time per sequence: {self.total_time / self.call_count:.6f} seconds"
+            )
         print("[SimulationLogger] Sampler sample counts used:")
         for n_samples, freq in self.samples_counter.items():
             print(f"  {n_samples} samples: {freq} times")
-        print(f"[SimulationLogger] Individual circuit simulations: {self.circuit_call_count}")
-        print(f"[SimulationLogger] Total circuit sim time: {self.circuit_total_time:.3f} seconds")
+        print(
+            f"[SimulationLogger] Individual circuit simulations: {self.circuit_call_count}"
+        )
+        print(
+            f"[SimulationLogger] Total circuit sim time: {self.circuit_total_time:.3f} seconds"
+        )
         if self.circuit_call_count > 0:
-            print(f"[SimulationLogger] Avg time per circuit sim: {self.circuit_total_time / self.circuit_call_count:.6f} seconds")
+            print(
+                f"[SimulationLogger] Avg time per circuit sim: {self.circuit_total_time / self.circuit_call_count:.6f} seconds"
+            )
 
 
 # Global simulation logger instance
@@ -62,10 +70,10 @@ def _normalize_memristive_output_modes(
     When None, uses get_mzi_modes_for_phase for each index (default: MZI output modes).
     """
     if memristive_output_modes is None:
-        return tuple(get_mzi_modes_for_phase(idx, n_modes) for idx in memristive_indices)
-    modes = tuple(
-        (int(m1), int(m2)) for m1, m2 in memristive_output_modes
-    )
+        return tuple(
+            get_mzi_modes_for_phase(idx, n_modes) for idx in memristive_indices
+        )
+    modes = tuple((int(m1), int(m2)) for m1, m2 in memristive_output_modes)
     if len(modes) != len(memristive_indices):
         raise ValueError(
             f"memristive_output_modes must have {len(memristive_indices)} entries "
@@ -74,7 +82,7 @@ def _normalize_memristive_output_modes(
     for j, (m1, m2) in enumerate(modes):
         if m1 < 0 or m1 >= n_modes or m2 < 0 or m2 >= n_modes:
             raise ValueError(
-                f"memristive_output_modes[{j}] = ({m1}, {m2}): modes must be in [0, {n_modes-1}]"
+                f"memristive_output_modes[{j}] = ({m1}, {m2}): modes must be in [0, {n_modes - 1}]"
             )
         if m1 == m2:
             raise ValueError(
@@ -98,7 +106,7 @@ def _normalize_memristive_phase_idx(
         idx = memristive_phase_idx
         if idx < 0 or idx >= n_phases:
             raise ValueError(
-                f"memristive_phase_idx must be in [0, {n_phases-1}] for {n_modes} modes, got {idx}"
+                f"memristive_phase_idx must be in [0, {n_phases - 1}] for {n_modes} modes, got {idx}"
             )
         return (idx,)
     # Sequence (tuple, list, etc.)
@@ -108,7 +116,7 @@ def _normalize_memristive_phase_idx(
     for idx in indices:
         if idx < 0 or idx >= n_phases:
             raise ValueError(
-                f"Each memristive_phase_idx must be in [0, {n_phases-1}] for {n_modes} modes, got {idx}"
+                f"Each memristive_phase_idx must be in [0, {n_phases - 1}] for {n_modes} modes, got {idx}"
             )
     if len(indices) != len(set(indices)):
         raise ValueError(
@@ -171,15 +179,23 @@ def run_simulation_sequence_np(
         raise ValueError(f"n_samples must be a positive int, got {n_samples!r}")
 
     n_phases = n_modes * (n_modes - 1)
-    memristive_indices = _normalize_memristive_phase_idx(memristive_phase_idx, n_modes, n_phases)
+    memristive_indices = _normalize_memristive_phase_idx(
+        memristive_phase_idx, n_modes, n_phases
+    )
     n_memristive = len(memristive_indices)
-    output_modes = _normalize_memristive_output_modes(
-        memristive_output_modes, memristive_indices, n_modes
-    ) if n_memristive > 0 else ()
+    output_modes = (
+        _normalize_memristive_output_modes(
+            memristive_output_modes, memristive_indices, n_modes
+        )
+        if n_memristive > 0
+        else ()
+    )
 
     # Continuous mode only when memristive is active
     if n_swipe > 0 and n_memristive == 0:
-        print("Warning: Continuous mode requires memristive phases. Switching to discrete.")
+        print(
+            "Warning: Continuous mode requires memristive phases. Switching to discrete."
+        )
         n_swipe = 0
     if n_swipe > 0 and swipe_span <= 0:
         raise ValueError("swipe_span must be > 0 for continuous mode.")
@@ -199,21 +215,37 @@ def run_simulation_sequence_np(
     if output_mode == "coincidence":
         if n_memristive > 0:
             raise ValueError("Coincidence mode does not support memristive phases yet")
-        in_modes = (1, 4) if n_modes >= 6 else (0, 1) if input_modes is None else tuple(int(m) for m in input_modes)
+        in_modes = (
+            (1, 4)
+            if n_modes >= 6
+            else (0, 1)
+            if input_modes is None
+            else tuple(int(m) for m in input_modes)
+        )
         if len(in_modes) != 2:
-            raise ValueError(f"Coincidence mode requires exactly 2 input modes, got {in_modes}")
+            raise ValueError(
+                f"Coincidence mode requires exactly 2 input modes, got {in_modes}"
+            )
         inp = [0] * n_modes
         for m in in_modes:
             if m < 0 or m >= n_modes:
-                raise ValueError(f"input_modes {input_modes} out of range [0, {n_modes-1}]")
+                raise ValueError(
+                    f"input_modes {input_modes} out of range [0, {n_modes - 1}]"
+                )
             inp[m] += 1
         input_state = pcvl.BasicState(inp)
-        working_detectors = tuple(working_detectors) if working_detectors is not None else (0, 1, 5)
+        working_detectors = (
+            tuple(working_detectors) if working_detectors is not None else (0, 1, 5)
+        )
         working_cc_indices = working_detectors_to_cc_indices(working_detectors, n_modes)
         cc_labels = get_cc_labels(n_modes)
         add_noise = noise_std is not None and (
             (isinstance(noise_std, (int, float)) and float(noise_std) > 0)
-            or (hasattr(noise_std, "__len__") and len(noise_std) > 0 and any(float(s) > 0 for s in noise_std))
+            or (
+                hasattr(noise_std, "__len__")
+                and len(noise_std) > 0
+                and any(float(s) > 0 for s in noise_std)
+            )
         )
     else:
         inp = [0] * n_modes
@@ -235,7 +267,7 @@ def run_simulation_sequence_np(
         state_m1_list.append(pcvl.BasicState(s1))
         state_m2_list.append(pcvl.BasicState(s2))
 
-    #pdb.set_trace()  # Debugging: check parameter normalization and setup before running simulations
+    # pdb.set_trace()  # Debugging: check parameter normalization and setup before running simulations
     # Build target states list for multi-class / probability extraction
     target_modes_list = []
     for m in target_mode:
@@ -261,7 +293,7 @@ def run_simulation_sequence_np(
     # Precompute base phases and offsets for continuous mode
     if mode == "continuous":
         enc_base = encoded_phases
-        #TODO: Use Iris data for that
+        # TODO: Use Iris data for that
         offsets = np.linspace(
             -swipe_span / 2, swipe_span / 2, n_swipe, dtype=encoded_phases.dtype
         )
@@ -312,9 +344,13 @@ def run_simulation_sequence_np(
                     mem_p2[t, j] = probs.get(state_m2_list[j], 0.0)
             if output_mode == "coincidence":
                 coinc = probs_to_coincidences(probs, n_modes)
-                out = postselect_measurement(coinc, working_cc_indices, cc_labels, fallback_uniform=True)
+                out = postselect_measurement(
+                    coinc, working_cc_indices, cc_labels, fallback_uniform=True
+                )
                 if add_noise:
-                    out = apply_noise_to_outcomes(out, noise_std, working_cc_indices, cc_labels, seed=i)
+                    out = apply_noise_to_outcomes(
+                        out, noise_std, working_cc_indices, cc_labels, seed=i
+                    )
                 if return_class_probs and len(working_cc_indices) > 1:
                     preds[i, :] = out[working_cc_indices]
                 else:
@@ -332,7 +368,12 @@ def run_simulation_sequence_np(
             # swipe mode (only when memristive)
             p1_swipe = np.empty((n_swipe, n_memristive), dtype=float)
             p2_swipe = np.empty((n_swipe, n_memristive), dtype=float)
-            target_swipe = np.empty((n_swipe, n_classes) if return_class_probs and n_classes > 1 else (n_swipe,), dtype=float)
+            target_swipe = np.empty(
+                (n_swipe, n_classes)
+                if return_class_probs and n_classes > 1
+                else (n_swipe,),
+                dtype=float,
+            )
             for k, off in enumerate(offsets):
                 enc_phi = enc_base[i] + off
                 phases = params[:-n_memristive].copy()
@@ -355,18 +396,30 @@ def run_simulation_sequence_np(
                     p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
                 if output_mode == "coincidence":
                     coinc = probs_to_coincidences(probs, n_modes)
-                    out = postselect_measurement(coinc, working_cc_indices, cc_labels, fallback_uniform=True)
+                    out = postselect_measurement(
+                        coinc, working_cc_indices, cc_labels, fallback_uniform=True
+                    )
                     if add_noise:
-                        out = apply_noise_to_outcomes(out, noise_std, working_cc_indices, cc_labels, seed=i * 1000 + k)
+                        out = apply_noise_to_outcomes(
+                            out,
+                            noise_std,
+                            working_cc_indices,
+                            cc_labels,
+                            seed=i * 1000 + k,
+                        )
                     if return_class_probs and len(working_cc_indices) > 1:
                         target_swipe[k, :] = out[working_cc_indices]
                     else:
-                        target_swipe[k] = out[working_cc_indices[0]] if working_cc_indices else 0.0
+                        target_swipe[k] = (
+                            out[working_cc_indices[0]] if working_cc_indices else 0.0
+                        )
                 elif return_class_probs and n_classes > 1:
                     for c, ts in enumerate(target_modes_list):
                         target_swipe[k, c] = probs.get(ts, 0.0)
                 else:
-                    target_swipe[k] = sum(probs.get(ts, 0.0) for ts in target_modes_list)
+                    target_swipe[k] = sum(
+                        probs.get(ts, 0.0) for ts in target_modes_list
+                    )
                     if len(target_modes_list) > 1:
                         target_swipe[k] /= len(target_modes_list)
             if output_mode == "coincidence" and working_cc_indices:
@@ -379,7 +432,10 @@ def run_simulation_sequence_np(
             else:
                 preds[i] = target_swipe.mean()
             for j in range(n_memristive):
-                mem_p1[t, j], mem_p2[t, j] = p1_swipe[:, j].mean(), p2_swipe[:, j].mean()
+                mem_p1[t, j], mem_p2[t, j] = (
+                    p1_swipe[:, j].mean(),
+                    p2_swipe[:, j].mean(),
+                )
 
     # finalize
     elapsed = time.perf_counter() - start_time

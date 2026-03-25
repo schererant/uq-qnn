@@ -34,21 +34,22 @@ def main():
     n_modes = 6
     n_phases = n_modes * (n_modes - 1)
     encoding_mode = 0
-    input_modes = (1, 4)              # 2-photon input ports
+    input_modes = (1, 4)  # 2-photon input ports
     working_detectors = tuple(range(n_modes))  # all detectors active
 
-    config['n_data'] = 100
-    config['sigma_noise'] = 0.005
-    config['lr'] = 0.05
-    config['epochs'] = 60
-    config['memory_depth'] = 2
-    config['phase_idx'] = tuple(range(n_phases))
+    config["n_data"] = 100
+    config["sigma_noise"] = 0.005
+    config["lr"] = 0.05
+    config["epochs"] = 60
+    config["memory_depth"] = 2
+    config["phase_idx"] = tuple(range(n_phases))
     n_input_photons = len(input_modes)
     n_photons = tuple([n_input_photons] * n_phases)
     n_samples = 100
 
     # --- Print settings ---
     from src.coincidence import get_cc_labels, working_detectors_to_cc_indices
+
     cc_labels = get_cc_labels(n_modes)
     active_cc_indices = working_detectors_to_cc_indices(working_detectors, n_modes)
     print("\n--- Settings ---")
@@ -57,7 +58,9 @@ def main():
     print(f"  encoding_mode:     {encoding_mode}")
     print(f"  input_modes:       {input_modes}")
     print(f"  working_detectors: {working_detectors}")
-    print(f"  active CC channels ({len(active_cc_indices)}): {[cc_labels[i] for i in active_cc_indices]}")
+    print(
+        f"  active CC channels ({len(active_cc_indices)}): {[cc_labels[i] for i in active_cc_indices]}"
+    )
     print(f"  n_data:            {config['n_data']}")
     print(f"  sigma_noise:       {config['sigma_noise']}")
     print(f"  memory_depth:      {config['memory_depth']}")
@@ -69,18 +72,19 @@ def main():
     # --- Data ---
     print("Generating synthetic data...")
     X_train, y_train, X_test, y_test = get_data(
-        config['n_data'],
-        config['sigma_noise'],
-        'quartic_data',
+        config["n_data"],
+        config["sigma_noise"],
+        "quartic_data",
     )
 
     # --- Training ---
     print("Training model with coincidence measurements...")
     theta_opt, history = train_pytorch(
-        X_train, y_train,
-        memory_depth=config['memory_depth'],
-        lr=config['lr'],
-        epochs=config['epochs'],
+        X_train,
+        y_train,
+        memory_depth=config["memory_depth"],
+        lr=config["lr"],
+        epochs=config["epochs"],
         n_samples=n_samples,
         n_swipe=0,
         swipe_span=0.0,
@@ -101,7 +105,7 @@ def main():
     enc_test = 2 * np.arccos(X_test)
     preds = run_simulation_sequence_np(
         theta_opt,
-        config['memory_depth'],
+        config["memory_depth"],
         n_samples,
         encoded_phases=enc_test,
         n_swipe=0,
@@ -132,7 +136,7 @@ def main():
 
         p = run_simulation_sequence_np(
             perturbed_theta,
-            config['memory_depth'],
+            config["memory_depth"],
             sample_count,
             encoded_phases=enc_test,
             n_swipe=0,
@@ -157,48 +161,56 @@ def main():
 
     plt.subplot(2, 2, 1)
     plt.plot(history)
-    plt.yscale('log')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training Loss (coincidence)')
+    plt.yscale("log")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training Loss (coincidence)")
     plt.grid(True)
 
     plt.subplot(2, 2, 2)
-    plt.scatter(X_train, y_train, s=20, label='Training data', alpha=0.7)
-    plt.plot(X_test, y_test, 'k--', label='Ground truth')
-    plt.plot(X_test, mean_preds, 'r-', label='Mean prediction')
+    plt.scatter(X_train, y_train, s=20, label="Training data", alpha=0.7)
+    plt.plot(X_test, y_test, "k--", label="Ground truth")
+    plt.plot(X_test, mean_preds, "r-", label="Mean prediction")
     plt.fill_between(
         X_test,
         mean_preds - 2 * std_preds,
         mean_preds + 2 * std_preds,
-        color='r', alpha=0.3, label='95% CI',
+        color="r",
+        alpha=0.3,
+        label="95% CI",
     )
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title('Regression with Uncertainty (coincidence)')
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Regression with Uncertainty (coincidence)")
     plt.legend()
     plt.grid(True)
 
     plt.subplot(2, 2, 3)
-    scatter = plt.scatter(X_test, std_preds, c=np.abs(mean_preds - y_test), cmap='viridis')
-    plt.colorbar(scatter, label='Absolute error')
-    plt.xlabel('x')
-    plt.ylabel('Standard deviation')
-    plt.title('Uncertainty vs. Input')
+    scatter = plt.scatter(
+        X_test, std_preds, c=np.abs(mean_preds - y_test), cmap="viridis"
+    )
+    plt.colorbar(scatter, label="Absolute error")
+    plt.xlabel("x")
+    plt.ylabel("Standard deviation")
+    plt.title("Uncertainty vs. Input")
     plt.grid(True)
 
     plt.subplot(2, 2, 4)
     plt.scatter(std_preds, np.abs(mean_preds - y_test), alpha=0.7)
-    plt.plot([0, np.max(std_preds)], [0, 2 * np.max(std_preds)], 'k--',
-             label='y=2x (well calibrated)')
-    plt.xlabel('Uncertainty (std)')
-    plt.ylabel('Absolute error')
-    plt.title('Calibration: Error vs. Uncertainty')
+    plt.plot(
+        [0, np.max(std_preds)],
+        [0, 2 * np.max(std_preds)],
+        "k--",
+        label="y=2x (well calibrated)",
+    )
+    plt.xlabel("Uncertainty (std)")
+    plt.ylabel("Absolute error")
+    plt.title("Calibration: Error vs. Uncertainty")
     plt.legend()
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig('coincidence_regression_with_uncertainty.png', dpi=300)
+    plt.savefig("coincidence_regression_with_uncertainty.png", dpi=300)
     plt.show()
 
     sim_logger.report()

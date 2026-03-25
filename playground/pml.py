@@ -4,21 +4,23 @@ from perceval.algorithm import Sampler
 
 class PhotonicMachineLearning:
     def __init__(self, size):
-        size = size # M for M X M circuit
+        size = size  # M for M X M circuit
         circuit = None
 
     def build_circuit(size, phases, circuit_type="Clements") -> pcvl.Circuit:
-        
+
         if circuit_type == "Clements":
             """
             Build the Clements circuit layout.
             """
-            
+
             # Check if the number of phases matches the expected number
             expected_num_phases = size * (size - 1) // 2
             if len(phases) != expected_num_phases:
-                raise ValueError(f"Expected {expected_num_phases} phases, but got {len(phases)}")
-            
+                raise ValueError(
+                    f"Expected {expected_num_phases} phases, but got {len(phases)}"
+                )
+
             # Initialize the circuit
             circuit = pcvl.Circuit(size)
             param_idx = 0
@@ -30,17 +32,17 @@ class PhotonicMachineLearning:
             # Implement the rectangular mesh (Clements layout)
             for layer in range(size):
                 start_idx = layer % 2  # Alternating between even and odd layers
-                
+
                 for i in range(start_idx, size - 1, 2):
                     # Add a Mach-Zehnder interferometer
-                    circuit.add((i, i+1), pcvl.BS())
-                    circuit.add((i+1,), pcvl.PS(phi=phases[param_idx]))
-                    circuit.add((i, i+1), pcvl.BS())
+                    circuit.add((i, i + 1), pcvl.BS())
+                    circuit.add((i + 1,), pcvl.PS(phi=phases[param_idx]))
+                    circuit.add((i, i + 1), pcvl.BS())
                     param_idx += 1
-                    
+
                     if param_idx >= len(phases):
                         break
-                    
+
     def _sim_circuit(self, input_fock, backend="SLOS", noise_model=None):
         """
         Simulate the circuit with the given input Fock state.
@@ -60,8 +62,5 @@ class PhotonicMachineLearning:
         sampler = Sampler(proc)
         counts = sampler.sample_count(100)
         probs = sampler.probs(100)
-        
-        return counts['results'], probs['results']
-                    
-                    
-    
+
+        return counts["results"], probs["results"]

@@ -23,23 +23,18 @@ from src.utils import config
 
 
 def train_and_evaluate(
+    datafunction,
+    encoding_mode,
+    target_mode,
     n_data: int,
     sigma_noise: float,
-    datafunction: str,
+    n_samples: int,
+    epochs: int,
+    n_phases: int,
+    n_modes: int,
     memory_depth: int,
     lr: float,
-    epochs: int,
-    n_samples: int,
-    n_swipe: int,
-    swipe_span: float,
-    n_modes: int,
-    encoding_mode: int,
-    n_photons: Sequence[int],
-    target_mode: Optional[Tuple[int, ...]],
-    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    encoding_phase_idx: Optional[Union[int, Sequence[int]]]
-    ): 
+):
     """
     Train and evaluate a model on the specified data function.
 
@@ -54,14 +49,13 @@ def train_and_evaluate(
         tuple: (X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history)
     """
     # Generate synthetic data
-    X_train, y_train, X_test, y_test = get_data(
-        n_data, sigma_noise, datafunction
-    )
+    X_train, y_train, X_test, y_test = get_data(n_data, sigma_noise, datafunction)
 
     # Train the model (3 modes for Clements 3x3)
     n_modes = n_modes
     theta_opt, history = train_pytorch(
-        X_train, y_train,
+        X_train,
+        y_train,
         memory_depth=memory_depth,
         lr=lr,
         epochs=epochs,
@@ -70,11 +64,7 @@ def train_and_evaluate(
         swipe_span=0.0,
         n_modes=n_modes,
         encoding_mode=encoding_mode,
-        n_photons=n_photons,
         target_mode=target_mode,
-        memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes,
-        encoding_phase_idx=encoding_phase_idx 
     )
 
     # Uncertainty estimation through multiple forward passes
@@ -83,18 +73,18 @@ def train_and_evaluate(
 
     for i in range(n_forward_passes):
         # Each forward pass with a different sample count introduces some randomness
-        sample_count = n_samples + np.random.randint(-10, 10)
-        sample_count = max(10, sample_count)  # Ensure at least 10 samples
-        
+        sample_count = n_samples + np.random.randint(-100, 100)
+        sample_count = max(100, sample_count)  # Ensure at least 100 samples
+
         # Small random perturbation to parameters to simulate quantum noise
         perturbed_theta = theta_opt.copy()
         # Only perturb phases slightly, not the weight
-        perturbed_theta[:-1] += np.random.normal(0, 0.03, size=len(perturbed_theta)-1)
-        
+        perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta) - 1)
+
         enc_test = 2 * np.arccos(X_test)
         preds = run_simulation_sequence_np(
             perturbed_theta,
-            memory_depth,
+            config["memory_depth"],
             sample_count,
             encoded_phases=enc_test,
             n_swipe=0,
@@ -102,10 +92,7 @@ def train_and_evaluate(
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx 
-            )
+        )
         all_preds[:, i] = preds
 
     # Compute mean and standard deviation of predictions
@@ -126,22 +113,24 @@ def compute_metrics(y_test, mean_preds, std_preds):
     uncertainty_score = np.mean(abs_error / (std_preds + 1e-6))
 
     # Compute prediction interval coverage (should be close to 0.95 for well-calibrated model)
-    inside_interval = (y_test >= mean_preds - 2*std_preds) & (y_test <= mean_preds + 2*std_preds)
+    inside_interval = (y_test >= mean_preds - 2 * std_preds) & (
+        y_test <= mean_preds + 2 * std_preds
+    )
     coverage = np.mean(inside_interval)
 
     return {
-        'mse': mse,
-        'rmse': rmse,
-        'mae': mae,
-        'uncertainty_score': uncertainty_score,
-        'coverage': coverage
+        "mse": mse,
+        "rmse": rmse,
+        "mae": mae,
+        "uncertainty_score": uncertainty_score,
+        "coverage": coverage,
     }
 
 
 def plot_function_comparison(results, functions):
     """Plot comparison of model performance on different functions."""
     n_functions = len(functions)
-    fig, axes = plt.subplots(n_functions, 3, figsize=(18, 4*n_functions))
+    fig, axes = plt.subplots(n_functions, 3, figsize=(18, 4 * n_functions))
 
     if n_functions == 1:
         axes = axes.reshape(1, 3)
@@ -150,75 +139,78 @@ def plot_function_comparison(results, functions):
 
     for i, func_name in enumerate(functions):
         result = results[func_name]
-        X_train, y_train, X_test, y_test = result['data']
-        mean_preds, std_preds = result['predictions']
-        history = result['history']
-        metrics = result['metrics']
+        X_train, y_train, X_test, y_test = result["data"]
+        mean_preds, std_preds = result["predictions"]
+        history = result["history"]
+        metrics = result["metrics"]
 
         # Plot training data and predictions
         ax = axes[i, 0]
-        ax.scatter(X_train, y_train, s=20, label='Training data', alpha=0.7)
-        ax.plot(X_test, y_test, 'k--', label='Ground truth')
-        ax.plot(X_test, mean_preds, 'r-', label='Mean prediction')
+        ax.scatter(X_train, y_train, s=20, label="Training data", alpha=0.7)
+        ax.plot(X_test, y_test, "k--", label="Ground truth")
+        ax.plot(X_test, mean_preds, "r-", label="Mean prediction")
         ax.fill_between(
             X_test,
-            mean_preds - 2*std_preds,
-            mean_preds + 2*std_preds,
-            color='r', alpha=0.3,
-            label='95% confidence interval'
+            mean_preds - 2 * std_preds,
+            mean_preds + 2 * std_preds,
+            color="r",
+            alpha=0.3,
+            label="95% confidence interval",
         )
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_title(f'{func_name} - Predictions')
-        ax.legend(loc='upper left')
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_title(f"{func_name} - Predictions")
+        ax.legend(loc="upper left")
         ax.grid(True)
 
         # Plot training loss
         ax = axes[i, 1]
         ax.plot(history)
-        ax.set_yscale('log')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel('Loss')
-        ax.set_title(f'{func_name} - Training Loss')
+        ax.set_yscale("log")
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Loss")
+        ax.set_title(f"{func_name} - Training Loss")
         ax.grid(True)
 
         # Plot uncertainty vs error
         ax = axes[i, 2]
         abs_error = np.abs(mean_preds - y_test)
-        scatter = ax.scatter(std_preds, abs_error, alpha=0.7, c=X_test, cmap='viridis')
-        plt.colorbar(scatter, ax=ax, label='x value')
+        scatter = ax.scatter(std_preds, abs_error, alpha=0.7, c=X_test, cmap="viridis")
+        plt.colorbar(scatter, ax=ax, label="x value")
         max_val = max(np.max(std_preds), np.max(abs_error))
-        ax.plot([0, max_val], [0, max_val], 'k--', label='y=x (perfect calibration)')
-        ax.set_xlabel('Uncertainty (std)')
-        ax.set_ylabel('Absolute error')
-        ax.set_title(f'{func_name} - Calibration')
+        ax.plot([0, max_val], [0, max_val], "k--", label="y=x (perfect calibration)")
+        ax.set_xlabel("Uncertainty (std)")
+        ax.set_ylabel("Absolute error")
+        ax.set_title(f"{func_name} - Calibration")
         ax.grid(True)
         ax.legend()
 
         # Collect metrics for table
-        metrics_table.append([
-            func_name,
-            f"{metrics['rmse']:.4f}",
-            f"{metrics['mae']:.4f}",
-            f"{metrics['uncertainty_score']:.4f}",
-            f"{metrics['coverage']:.4f}"
-        ])
+        metrics_table.append(
+            [
+                func_name,
+                f"{metrics['rmse']:.4f}",
+                f"{metrics['mae']:.4f}",
+                f"{metrics['uncertainty_score']:.4f}",
+                f"{metrics['coverage']:.4f}",
+            ]
+        )
 
     plt.tight_layout()
 
     # Create metrics table as a separate figure
-    fig_table, ax_table = plt.subplots(figsize=(10, n_functions*0.5 + 1))
-    ax_table.axis('off')
+    fig_table, ax_table = plt.subplots(figsize=(10, n_functions * 0.5 + 1))
+    ax_table.axis("off")
     table = ax_table.table(
         cellText=metrics_table,
-        colLabels=['Function', 'RMSE', 'MAE', 'Uncert. Score', 'Coverage'],
-        cellLoc='center',
-        loc='center'
+        colLabels=["Function", "RMSE", "MAE", "Uncert. Score", "Coverage"],
+        cellLoc="center",
+        loc="center",
     )
     table.auto_set_font_size(False)
     table.set_fontsize(10)
     table.scale(1.2, 1.5)
-    ax_table.set_title('Performance Metrics Comparison')
+    ax_table.set_title("Performance Metrics Comparison")
 
     plt.tight_layout()
 
@@ -235,32 +227,39 @@ def main():
     np.random.seed(42)
     
     # Configure parameters
-    n_data = 100
-    sigma_noise = 0.002
-    lr = 0.04
-    epochs = 120
-    memory_depth = 2
-    n_modes = 6
-    n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
-    phase_idx = tuple(range(n_phases))
-    n_photons = tuple([2] * n_phases)
-    n_samples = 20
-    encoding_mode = 2
-    target_mode=(n_modes - 2,)
-    memristive_output_modes = None
-    memristive_phase_idx=None
-    encoding_phase_idx=None
+    lr = 0.05
+    memory_depth = 1
+    n_modes = 3
+    config["phase_idx"] = (0, 1, 2)
+    config["n_photons"] = (1, 1, 1)
+    n_phases = n_modes * (
+        n_modes - 1
+    )  # Number of external phase parameters (excluding memory phase)
 
 
     # Functions to compare
     functions = [
-        'quartic_data',  
-        'neg_qubic_data',
-        'sinusoid_data'
+        "quartic_data",
+        "sinusoid_data",
+        "multi_modal_data",
+        "step_function_data",
+        "oscillating_poly_data",
+        "damped_cosine_data",
     ]
-    
+
     # Print parameter structure info
-    print(f"Using array-based circuit structure with {n_phases} phase parameters (+ memory phase)")
+    print(
+        f"Using array-based circuit structure with {n_phases} phase parameters (+ memory phase)"
+    )
+
+    # Parameters
+    n_data = 80
+    sigma_noise = 0.02
+    n_samples = 20
+    epochs = 300
+    encoding_mode = 2
+    target_mode = (n_phases - 1,)  # Last mode as target
+    lr = 0.05
 
     # Store results
     results = {}
@@ -268,23 +267,20 @@ def main():
     # Train and evaluate on each function
     for func_name in functions:
         print(f"\n=== Training on {func_name} ===")
-        X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = train_and_evaluate(
-            datafunction=func_name, 
-            n_data=n_data,
-            sigma_noise=sigma_noise,
-            memory_depth=memory_depth,
-            lr=lr,
-            epochs=epochs,
-            n_samples=n_samples,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            n_photons=n_photons,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx
+        X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = (
+            train_and_evaluate(
+                datafunction=func_name,
+                encoding_mode=encoding_mode,
+                target_mode=target_mode,
+                n_data=n_data,
+                sigma_noise=sigma_noise,
+                n_samples=n_samples,
+                epochs=epochs,
+                n_phases=n_phases,
+                n_modes=n_modes,
+                memory_depth=memory_depth,
+                lr=lr,
+            )
         )
 
         metrics = compute_metrics(y_test, mean_preds, std_preds)
@@ -294,19 +290,19 @@ def main():
         print(f"  Coverage (95% interval): {metrics['coverage']:.6f}")
 
         results[func_name] = {
-            'data': (X_train, y_train, X_test, y_test),
-            'predictions': (mean_preds, std_preds),
-            'theta': theta_opt,
-            'history': history,
-            'metrics': metrics
+            "data": (X_train, y_train, X_test, y_test),
+            "predictions": (mean_preds, std_preds),
+            "theta": theta_opt,
+            "history": history,
+            "metrics": metrics,
         }
 
     # Plot comparison
     fig, fig_table = plot_function_comparison(results, functions)
 
     # Save figures
-    fig.savefig('function_comparison.png', dpi=300, bbox_inches='tight')
-    fig_table.savefig('function_metrics.png', dpi=300, bbox_inches='tight')
+    fig.savefig("function_comparison.png", dpi=300, bbox_inches="tight")
+    fig_table.savefig("function_metrics.png", dpi=300, bbox_inches="tight")
 
     plt.show()
 
