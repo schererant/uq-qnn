@@ -1,7 +1,6 @@
 import strawberryfields as sf
 from strawberryfields.ops import *
 import numpy as np
-from abc import ABC, abstractmethod
 
 class MemristorCircuit:
     def __init__(self, phase1, memristor_weight, phase3, encoded_phases):

@@ -39,7 +39,7 @@ class SimulationLogger:
         print(f"[SimulationLogger] Total sequence time: {self.total_time:.3f} seconds")
         if self.call_count > 0:
             print(f"[SimulationLogger] Avg time per sequence: {self.total_time / self.call_count:.6f} seconds")
-        print(f"[SimulationLogger] Sampler sample counts used:")
+        print("[SimulationLogger] Sampler sample counts used:")
         for n_samples, freq in self.samples_counter.items():
             print(f"  {n_samples} samples: {freq} times")
         print(f"[SimulationLogger] Individual circuit simulations: {self.circuit_call_count}")

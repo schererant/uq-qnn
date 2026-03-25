@@ -1,20 +1,15 @@
-import unittest
-import numpy as np
 import tensorflow as tf
 from strawberryfields.ops import *
 import warnings
-import csv
 import os
-import shutil
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.dataloader import get_data, quartic_data
 from src.logger import ExperimentLogger
-from src.config import Config, HyperparameterConfig, ModelComparisonConfig, MLPConfig, PolynomialConfig, PredictionConfig, TrainingConfig, DataConfig
+from src.config import Config
 from src.model import train_memristor
-from src.modelmegabigding import train_megabigmemristor
 
 tf.get_logger().setLevel('ERROR')
 warnings.filterwarnings("ignore")

@@ -12,7 +12,6 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

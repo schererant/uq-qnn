@@ -1,5 +1,5 @@
 import perceval as pcvl
-from perceval.algorithm import Analyzer, Sampler
+from perceval.algorithm import Sampler
 
 
 class PhotonicMachineLearning:

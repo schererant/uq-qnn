@@ -22,7 +22,7 @@ import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import perceval as pcvl
-from src.circuits import memristor_circuit, encoding_circuit, build_circuit
+from src.circuits import memristor_circuit, build_circuit
 
 def create_memristor_circuit():
     """Creates a memristor circuit with random phases."""
@@ -32,7 +32,7 @@ def create_memristor_circuit():
     # Create the memristor circuit
     circuit = memristor_circuit(phases)
     
-    print(f"Created memristor circuit with 3 modes")
+    print("Created memristor circuit with 3 modes")
     print(f"Phases: {phases}")
     
     return circuit, phases
@@ -191,7 +191,7 @@ def main():
     print("\n=== Simulating Quartic Function Training ===")
     
     # Import required modules for training
-    from src.data import get_data, quartic_data
+    from src.data import get_data
     from src.training import train_pytorch
     from src.simulation import run_simulation_sequence_np
     from src.utils import config

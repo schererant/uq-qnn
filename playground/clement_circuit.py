@@ -2,9 +2,7 @@ import strawberryfields as sf
 from strawberryfields.ops import *
 import numpy as np
 
-import strawberryfields as sf
 from strawberryfields.ops import *
-import numpy as np
 
 class MemristorCircuit:
     @staticmethod

@@ -12,9 +12,8 @@ import argparse
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional, Tuple, List
 
-from src.data import get_data, load_measurement_pickle, quartic_data
+from src.data import get_data, load_measurement_pickle
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.utils import config, _resolve_n_swipe
@@ -142,7 +141,7 @@ def update_config_from_args(args):
             target_mode = tuple(int(m) for m in args.target_mode.split(','))
             # Validate target modes
             if any(m >= args.n_modes for m in target_mode):
-                print(f"Warning: Target mode exceeds available modes in Clements circuit")
+                print("Warning: Target mode exceeds available modes in Clements circuit")
                 target_mode = (min(args.n_modes - 1, max(0, target_mode[0])),)
         except ValueError:
             print(f"Warning: Invalid target mode format '{args.target_mode}', using default")
@@ -441,7 +440,7 @@ def main():
     update_config_from_args(args)
     
     print("=== UQ-QNN: Photonic Neural Network Training ===")
-    print(f"Running with configuration:")
+    print("Running with configuration:")
     for key, value in config.items():
         print(f"  {key}: {value}")
     

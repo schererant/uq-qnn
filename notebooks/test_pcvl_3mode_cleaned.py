@@ -1,8 +1,5 @@
 import perceval as pcvl
-from perceval import Circuit, BasicState, NoiseModel, Processor, PostSelect, pdisplay, Detector
 from perceval.algorithm import Sampler
-from perceval import catalog
-from tqdm import tqdm  # For Jupyter notebook progress bars
 import numpy as np
 from typing import Callable
 

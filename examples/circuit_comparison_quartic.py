@@ -15,7 +15,6 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,10 +24,7 @@ from src.data import get_data, quartic_data
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.circuits import (
-    memristor_circuit,
-    clements_circuit,
-    build_circuit,
-    encoding_circuit
+    build_circuit
 )
 from src.utils import config
 
@@ -194,7 +190,7 @@ def train_and_evaluate(label, n_modes, X_train, y_train, X_test, y_test, memrist
         
         # Handle NaN values in predictions
         if np.isnan(predictions).any():
-            print(f"Warning: NaN values in predictions")
+            print("Warning: NaN values in predictions")
             # For visualization purposes, replace NaNs with zeros
             predictions = np.nan_to_num(predictions, nan=0.0)
         
