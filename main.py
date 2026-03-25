@@ -71,6 +71,13 @@ def parse_arguments():
         help="Number of samples for circuit simulation",
     )
     sim_group.add_argument(
+        "--backend",
+        type=str,
+        default="numpy",
+        choices=["numpy", "perceval"],
+        help="Simulation backend: numpy (fast unitary) or perceval (full SLOS pipeline)",
+    )
+    sim_group.add_argument(
         "--memory-depth",
         type=int,
         default=2,
@@ -265,6 +272,7 @@ def update_config_from_args(args):
 
     # Sampler settings
     config["n_samples"] = args.n_samples
+    config["sim_backend"] = args.backend
 
     # Coincidence mode settings
     config["output_mode"] = args.output_mode
@@ -330,6 +338,7 @@ def run_training(X_train, y_train, X_test, y_test, args):
             working_detectors=config["working_detectors"],
             noise_std=config["noise_std"],
             verbose=args.verbose,
+            backend=args.backend,
         )
     else:
         print("Running in discrete mode")
@@ -354,6 +363,7 @@ def run_training(X_train, y_train, X_test, y_test, args):
             working_detectors=config["working_detectors"],
             noise_std=config["noise_std"],
             verbose=args.verbose,
+            backend=args.backend,
         )
 
     training_time = time.time() - start_time
@@ -381,6 +391,7 @@ def run_training(X_train, y_train, X_test, y_test, args):
                 input_modes=config["input_modes"],
                 working_detectors=config["working_detectors"],
                 noise_std=config["noise_std"],
+                backend=args.backend,
             )
         else:
             preds = run_simulation_sequence_np(
@@ -400,6 +411,7 @@ def run_training(X_train, y_train, X_test, y_test, args):
                 input_modes=config["input_modes"],
                 working_detectors=config["working_detectors"],
                 noise_std=config["noise_std"],
+                backend=args.backend,
             )
     except Exception as e:
         print(f"Error during prediction: {e}")
@@ -424,6 +436,7 @@ def run_training(X_train, y_train, X_test, y_test, args):
             input_modes=config["input_modes"],
             working_detectors=config["working_detectors"],
             noise_std=config["noise_std"],
+            backend=args.backend,
         )
 
     # Calculate metrics

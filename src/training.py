@@ -54,6 +54,7 @@ def train_pytorch_generic(
     loss_type: str = "mse",
     n_classes: int = 1,
     seed: int = 42,
+    backend: str = "numpy",
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Trains the photonic model using PyTorch and returns optimized parameters and loss history.
@@ -147,6 +148,7 @@ def train_pytorch_generic(
         input_modes=input_modes,
         working_detectors=working_detectors,
         noise_std=noise_std,
+        backend=backend,
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
@@ -196,6 +198,7 @@ def train_pytorch(
     verbose: bool = False,
     loss_type: str = "mse",
     n_classes: int = 1,
+    backend: str = "numpy",
 ) -> Tuple[np.ndarray, List[float]]:
     """
     Unified training path for both discrete and continuous modes.
@@ -235,6 +238,7 @@ def train_pytorch(
         working_detectors=working_detectors,
         noise_std=noise_std,
         verbose=verbose,
+        backend=backend,
     )
 
 
@@ -280,6 +284,8 @@ def gradient_check(
                         encoding_mode=0,
                         target_mode=(n_modes - 1,) if n_modes else None,
                         memristive_phase_idx=memristive_phase_idx,
+                        memristive_output_modes=None,
+                        encoding_phase_idx=None,
                     )
                     - y
                 )
@@ -308,11 +314,17 @@ def gradient_check(
         0.0,  # n_swipe, swipe_span
         n_modes,
         0,
-        (n_modes - 1,) if n_modes else None,  # n_modes, encoding_mode, target_mode
-        "mse",
-        1,  # loss_type, n_classes
+        (n_modes - 1,) if n_modes else None,
         memristive_phase_idx,
-        None,  # memristive_phase_idx, memristive_output_modes
+        None,  # memristive_output_modes
+        None,  # encoding_phase_idx
+        "mse",
+        1,  # n_classes
+        "singles",
+        None,  # input_modes
+        None,  # working_detectors
+        None,  # noise_std
+        "numpy",  # backend
     )
     loss.backward()
     psr_grad = th_t.grad.detach().cpu().numpy()

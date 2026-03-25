@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 import perceval as pcvl
 from typing import Optional, Tuple
@@ -49,7 +51,8 @@ def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> pcvl.Cir
     return c
 
 
-def _clements_mzi_pairs(n_modes: int) -> list[Tuple[int, int]]:
+@lru_cache(maxsize=None)
+def _clements_mzi_pairs(n_modes: int) -> tuple[Tuple[int, int], ...]:
     """
     Return the ordered list of MZI mode pairs for a rectangular Clements mesh.
 
@@ -79,7 +82,7 @@ def _clements_mzi_pairs(n_modes: int) -> list[Tuple[int, int]]:
         for j in range(0, n_modes - 1, 2):
             pairs.append((j, j + 1))
 
-    return pairs
+    return tuple(pairs)
 
 
 def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
@@ -238,4 +241,51 @@ def build_circuit(
         ) % (2 * np.pi)
 
     c.add(0, clements_circuit(mesh_phases, n_modes), merge=True)
+    return c
+
+
+def encoding_circuit_parametric(enc_param) -> pcvl.Circuit:
+    """
+    Same layout as encoding_circuit but with a Perceval Parameter for the phase shifter.
+    """
+    c = pcvl.Circuit(2, name="Encoding")
+    c.add((0, 1), pcvl.BS())
+    c.add((1,), pcvl.PS(phi=enc_param))
+    c.add((0, 1), pcvl.BS())
+    return c
+
+
+def build_parametric_circuit(
+    phases: np.ndarray,
+    enc_param,
+    n_modes: int,
+    encoding_mode: int,
+    encoding_phase_idx: Optional[int],
+) -> pcvl.Circuit:
+    """
+    Full Clements + encoding with a symbolic encoding phase (for reuse across data points).
+
+    Requires ``encoding_phase_idx is None`` (separate encoding block). For inline mesh
+    encoding, rebuild the circuit per evaluation.
+    """
+    if encoding_phase_idx is not None:
+        raise ValueError(
+            "build_parametric_circuit only supports separate encoding (encoding_phase_idx=None)"
+        )
+    if encoding_mode < 0:
+        raise ValueError(f"Encoding mode must be non-negative, got {encoding_mode}")
+    if n_modes < 2:
+        raise ValueError(f"Requires at least 2 modes, got {n_modes}")
+
+    expected_phases = n_modes * (n_modes - 1)
+    if len(phases) != expected_phases:
+        raise ValueError(
+            f"Clements circuit requires {expected_phases} phases for {n_modes} modes, "
+            f"got {len(phases)}"
+        )
+
+    c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
+    valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
+    c.add(valid_encoding_mode, encoding_circuit_parametric(enc_param), merge=True)
+    c.add(0, clements_circuit(phases, n_modes), merge=True)
     return c

@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-03-25 — Simulation performance: NumPy backend, parametric Perceval, parallel uncertainty
+
+### Added
+
+- **`src/numpy_backend.py`** — Fast path that builds the Clements unitary in NumPy and evaluates singles / collision-free coincidence probabilities via the Born rule (2×2 permanents). For non-memristive discrete runs, **all data points are vectorized** in one pass (separate or inline mesh encoding).
+- **`backend` parameter** — `run_simulation_sequence_np(..., backend="numpy" | "perceval")`. Default **`numpy`**. Threaded through `MemristorLossPSR`, `PhotonicModel`, `train_pytorch` / `train_pytorch_generic`.
+- **CLI** — `main.py`: `--backend {numpy,perceval}` (stored in `config["sim_backend"]` alongside existing config).
+- **`build_parametric_circuit` / `encoding_circuit_parametric`** in `src/circuits.py` — Perceval `pcvl.P` encoding phase for reuse; requires `encoding_phase_idx=None` (legacy separate encoding block).
+- **`SimulationLogger.log_circuits(elapsed, count)`** — Batch-friendly logging for vectorized runs.
+- **`uncertainty_forward_pass(job)`** in `src/simulation.py` — Picklable `(params, n_samples, encoded_phases, cfg)` worker for multiprocessing.
+- **`tests/test_numpy_perceval_agreement.py`** — Asserts NumPy vs Perceval outputs match within tight tolerance (singles, coincidence, inline encoding).
+
+### Changed
+
+- **`src/simulation.py`** — Dispatches on `backend`; Perceval path reuses one Processor/Sampler with `set_value` on the encoding parameter when discrete, non-memristive, and separate encoding; swipe inner loop uses the same pattern when applicable.
+- **`src/circuits.py`** — `@lru_cache` on `_clements_mzi_pairs` (returns `tuple`).
+- **`examples/coincidence_regression.py`**, **`examples/simple_regression.py`** — `SIM_BACKEND` constant; uncertainty estimation uses **`ProcessPoolExecutor`** + `uncertainty_forward_pass`.
+- **`src/__init__.py`** — Exports `numpy_backend`, `build_parametric_circuit`, `encoding_circuit_parametric`, `uncertainty_forward_pass`.
+- **`src/utils.py`** — `config["sim_backend"]` default `"numpy"`.
+- **`tests/test_imports.py`** — Imports `numpy_backend` module.
+
+### Notes
+
+- **NumPy + memristive** is supported for **singles** only (sequential loop). Coincidence + memristive remains unsupported; use **`backend="perceval"`** if that path is added later.
+- **Perceval** remains the full SLOS pipeline when `backend="perceval"`; parametric reuse does not apply when `encoding_phase_idx` is set (inline mesh encoding).
+
 ## 2026-03-24 — Fix broken PSR gradients for coincidence (2-photon) mode
 
 ### Bug: Wrong `n_photons` in Parameter Shift Rule (Critical)

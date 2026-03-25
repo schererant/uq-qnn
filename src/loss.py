@@ -45,6 +45,7 @@ class PhotonicModel(torch.nn.Module):
         noise_std: Optional[Union[float, Sequence[float]]] = None,
         loss_type: str = "mse",
         n_classes: int = 1,
+        backend: str = "numpy",
     ) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
@@ -66,6 +67,7 @@ class PhotonicModel(torch.nn.Module):
         self.input_modes = tuple(input_modes) if input_modes else None
         self.working_detectors = tuple(working_detectors) if working_detectors else None
         self.noise_std = noise_std
+        self.backend = backend
 
         # Validate inputs for classification
         if loss_type == "cross_entropy":
@@ -127,4 +129,5 @@ class PhotonicModel(torch.nn.Module):
             self.input_modes,
             self.working_detectors,
             self.noise_std,
+            self.backend,
         )

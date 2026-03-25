@@ -30,6 +30,7 @@ class TestImports(unittest.TestCase):
         from src import circuits
         from src import data
         from src import loss
+        from src import numpy_backend
         from src import simulation
         from src import training
         from src import utils
@@ -38,6 +39,7 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(circuits)
         self.assertIsNotNone(data)
         self.assertIsNotNone(loss)
+        self.assertIsNotNone(numpy_backend)
         self.assertIsNotNone(simulation)
         self.assertIsNotNone(training)
         self.assertIsNotNone(utils)
