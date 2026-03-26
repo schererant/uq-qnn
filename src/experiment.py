@@ -21,14 +21,21 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from src.circuit import PhotonicCircuit
+from src.coincidence import (
+    apply_noise_to_outcomes,
+    get_cc_labels,
+    postselect_measurement,
+    working_detectors_to_cc_indices,
+)
 from src.config import SimConfig
 from src.hardware import HardwareProfile, get_profile
+from src.logging_config import add_file_handler, get_logger, remove_file_handler
 from src.simulation import sim_logger
-from src.logging_config import get_logger, add_file_handler, remove_file_handler
 
 logger = get_logger(__name__)
 
@@ -91,7 +98,10 @@ class Experiment:
         if self.hardware is not None:
             self.config = self.hardware.apply_to_config(self.config)
             # If profile has noise, disable SimConfig-level noise_std to avoid double noise
-            if self.hardware.noise is not None and self.config.get("noise_std") is not None:
+            if (
+                self.hardware.noise is not None
+                and self.config.get("noise_std") is not None
+            ):
                 logger.warning(
                     "HardwareProfile %r has a noise model and config has noise_std set. "
                     "Profile noise takes precedence; setting noise_std=None.",
@@ -204,12 +214,19 @@ class Experiment:
         """
         from src.simulation import run_simulation_sequence_np
 
-        raw = run_simulation_sequence_np(
-            theta,
-            encoded_phases,
-            self.sim_cfg,
-            return_class_probs=return_class_probs,
-        )
+        if self._can_use_photonic_circuit():
+            raw = self._predict_with_photonic_circuit(
+                theta,
+                encoded_phases,
+                return_class_probs=return_class_probs,
+            )
+        else:
+            raw = run_simulation_sequence_np(
+                theta,
+                encoded_phases,
+                self.sim_cfg,
+                return_class_probs=return_class_probs,
+            )
         if self.hardware is not None and self.hardware.noise is not None:
             raw = self._apply_hardware_noise(raw)
         return raw
@@ -251,6 +268,154 @@ class Experiment:
                 result[i] = noised[0]
             return result
 
+    # ── photonic circuit fast path -------------------------------------------
+
+    def _can_use_photonic_circuit(self) -> bool:
+        cfg = self.sim_cfg
+        if cfg.backend != "numpy":
+            return False
+        if cfg.n_swipe != 0:
+            return False
+        return not self._has_memristive_phases()
+
+    def _has_memristive_phases(self) -> bool:
+        mpi = self.sim_cfg.memristive_phase_idx
+        if mpi is None:
+            return False
+        if isinstance(mpi, int):
+            return True
+        return len(tuple(mpi)) > 0
+
+    def _predict_with_photonic_circuit(
+        self,
+        theta: np.ndarray,
+        encoded_phases: np.ndarray,
+        *,
+        return_class_probs: bool,
+    ) -> np.ndarray:
+        circuit = self._build_photonic_circuit(theta)
+        if self.sim_cfg.output_mode == "coincidence":
+            return self._predict_coincidence_with_circuit(
+                circuit,
+                encoded_phases,
+                return_class_probs=return_class_probs,
+            )
+        return self._predict_singles_with_circuit(
+            circuit,
+            encoded_phases,
+            return_class_probs=return_class_probs,
+        )
+
+    def _build_photonic_circuit(self, theta: np.ndarray) -> PhotonicCircuit:
+        cfg = self.sim_cfg
+        n_phases = cfg.n_modes * (cfg.n_modes - 1)
+        phases = np.asarray(theta[:n_phases], dtype=np.float64)
+        return PhotonicCircuit(
+            n_modes=cfg.n_modes,
+            phases=phases,
+            encoding_mode=cfg.encoding_mode,
+            encoding_phase_idx=cfg.encoding_phase_idx,
+        )
+
+    def _predict_singles_with_circuit(
+        self,
+        circuit: PhotonicCircuit,
+        encoded_phases: np.ndarray,
+        *,
+        return_class_probs: bool,
+    ) -> np.ndarray:
+        cfg = self.sim_cfg
+        target_mode = (
+            cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
+        )
+        indices = tuple(int(m) for m in target_mode)
+        singles = circuit.singles_batch(encoded_phases)
+        if return_class_probs and len(indices) > 1:
+            return singles[:, indices]
+        selected = singles[:, indices]
+        if len(indices) > 1:
+            return selected.mean(axis=1)
+        return selected[:, 0]
+
+    def _predict_coincidence_with_circuit(
+        self,
+        circuit: PhotonicCircuit,
+        encoded_phases: np.ndarray,
+        *,
+        return_class_probs: bool,
+    ) -> np.ndarray:
+        cfg = self.sim_cfg
+        in_modes = self._coincidence_input_modes()
+        working_detectors = (
+            tuple(cfg.working_detectors)
+            if cfg.working_detectors is not None
+            else (0, 1, 5)
+        )
+        working_cc_indices = working_detectors_to_cc_indices(
+            working_detectors, cfg.n_modes
+        )
+        cc_labels = get_cc_labels(cfg.n_modes)
+        add_noise = self._should_add_noise(cfg.noise_std)
+        coinc = circuit.coincidences_batch(encoded_phases, input_modes=in_modes)
+        n_data = coinc.shape[0]
+        n_classes = len(working_cc_indices)
+        if return_class_probs and n_classes > 1:
+            preds = np.zeros((n_data, n_classes), dtype=float)
+        else:
+            preds = np.zeros(n_data, dtype=float)
+        for i in range(n_data):
+            out = postselect_measurement(
+                coinc[i],
+                working_cc_indices,
+                cc_labels,
+                fallback_uniform=True,
+            )
+            if add_noise:
+                out = apply_noise_to_outcomes(
+                    out,
+                    cfg.noise_std,
+                    working_cc_indices,
+                    cc_labels,
+                    seed=i,
+                )
+            if return_class_probs and n_classes > 1:
+                preds[i, :] = out[list(working_cc_indices)]
+            else:
+                preds[i] = out[working_cc_indices[0]] if working_cc_indices else 0.0
+        return preds
+
+    def _coincidence_input_modes(self) -> Tuple[int, int]:
+        cfg = self.sim_cfg
+        if cfg.input_modes is not None:
+            in_modes = tuple(int(m) for m in cfg.input_modes)
+        elif cfg.n_modes >= 6:
+            in_modes = (1, 4)
+        else:
+            in_modes = (0, 1)
+        if len(in_modes) != 2:
+            raise ValueError(
+                f"Coincidence mode requires exactly 2 input modes, got {in_modes}"
+            )
+        for m in in_modes:
+            if m < 0 or m >= cfg.n_modes:
+                raise ValueError(
+                    f"input_modes {in_modes} out of range [0, {cfg.n_modes - 1}]"
+                )
+        return in_modes
+
+    def _should_add_noise(
+        self,
+        noise_std: Optional[Union[float, Sequence[float]]],
+    ) -> bool:
+        if noise_std is None:
+            return False
+        if isinstance(noise_std, (int, float)):
+            return float(noise_std) > 0
+        try:
+            return any(float(x) > 0 for x in noise_std)  # type: ignore[arg-type]
+        except TypeError:
+            return False
+
     # ── uncertainty ────────────────────────────────────────────
 
     def run_uncertainty_analysis(
@@ -277,13 +442,18 @@ class Experiment:
             Dict with ``'mean'``, ``'std'``, and ``'all_preds'`` arrays.
         """
         from concurrent.futures import ProcessPoolExecutor
+
         from tqdm import tqdm
+
         from src.simulation import uncertainty_forward_pass
 
         c = self.config
         n_classes = c["n_classes"]
 
         is_classification = c["loss_type"] == "cross_entropy" or return_class_probs
+
+        if n_passes <= 0:
+            raise ValueError("n_passes must be a positive integer")
 
         logger.info("Estimating uncertainty with %d forward passes…", n_passes)
 
@@ -320,22 +490,41 @@ class Experiment:
                 )
             )
 
-        max_workers = min(n_passes, os.cpu_count() or 2)
-        with ProcessPoolExecutor(max_workers=max_workers) as pool:
-            results = list(
-                tqdm(
-                    pool.map(uncertainty_forward_pass, jobs),
-                    total=n_passes,
-                    desc="UQ passes",
+        def _run_sequential():
+            return [
+                uncertainty_forward_pass(job)
+                for job in tqdm(jobs, total=n_passes, desc="UQ passes")
+            ]
+
+        results: list[np.ndarray]
+        if n_passes == 1:
+            results = _run_sequential()
+        else:
+            max_workers = min(n_passes, os.cpu_count() or 2)
+            try:
+                with ProcessPoolExecutor(max_workers=max_workers) as pool:
+                    results = list(
+                        tqdm(
+                            pool.map(uncertainty_forward_pass, jobs),
+                            total=n_passes,
+                            desc="UQ passes",
+                        )
+                    )
+            except (PermissionError, OSError) as exc:
+                logger.warning(
+                    "ProcessPool unavailable (%s); falling back to sequential UQ passes",
+                    exc,
                 )
-            )
+                results = _run_sequential()
 
         has_hw_noise = self.hardware is not None and self.hardware.noise is not None
 
         for i, preds in enumerate(results):
             if has_hw_noise:
                 preds = self._apply_hardware_noise(
-                    np.atleast_2d(preds) if (is_classification and n_classes > 1) else preds,
+                    np.atleast_2d(preds)
+                    if (is_classification and n_classes > 1)
+                    else preds,
                     seed=(c["seed"] + i + 1),
                 )
             if is_classification and n_classes > 1:

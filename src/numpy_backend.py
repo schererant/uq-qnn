@@ -13,15 +13,15 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from .config import SimConfig
-from .circuits import _clements_mzi_pairs
+from .circuits import clements_mzi_pairs
 from .coincidence import (
-    get_cc_mode_pairs,
-    get_cc_labels,
-    postselect_measurement,
     apply_noise_to_outcomes,
+    get_cc_labels,
+    get_cc_mode_pairs,
+    postselect_measurement,
     working_detectors_to_cc_indices,
 )
+from .config import SimConfig
 
 
 def _bs_2x2() -> np.ndarray:
@@ -40,7 +40,7 @@ def _mzi_unitary(phi_int: float, phi_ext: float) -> np.ndarray:
 def clements_unitary(phases: np.ndarray, n_modes: int) -> np.ndarray:
     """Full n_modes x n_modes unitary for the Clements mesh (matches Perceval ordering)."""
     phases = np.asarray(phases, dtype=np.float64).reshape(-1)
-    pairs = _clements_mzi_pairs(n_modes)
+    pairs = clements_mzi_pairs(n_modes)
     expected = n_modes * (n_modes - 1)
     if len(phases) != expected:
         raise ValueError(f"Expected {expected} phases, got {len(phases)}")
@@ -121,10 +121,7 @@ def _coincidence_raw_batch(
     pairs = get_cc_mode_pairs(n_modes)
     mj = np.array([p[0] for p in pairs], dtype=int)
     mk = np.array([p[1] for p in pairs], dtype=int)
-    perm = (
-        u_batch[:, mj, a] * u_batch[:, mk, b]
-        + u_batch[:, mj, b] * u_batch[:, mk, a]
-    )
+    perm = u_batch[:, mj, a] * u_batch[:, mk, b] + u_batch[:, mj, b] * u_batch[:, mk, a]
     return np.abs(perm) ** 2
 
 
@@ -163,9 +160,7 @@ def run_vectorized_non_memristive(
     Vectorized simulation for non-memristive discrete mode.
     """
     target_mode: Tuple[int, ...] = (
-        cfg.target_mode
-        if cfg.target_mode is not None
-        else (cfg.n_modes - 1,)
+        cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
     )
     n_phases = cfg.n_modes * (cfg.n_modes - 1)
     phases = np.asarray(params[:n_phases], dtype=np.float64)
@@ -261,11 +256,28 @@ def singles_class_probs_from_unitary(
     return np.array([np.abs(u[int(m), enc_col]) ** 2 for m in target_mode], dtype=float)
 
 
+def all_singles_from_unitary(u: np.ndarray, input_mode: int) -> np.ndarray:
+    """Return singles probabilities for every output mode."""
+
+    col = int(input_mode)
+    return np.abs(u[:, col]) ** 2
+
+
 def coincidence_raw_vector(
     u: np.ndarray, input_modes: Tuple[int, int], n_modes: int
 ) -> np.ndarray:
     """Collision-free coincidence probabilities for one unitary, shape (n_cc,)."""
     return _coincidence_raw_batch(u[np.newaxis, ...], input_modes, n_modes)[0]
+
+
+def all_coincidences_from_unitary(
+    u: np.ndarray, input_modes: Tuple[int, int]
+) -> np.ndarray:
+    """Return coincidence probabilities for all detector pairs."""
+
+    return coincidence_raw_vector(
+        u, (int(input_modes[0]), int(input_modes[1])), u.shape[0]
+    )
 
 
 def unitary_for_point(
