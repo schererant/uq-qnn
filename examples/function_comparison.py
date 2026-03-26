@@ -19,9 +19,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from reporting import begin_console_capture, write_run_summary
 
 from src.data import get_data
+from src.config import SimConfig
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
-from src.utils import config
+SIM_BACKEND = "numpy"
 
 
 def train_and_evaluate(
@@ -55,18 +56,33 @@ def train_and_evaluate(
 
     # Train the model (3 modes for Clements 3x3)
     n_modes = n_modes
-    theta_opt, history = train_pytorch(
-        X_train,
-        y_train,
-        memory_depth=memory_depth,
-        lr=lr,
-        epochs=epochs,
-        n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
+    sim_cfg = SimConfig(
         n_modes=n_modes,
         encoding_mode=encoding_mode,
         target_mode=target_mode,
+        memristive_phase_idx=None,
+        memristive_output_modes=None,
+        encoding_phase_idx=None,
+        output_mode="singles",
+        input_modes=None,
+        working_detectors=None,
+        noise_std=None,
+        n_samples=n_samples,
+        memory_depth=memory_depth,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_photons=None,
+        backend=SIM_BACKEND,
+        loss_type="mse",
+        n_classes=1,
+    )
+    theta_opt, history = train_pytorch(
+        X_train,
+        y_train,
+        sim_cfg=sim_cfg,
+        lr=lr,
+        epochs=epochs,
+        seed=42,
     )
 
     # Uncertainty estimation through multiple forward passes
@@ -86,14 +102,8 @@ def train_and_evaluate(
         enc_test = 2 * np.arccos(X_test)
         preds = run_simulation_sequence_np(
             perturbed_theta,
-            config["memory_depth"],
-            sample_count,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=0,
-            target_mode=target_mode,
+            enc_test,
+            sim_cfg.replace(n_samples=sample_count),
         )
         all_preds[:, i] = preds
 
@@ -234,8 +244,7 @@ def main():
         lr = 0.05
         memory_depth = 1
         n_modes = 3
-        config["phase_idx"] = (0, 1, 2)
-        config["n_photons"] = (1, 1, 1)
+        # phase_idx and n_photons are derived automatically by SimConfig
         n_phases = n_modes * (
             n_modes - 1
         )  # Number of external phase parameters (excluding memory phase)

@@ -25,9 +25,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from reporting import begin_console_capture, write_run_summary
 
 from src.data import get_data
+from src.config import SimConfig
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
-from src.utils import config
+SIM_BACKEND = "numpy"
 from src.circuit_visualization import save_circuit_annotated
 
 
@@ -70,37 +71,43 @@ def run_experiment(
     print(f"\n--- {label} ---")
     # Use inline encoding on the first MZI internal phase (phase index 0)
     ENCODING_PHASE_IDX = 0
-    theta, history = train_pytorch(
-        X_train,
-        y_train,
-        memory_depth=memory_depth,
-        lr=lr,
-        epochs=epochs,
-        n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
+    mom = memristive_output_modes
+    if mom is not None:
+        mom = tuple(tuple(p) for p in mom)
+    sim_cfg = SimConfig(
         n_modes=N_MODES,
         encoding_mode=0,
         target_mode=(N_MODES - 1,),
         memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes,
-        verbose=verbose,
+        memristive_output_modes=mom,
         encoding_phase_idx=ENCODING_PHASE_IDX,
+        output_mode="singles",
+        input_modes=None,
+        working_detectors=None,
+        noise_std=None,
+        n_samples=n_samples,
+        memory_depth=memory_depth,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_photons=None,
+        backend=SIM_BACKEND,
+        loss_type="mse",
+        n_classes=1,
+    )
+    theta, history = train_pytorch(
+        X_train,
+        y_train,
+        sim_cfg=sim_cfg,
+        lr=lr,
+        epochs=epochs,
+        seed=42,
+        verbose=verbose,
     )
     enc_test = 2 * np.arccos(X_test)
     preds = run_simulation_sequence_np(
         theta,
-        memory_depth,
-        n_samples,
-        encoded_phases=enc_test,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_modes=N_MODES,
-        encoding_mode=0,
-        target_mode=(N_MODES - 1,),
-        memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes,
-        encoding_phase_idx=ENCODING_PHASE_IDX,
+        enc_test,
+        sim_cfg,
     )
     mse = np.mean((preds - y_test) ** 2)
     print(f"MSE: {mse:.6f}")
@@ -114,10 +121,10 @@ def main():
     try:
         np.random.seed(42)
     
-        config["n_data"] = 100
-        config["sigma_noise"] = 0.02
-        config["lr"] = 0.04
-        config["epochs"] = 300
+        n_data = 100
+        sigma_noise = 0.02
+        lr = 0.04
+        epochs = 300
         n_samples = 20
     
         # Save annotated circuit diagram (encoding, target, memristive phases)
@@ -136,8 +143,8 @@ def main():
     
         print("Generating quartic data (y = x^4)...")
         X_train, y_train, X_test, y_test = get_data(
-            config["n_data"],
-            config["sigma_noise"],
+            n_data,
+            sigma_noise,
             "quartic_data",
         )
     
@@ -153,8 +160,8 @@ def main():
             X_test=X_test,
             y_test=y_test,
             n_samples=n_samples,
-            lr=config["lr"],
-            epochs=config["epochs"],
+            lr=lr,
+            epochs=epochs,
         )
     
         # 2. Memristors, depth 1 (minimal memory), custom output modes
@@ -167,8 +174,8 @@ def main():
             X_test=X_test,
             y_test=y_test,
             n_samples=n_samples,
-            lr=config["lr"],
-            epochs=config["epochs"],
+            lr=lr,
+            epochs=epochs,
             memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
         )
     
@@ -182,8 +189,8 @@ def main():
             X_test=X_test,
             y_test=y_test,
             n_samples=n_samples,
-            lr=config["lr"],
-            epochs=config["epochs"],
+            lr=lr,
+            epochs=epochs,
             memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
         )
     
@@ -197,8 +204,8 @@ def main():
             X_test=X_test,
             y_test=y_test,
             n_samples=n_samples,
-            lr=config["lr"],
-            epochs=config["epochs"],
+            lr=lr,
+            epochs=epochs,
             memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
         )
     
@@ -262,7 +269,7 @@ def main():
             },
             artifacts=["quartic_circuit_annotated.png",
                 "quartic_regression_comparison.png",
-                "quartic_regression_loss_comparison.png",, "run.log"],
+                "quartic_regression_loss_comparison.png", "run.log"],
             simulation=sim_logger.stats_dict()
         )
     

@@ -145,7 +145,7 @@ def main():
 
         fig.tight_layout()
         exp.savefig(fig, "classification_with_uncertainty.png")
-        plt.show()
+        # plt.show()
 
 
 if __name__ == "__main__":

@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-03-26 — Hardware abstraction layer, noise models, and legacy cleanup
+
+### Added
+
+- **`src/hardware.py`** — Full hardware abstraction layer:
+    - **`NoiseModel` protocol** — Structural typing for noise callables `(outcomes, working_indices, labels, *, rng) -> np.ndarray`.
+    - **`GaussianNoise(std)`** — Additive Gaussian noise, clipped to `[0, 1]` and renormalized. Supports per-channel `std` as a tuple.
+    - **`ShotNoise(n_samples)`** — Poisson-distributed shot noise from multinomial sampling.
+    - **`DarkCountNoise(rate_per_detector)`** — Constant dark count baseline added to each detector, renormalized.
+    - **`CompositeNoise(models)`** — Chains multiple noise models in sequence.
+    - **`TimingParams`** — Frozen dataclass for hardware timing: `t_phase_ms`, `f_laser_khz`, `det_window_us`, `max_swipe`. `compute_n_swipe()` delegates to `data.compute_n_swipe()`.
+    - **`HardwareProfile`** — Frozen dataclass bundling `name`, `backend`, `noise`, `timing`, and coincidence window constants. `apply_to_config(cfg)` merges profile defaults into a config dict (explicit keys in the dict take precedence). `to_dict()` returns a JSON-serializable representation.
+    - **`HardwareBackend` protocol** and **`RealHardwareBackend`** placeholder — Interface for future physical hardware connection; `run_circuit()` raises `NotImplementedError` until implemented.
+    - **Backend registry** — `register_backend(name, backend)` / `get_backend(name)` for custom hardware backends.
+    - **Built-in profiles** — `IDEAL` (no noise), `LAB_6MODE` (Gaussian std=0.02), `NOISY_PROTOTYPE` (Gaussian std=0.05 + dark counts rate=0.002).
+    - **Profile registry** — `get_profile(name)` looks up profiles by string name; raises `KeyError` with a clear message on unknown names.
+- **`examples/hardware_profile_comparison.py`** — Trains the same 6-mode quartic regression under `IDEAL`, `LAB_6MODE`, and `NOISY_PROTOTYPE` profiles; plots side-by-side predictions with 95% CI.
+- **`tests/test_hardware.py`** — 27 tests covering noise model contracts (shape, clipping, seed reproducibility, per-channel std), `CompositeNoise` chaining, `HardwareProfile.to_dict()` and `apply_to_config()` merge precedence, `TimingParams`, `get_profile`, `RealHardwareBackend`, and backend registry.
+
+### Changed
+
+- **`src/experiment.py`** — `Experiment.__init__` accepts `hardware: HardwareProfile | str | None`. Profile is resolved, merged into config via `apply_to_config()`, and applied as a post-processing step after `predict()` and each UQ pass. `run_summary.json` includes `hardware.to_dict()`. When both a profile noise model and `config["noise_std"]` are set, the profile takes precedence and a warning is logged.
+- **`src/utils.py`** — Stripped to ~40 lines. Removed `config` dict, `main()`, `_run_training()`, `run_cli()`, and all associated imports. Kept `print_run_params()` (deprecated wrapper) and `resolve_n_swipe(timing, n_swipe_override)` (now accepts `TimingParams` instead of reading a global dict).
+- **`src/__init__.py`** — Registers `hardware` module; exports all public hardware types; removes dead utils exports (`main`, `config`).
+- **`examples/circuit_comparison.py`**, **`examples/circuit_comparison_quartic.py`**, **`examples/circuit_visualization_training.py`**, **`examples/function_comparison.py`**, **`examples/quartic_regression_comparison.py`**, **`examples/memristor_circuit_visualization.py`** — Replaced `from src.utils import config` with explicit local `CONFIG` / constant dicts. No more shared mutable global.
+
+### Removed
+
+- **`main.py`** — Legacy CLI entry point removed. Use `Experiment`-based scripts in `examples/` instead.
+- **`config/`** directory — `config.yaml` and `quantum/pcvl.yaml` removed; settings are now passed directly via `CONFIG` dicts in each script.
+
+---
+
 ## 2026-03-26 — Experiment: script-level CONFIG, API bridge, no hidden defaults
 
 ### Added

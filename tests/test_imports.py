@@ -29,6 +29,7 @@ class TestImports(unittest.TestCase):
         from src import autograd
         from src import circuits
         from src import data
+        from src import hardware
         from src import loss
         from src import numpy_backend
         from src import simulation
@@ -38,6 +39,7 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(autograd)
         self.assertIsNotNone(circuits)
         self.assertIsNotNone(data)
+        self.assertIsNotNone(hardware)
         self.assertIsNotNone(loss)
         self.assertIsNotNone(numpy_backend)
         self.assertIsNotNone(simulation)
@@ -52,7 +54,7 @@ class TestImports(unittest.TestCase):
         from src.autograd import photonic_psr_coeffs_torch, MemristorLossPSR
         from src.loss import PhotonicModel
         from src.training import train_pytorch, train_pytorch_generic
-        from src.utils import config
+        from src.hardware import HardwareProfile, get_profile, IDEAL
 
         self.assertIsNotNone(get_data)
         self.assertIsNotNone(quartic_data)
@@ -66,7 +68,9 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(PhotonicModel)
         self.assertIsNotNone(train_pytorch)
         self.assertIsNotNone(train_pytorch_generic)
-        self.assertIsNotNone(config)
+        self.assertIsNotNone(HardwareProfile)
+        self.assertIsNotNone(get_profile)
+        self.assertIsNotNone(IDEAL)
 
 
 if __name__ == "__main__":

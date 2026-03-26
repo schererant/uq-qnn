@@ -1,294 +1,516 @@
-# Uncertainty Quantification with Quantum Neural Networks on Integrated Photonic Circuits
+# UQ-QNN -- Uncertainty Quantification for Photonic Quantum Neural Networks
 
-#TODO:
-- coverage is not calculated correctly
+A framework for training photonic quantum neural networks (QNNs) on integrated photonic circuits, with built-in uncertainty quantification via multi-pass parameter perturbation.
 
-
+---
 
 ## Overview
 
-This repository implements a modular framework for training photonic quantum neural networks with uncertainty quantification capabilities. The code is based on the photonic quantum memristor paper and provides both discrete-phase and continuous-swipe implementations for circuit simulation.
+UQ-QNN models integrated photonic circuits (Clements mesh, photonic memristors) as differentiable quantum layers and trains them with PyTorch via the **Parameter-Shift Rule (PSR)**. It supports regression and classification tasks, two simulation backends (fast NumPy and full Perceval SLOS), and a structured `Experiment` class for reproducible runs.
 
-## Modular Structure
+### Core data flow
 
-The codebase is organized into the following modules:
+```
+Input x --> phase encoding (2*arccos(x)) --> photonic circuit --> Born-rule probabilities --> loss --> PSR gradients --> Adam update
+```
 
-- `src/autograd.py`: Implements parameter-shift rule (PSR) for photonic circuits (regression and classification)
-- `src/circuits.py`: Circuit construction for encoding and memristor components (array-based parameter design)
-- `src/data.py`: Data generation and processing utilities (regression and classification datasets)
-- `src/loss.py`: Custom loss functions and PyTorch model implementations (MSE and cross-entropy)
-- `src/simulation.py`: Circuit simulation with discrete and continuous modes
-- `src/training.py`: Training algorithms with PyTorch optimization
-- `src/utils.py`: Configuration and utility functions
+---
 
 ## Installation
 
+Requires **Python >= 3.13** and [uv](https://docs.astral.sh/uv/).
+
 ```bash
-# Clone the repository
 git clone https://github.com/username/uq-qnn.git
 cd uq-qnn
-
-# Install dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
-## Usage
+This installs all dependencies (PyTorch, Perceval, NumPy, scikit-learn, matplotlib, tqdm, etc.) into a virtual environment managed by `uv`.
 
-Run the main script to train the quantum neural network:
+---
+
+## Quick start
+
+### Example scripts
+
+| Script | Description |
+|---|---|
+| `examples/simple_regression.py` | Regression + UQ on a quartic function |
+| `examples/simple_classification.py` | Binary classification + UQ |
+| `examples/multi_class_classification.py` | 3-class Clements circuit |
+| `examples/two_moons_classification.py` | 2D half-moons dataset |
+| `examples/circuit_comparison.py` | Memristor vs. Clements on the same data |
+| `examples/circuit_comparison_quartic.py` | Architecture comparison on quartic |
+| `examples/quartic_regression_comparison.py` | Quartic regression ablation |
+| `examples/function_comparison.py` | Model performance across synthetic functions |
+| `examples/circuit_visualization_training.py` | Live circuit training visualization |
+| `examples/memristor_circuit_visualization.py` | Memristor circuit diagram |
+| `examples/hardware_profile_comparison.py` | Compare ideal vs noisy hardware profiles |
+| `examples/coincidence_regression.py` | Two-photon coincidence regression |
+| `examples/6x6.py` | 6-mode circuit example |
 
 ```bash
-python main.py --n-samples 1000
+uv run python examples/simple_regression.py
+uv run python examples/simple_classification.py
 ```
 
-### Key Options
+---
 
-- `--continuous`: Use continuous-swipe training mode
-- `--n-samples`: Number of samples for circuit simulation
-- `--epochs`: Number of training epochs
-- `--lr`: Learning rate
-- `--measured-data`: Path to measured data pickle file
-- `--datafunction`: Synthetic data function to use (see below)
-- `--n-phases`: Number of phase parameters in the memristor circuit (default: 2)
-- `--circuit-type`: Circuit architecture to use ('memristor' or 'clements')
-- `--n-modes`: Number of modes for Clements architecture (default: 3)
-- `--encoding-mode`: Mode to apply encoding to (default: 0)
-- `--target-mode`: Target output mode(s) as comma-separated list (e.g., '2,3')
+## Creating experiments with the `Experiment` class
 
-See `python main.py --help` for all available options.
+`Experiment` is the recommended entry point for all experiment scripts. It is a context manager that:
 
-### Synthetic Data Functions
+- Creates a timestamped run directory under `reports/<name>/<timestamp>/`
+- Writes a structured `run.log` via the package logger
+- Validates that all required config keys are present (no hidden defaults)
+- Writes a `run_summary.json` (config, metrics, artifacts, git SHA) on exit
+- Exposes `train`, `predict`, `run_uncertainty_analysis`, and `savefig` helpers
+- Builds a frozen `SimConfig` from your config dict automatically
 
-The framework includes multiple synthetic data functions for regression tasks:
+### Step-by-step guide
 
-- `quartic_data`: Standard x⁴ function
-- `sinusoid_data`: Sinusoidal function (sin(2πx) * 0.5 + 0.5)
-- `multi_modal_data`: Sum of Gaussian peaks
-- `step_function_data`: Smooth step function using tanh
-- `oscillating_poly_data`: Oscillating polynomial (x³ - 0.5x² + 0.1sin(15x))
-- `damped_cosine_data`: Damped cosine wave
+1. **Define a CONFIG dict** with all required keys (see [Config reference](#config-reference) below).
+2. **Prepare your data** using the built-in generators or your own arrays.
+3. **Open an `Experiment` context** -- this creates the run directory and starts logging.
+4. **Train** with `exp.train(X, y)` -- phase encoding is applied automatically.
+5. **Predict** with `exp.predict(theta, encoded_phases)` on test data.
+6. **Run UQ** with `exp.run_uncertainty_analysis(...)` for uncertainty estimates.
+7. **Save figures** with `exp.savefig(fig, "name.png")`.
+8. **Exit the context** -- `run_summary.json` is written automatically.
 
-Run the `examples/function_comparison.py` script to compare model performance across all functions.
+### Full regression example
 
-### Example Scripts
-
-The repository includes several example scripts:
-
-**Regression Examples:**
-1. `examples/simple_regression.py` - Basic regression with uncertainty quantification
-2. `examples/function_comparison.py` - Compare performance across different synthetic functions
-3. `examples/circuit_comparison.py` - Compare memristor vs. Clements circuit architectures
-
-**Classification Examples:**
-4. `examples/simple_classification.py` - Binary classification with uncertainty quantification
-5. `examples/multi_class_classification.py` - Multi-class classification (3+ classes) demonstration
-6. `examples/two_moons_classification.py` - Two Moons (half-moons) 2D classification dataset
-
-For the Clements architecture example, run:
-```bash
-python examples/circuit_comparison.py
-```
-
-This script demonstrates how to use both architectures on the same dataset and compares their performance.
-
-### Circuit Architectures
-
-The framework supports two distinct circuit architectures:
-
-#### 1. Memristor Architecture
-
-The photonic memristor circuit implementation uses an array-based approach:
-
-- `encoding_circuit`: Builds a 2-mode encoding circuit with a phase shifter
-- `memristor_circuit`: Takes an array of phases instead of individual parameters
-- `build_circuit`: Combines encoding and memristor circuits with array-based parameters
-
-Parameter structure for memristor circuit:
-```
-params = [phi1, phi3, w]
-```
-where `phi1` and `phi3` are phase parameters and `w` is the memory weight parameter.
-
-#### 2. Clements (Rectangular) Architecture
-
-The Clements architecture provides a more flexible, scalable approach:
-
-- Configurable number of modes (use `--n-modes` option)
-- Mesh of Mach-Zehnder Interferometers (MZIs) in a rectangular grid pattern
-- Each MZI has two phase shifters (internal and external)
-- Supports arbitrary-sized photonic neural networks
-
-Parameter structure for Clements circuit:
-```
-params = [phi1_int, phi1_ext, phi2_int, phi2_ext, ..., phiN_int, phiN_ext, w]
-```
-where each MZI has an internal phase (`phi_int`) and external phase (`phi_ext`), and `w` is the memory weight parameter.
-
-The number of phase parameters is automatically calculated as `n_modes * (n_modes - 1)` based on the number of modes.
-
-> **Note:** For Clements architecture, you must ensure that `n_modes` ≥ 2 and `encoding_mode` < `n_modes`. The target mode(s) must also be valid for the given number of modes.
-
-## Classification Tasks
-
-The framework now supports both regression and classification tasks using the Photonic Parameter Shift Rule (PSR) for exact gradient computation.
-
-### Classification Usage
-
-For binary classification (2 classes):
 ```python
+import numpy as np
+import matplotlib.pyplot as plt
+from src.data import get_data
+from src.experiment import Experiment
+
+CONFIG = {
+    # -- circuit geometry --
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": (4,),
+    "memristive_phase_idx": None,
+    "memristive_output_modes": None,
+    "encoding_phase_idx": None,
+
+    # -- measurement --
+    "output_mode": "singles",
+    "input_modes": None,
+    "working_detectors": None,
+    "noise_std": None,
+
+    # -- simulation --
+    "n_samples": 20,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "n_photons": None,
+    "sim_backend": "numpy",
+
+    # -- task / loss --
+    "loss_type": "mse",
+    "n_classes": 1,
+
+    # -- training --
+    "lr": 0.05,
+    "epochs": 100,
+    "seed": 42,
+
+    # -- data (experiment-only) --
+    "n_data": 20,
+    "sigma_noise": 0.005,
+
+    # -- uncertainty (experiment-only) --
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05,
+}
+
+
+def main():
+    X_train, y_train, X_test, y_test = get_data(
+        CONFIG["n_data"], CONFIG["sigma_noise"], "quartic_data"
+    )
+
+    with Experiment("my_regression", config=CONFIG) as exp:
+        # Train -- exp.train applies 2*arccos(X) encoding automatically
+        theta, history = exp.train(X_train, y_train)
+        exp.save_metrics({"final_loss": history[-1]})
+
+        # Predict on test data (must encode manually)
+        enc_test = 2 * np.arccos(X_test)
+        preds = exp.predict(theta, enc_test)
+
+        # Uncertainty analysis (parallel forward passes with perturbed params)
+        unc = exp.run_uncertainty_analysis(
+            theta, enc_test,
+            n_passes=CONFIG["unc_n_passes"],
+            noise_std=CONFIG["unc_noise_std"],
+        )
+        mean_preds = unc["mean"]   # shape (n_test,)
+        std_preds  = unc["std"]    # shape (n_test,)
+
+        mse = float(np.mean((mean_preds - y_test) ** 2))
+        exp.save_metrics({"test_mse": mse})
+
+        # Save a figure to the run directory
+        fig, ax = plt.subplots()
+        ax.plot(X_test, y_test, "k--", label="Ground truth")
+        ax.plot(X_test, mean_preds, "r-", label="Prediction")
+        ax.fill_between(X_test,
+                        mean_preds - 2 * std_preds,
+                        mean_preds + 2 * std_preds,
+                        color="r", alpha=0.2, label="95% CI")
+        ax.legend()
+        exp.savefig(fig, "fit.png")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Full classification example
+
+```python
+import numpy as np
 from src.data import get_classification_data
-from src.training import train_pytorch
+from src.experiment import Experiment
 
-# Generate binary classification data
+CONFIG = {
+    "n_modes": 3,
+    "encoding_mode": 0,
+    "target_mode": (1, 2),          # one mode per class
+    "memristive_phase_idx": None,
+    "memristive_output_modes": None,
+    "encoding_phase_idx": None,
+    "output_mode": "singles",
+    "input_modes": None,
+    "working_detectors": None,
+    "noise_std": None,
+    "n_samples": 500,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "n_photons": None,
+    "sim_backend": "numpy",
+    "loss_type": "cross_entropy",
+    "n_classes": 2,
+    "lr": 0.03,
+    "epochs": 30,
+    "seed": 42,
+    "n_data": 80,
+    "sigma_noise": 0.05,
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05,
+}
+
 X_train, y_train, X_test, y_test = get_classification_data(
-    n_data=80,
-    n_classes=2,
-    data_type='binary_threshold',
-    noise_level=0.05,
-    return_one_hot=False
+    CONFIG["n_data"], "binary_threshold"
 )
 
-# Train with cross-entropy loss
-theta, history = train_pytorch(
-    X_train, y_train,
-    memory_depth=2,
-    lr=0.03,
-    epochs=30,
-    n_samples=500,
-    n_swipe=0,
-    swipe_span=0.0,
-    n_modes=3,
-    encoding_mode=0,
-    loss_type='cross_entropy',
-    n_classes=2,
-    target_mode=(1, 2)  # Use modes 1 and 2 for binary classification
-)
+with Experiment("binary_classification", config=CONFIG) as exp:
+    theta, history = exp.train(X_train, y_train)
+
+    enc_test = 2 * np.arccos(X_test)
+    unc = exp.run_uncertainty_analysis(
+        theta, enc_test,
+        n_passes=CONFIG["unc_n_passes"],
+        noise_std=CONFIG["unc_noise_std"],
+    )
+    mean_probs = unc["mean"]        # shape (n_test, n_classes)
+    predicted_labels = np.argmax(mean_probs, axis=1)
+
+    entropy = -np.sum(mean_probs * np.log(mean_probs + 1e-15), axis=1)
+    exp.save_metrics({"entropy_mean": float(entropy.mean())})
 ```
 
-For multi-class classification (3+ classes):
+---
+
+## Config reference
+
+Every key listed below is **required** by `Experiment`. There are no hidden defaults -- all parameters must be set explicitly. The config dict is split into two groups: keys that flow into `SimConfig` (the frozen dataclass used throughout the simulation/training stack) and experiment-only keys consumed by your script.
+
+### Circuit geometry
+
+| Key | Type | Description |
+|---|---|---|
+| `n_modes` | `int` | Number of waveguide modes in the Clements mesh. Determines circuit depth: `n_modes * (n_modes - 1)` phase parameters total. |
+| `encoding_mode` | `int` | Index of the input mode that receives the data-encoded phase (`2*arccos(x)`). Must be `< n_modes`. |
+| `target_mode` | `tuple[int, ...]` or `None` | Output mode indices to read Born-rule probability from. For regression: one mode, e.g. `(4,)`. For classification: one mode per class, e.g. `(1, 2)` for binary. `None` falls back to `(n_modes - 1,)`. |
+| `memristive_phase_idx` | `int`, `tuple[int, ...]`, or `None` | Index/indices of phase parameters that are made memristive (history-dependent feedback). `None` = pure Clements mesh with no memory. |
+| `memristive_output_modes` | `tuple[tuple[int, int], ...]` or `None` | Pairs `(m1, m2)` of output modes used for photon-feedback into memristive phases. Only relevant when `memristive_phase_idx` is set. |
+| `encoding_phase_idx` | `int` or `None` | Overrides which phase slot the data encoding is applied to. `None` = use the default slot derived from `encoding_mode`. |
+
+### Measurement
+
+| Key | Type | Description |
+|---|---|---|
+| `output_mode` | `str` | `"singles"` -- 1-photon probabilities via `|U[target, encoding]|^2`. `"coincidence"` -- 2-photon coincidence counting via permanents. |
+| `input_modes` | `tuple[int, ...]` or `None` | For coincidence only: mode indices where the two photons enter, e.g. `(0, 1)`. |
+| `working_detectors` | `tuple[int, ...]` or `None` | For coincidence only: indices of functioning output detectors. Postselection is applied to these modes. |
+| `noise_std` | `float`, `tuple[float, ...]`, or `None` | Gaussian noise standard deviation added to coincidence counts. Can be a single float (all channels) or a per-channel tuple. `None` = noiseless. |
+
+### Simulation
+
+| Key | Type | Description |
+|---|---|---|
+| `n_samples` | `int` | Number of photon samples per data point. Higher values reduce shot noise but increase runtime. Set low (e.g. 20) for fast prototyping, higher (e.g. 1000) for production. |
+| `memory_depth` | `int` | Number of past time steps stored in the memristor buffer. Irrelevant when `memristive_phase_idx` is `None`. |
+| `n_swipe` | `int` | Number of phase points swept per data point in continuous-swipe mode. `0` = discrete mode (single phase per point). |
+| `swipe_span` | `float` | Total phase range (radians) swept around each encoded phase. Used only when `n_swipe > 0`. |
+| `n_photons` | `tuple[int, ...]` or `None` | Photon count associated with each phase parameter for PSR shift computation. `None` = auto-infer (1 for singles, 2 for coincidence). Must match the total photon number in the system. |
+| `sim_backend` | `str` | `"numpy"` -- fast vectorized path: builds the Clements unitary analytically and applies Born rule. `"perceval"` -- full Scalable Linear Optical Simulator, required for memristive circuits or exact multi-photon statistics. |
+
+### Task / loss
+
+| Key | Type | Description |
+|---|---|---|
+| `loss_type` | `str` | `"mse"` for regression (mean squared error). `"cross_entropy"` for classification (softmax over `target_mode` probabilities). |
+| `n_classes` | `int` | `1` for regression. Number of classes for classification. Must equal `len(target_mode)` when `loss_type="cross_entropy"`. |
+
+### Training
+
+| Key | Type | Description |
+|---|---|---|
+| `lr` | `float` | Adam optimizer learning rate. |
+| `epochs` | `int` | Number of full passes over the training set. |
+| `seed` | `int` | RNG seed for parameter initialization and UQ pass noise. |
+
+### Data (experiment-only)
+
+These keys are consumed by the experiment script and are **not** forwarded to `SimConfig`.
+
+| Key | Type | Description |
+|---|---|---|
+| `n_data` | `int` | Number of synthetic training/test samples to generate. |
+| `sigma_noise` | `float` | Label noise standard deviation for synthetic regression datasets. |
+
+### Uncertainty (experiment-only)
+
+| Key | Type | Description |
+|---|---|---|
+| `unc_n_passes` | `int` | Number of noisy forward passes for uncertainty estimation. More passes = smoother uncertainty estimates. |
+| `unc_noise_std` | `float` | Standard deviation of Gaussian noise added to phase parameters on each UQ pass. Models parameter uncertainty / shot-noise variability. |
+
+---
+
+## The `SimConfig` dataclass
+
+`SimConfig` (`src/config.py`) is a frozen dataclass that bundles all circuit, simulation, and task parameters into a single immutable object. It replaces the loose keyword arguments that previously flowed through the stack.
+
+- **Frozen** -- safe to share across threads and store on `torch.autograd` ctx objects
+- **No defaults** -- all fields must be supplied explicitly
+- Created automatically by `Experiment` via `SimConfig.from_experiment_config(config)`
+- Can also be constructed directly via `SimConfig(...)` or `SimConfig.from_dict(d)`
+- Use `sim_cfg.replace(field=value)` to derive a modified copy (e.g. for UQ passes)
+- `sim_cfg.to_dict()` returns a JSON-safe dict for serialization
+
+The fields on `SimConfig` map directly to the config keys above (circuit geometry, measurement, simulation, task/loss), with one rename: the config key `sim_backend` maps to the `SimConfig.backend` field.
+
+---
+
+## Hardware profiles
+
+`HardwareProfile` bundles a simulation backend, noise model, and timing parameters into a named, frozen dataclass. Use profiles to simulate different hardware conditions without changing your experiment config.
+
+### Built-in profiles
+
+| Profile | Backend | Noise | Description |
+|---|---|---|---|
+| `IDEAL` | numpy | None | Perfect noiseless simulation |
+| `LAB_6MODE` | numpy | Gaussian (std=0.02) | Typical 6-mode lab setup |
+| `NOISY_PROTOTYPE` | numpy | Gaussian (std=0.05) + dark counts | Early prototype with high noise |
+
+### Using hardware profiles
+
+Pass a `hardware` argument to `Experiment`:
+
 ```python
-# Generate multi-class data
-X_train, y_train, X_test, y_test = get_classification_data(
-    n_data=100,
-    n_classes=3,
-    data_type='multi_class_regions',
-    noise_level=0.05,
-    return_one_hot=False
-)
+from src.experiment import Experiment
+from src.hardware import LAB_6MODE, NOISY_PROTOTYPE
 
-# Train with Clements architecture (more modes needed)
-theta, history = train_pytorch(
-    X_train, y_train,
-    memory_depth=2,
-    lr=0.03,
-    epochs=40,
-    n_samples=500,
-    n_swipe=0,
-    swipe_span=0.0,
-    n_modes=4,  # Need at least n_classes modes
-    encoding_mode=0,
-    loss_type='cross_entropy',
-    n_classes=3,
-    target_mode=(0, 1, 2)  # Use first 3 modes for 3 classes
-)
+# By object
+with Experiment("my_run", config=CONFIG, hardware=LAB_6MODE) as exp:
+    theta, history = exp.train(X_train, y_train)
+
+# By name
+with Experiment("my_run", config=CONFIG, hardware="noisy_prototype") as exp:
+    theta, history = exp.train(X_train, y_train)
 ```
 
-### Classification Data Types
+The profile's noise model is applied automatically to `predict()` and `run_uncertainty_analysis()` outputs. If the profile specifies a backend (e.g. `"numpy"`), it is merged into your config (explicit `sim_backend` in the config takes precedence).
 
-The framework supports several classification datasets:
+### Noise models
 
-**1D Synthetic Datasets** (via `get_classification_data()`):
-- `'binary_threshold'`: Simple threshold at x=0.5 (2 classes only)
-- `'multi_class_regions'`: Three regions [0,0.33], [0.33,0.66], [0.66,1.0] (3 classes only)
-- `'sinusoidal'`: Classes based on sin(2πx) sign (2 classes only)
+Noise models implement a callable protocol and are applied post-simulation (modelling detector imperfections):
 
-**2D Datasets**:
-- **Two Moons** (via `get_two_moons_data()`): Classic 2D binary classification dataset with two interleaving half-circles. Uses `sklearn.datasets.make_moons` under the hood. The 2D features are encoded to a single phase value using `encode_2d_to_phase()` with methods:
-  - `'weighted_sum'`: Linear combination of both dimensions (default)
-  - `'first_dim'`: Use only first dimension
-  - `'radial'`: Use radial distance from center
+| Class | Parameters | Description |
+|---|---|---|
+| `GaussianNoise` | `std: float \| tuple` | Additive Gaussian noise, clipped and renormalized |
+| `ShotNoise` | `n_samples: int` | Poisson-distributed shot noise |
+| `DarkCountNoise` | `rate_per_detector: float` | Constant dark count baseline per detector |
+| `CompositeNoise` | `models: tuple[NoiseModel, ...]` | Chains multiple noise models in order |
 
-### Classification PSR
-
-The classification PSR implements Equation (15) from the paper:
-
-```
-∂L/∂θ = -(1/K) Σ_q c_q Σ_c (y_c / F^c_Θ(x)) · F^c_{Θ+Θ^q}(x)
-```
-
-where:
-- `F^c_Θ(x)` is the probability for class `c`
-- `y_c` is the one-hot encoded target for class `c`
-- The same shift angles and coefficients are used as in regression PSR
-
-### Uncertainty Quantification for Classification
-
-For classification tasks, uncertainty is quantified using:
-- **Entropy**: `H = -Σ_c p_c * log(p_c)` where `p_c` is the predicted probability for class `c`
-- **Multiple forward passes**: Similar to regression, run multiple passes with parameter perturbations
-- **Class probability variance**: Standard deviation of class probabilities across forward passes
-
-See `examples/simple_classification.py`, `examples/multi_class_classification.py`, and `examples/two_moons_classification.py` for complete examples.
-
-### Two Moons Dataset Example
-Taking implementation from https://github.com/lightning-uq-box/lightning-uq-box/blob/main/lightning_uq_box/datamodules/toy_half_moons.py
-    
-
-The Two Moons dataset is a classic 2D binary classification benchmark:
+### Custom profiles
 
 ```python
-from src.data import get_two_moons_data, encode_2d_to_phase
-from src.training import train_pytorch_generic
+from src.hardware import HardwareProfile, GaussianNoise, CompositeNoise, DarkCountNoise, TimingParams
 
-# Generate Two Moons dataset
-X_train, y_train, X_test, y_test = get_two_moons_data(
-    n_samples=1000,
-    noise=0.1,
-    random_state=42,
-    return_one_hot=False
-)
-
-# Encode 2D features to phase values
-enc_train = encode_2d_to_phase(X_train, method='weighted_sum')
-enc_test = encode_2d_to_phase(X_test, method='weighted_sum')
-
-# Train with cross-entropy loss
-theta, history = train_pytorch_generic(
-    enc_train, y_train,
-    memory_depth=2,
-    lr=0.03,
-    epochs=50,
-    n_samples=500,
-    n_swipe=0,
-    swipe_span=0.0,
-    n_modes=3,
-    encoding_mode=0,
-    loss_type='cross_entropy',
-    n_classes=2,
-    target_mode=(1, 2)
+my_profile = HardwareProfile(
+    name="my_lab",
+    backend="numpy",
+    noise=CompositeNoise(models=(
+        GaussianNoise(std=0.03),
+        DarkCountNoise(rate_per_detector=0.005),
+    )),
+    timing=TimingParams(
+        t_phase_ms=10.0,
+        f_laser_khz=50.0,
+        det_window_us=10.0,
+        max_swipe=21,
+    ),
 )
 ```
 
-The example includes visualization of the decision boundary and uncertainty maps.
+### Real hardware (placeholder)
 
-## Tasks
+`RealHardwareBackend` provides the interface for connecting to physical photonic hardware. It currently raises `NotImplementedError` -- implement `run_circuit()` to bridge to your lab control software:
 
-- initial study of QNNs with UQ in simulation, use 1-d regression function from photonic quantum memristor paper from Iris (ask Iris about simulations)
+```python
+from src.hardware import RealHardwareBackend, register_backend
 
-- use existing QNNs works for regression and classification to check if "inherent Quantum"-UQ adds a benefit:
-    - **classification task:** over multiple forward passes compute the mean of logits and then take the softmax, as e.g. in [Link](https://github.com/lightning-uq-box/lightning-uq-box/blob/acd1fc2bfc33860111c272be767e0ddcf1f5b34f/lightning_uq_box/uq_methods/utils.py#L166)
-    - compute Entropy over softmax outputs as in [Link](https://github.com/lightning-uq-box/lightning-uq-box/blob/acd1fc2bfc33860111c272be767e0ddcf1f5b34f/lightning_uq_box/uq_methods/utils.py#L186)
-    - on a validation set (it should kinda all be iid and similar splits) compute the quantiles of the entropies (per prediction) as in [Pandas Link](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.quantile.html). An example is given in [Link](https://github.com/nilsleh/tropical_cyclone_uq/blob/main/src/class_results_analysis.ipynb) - code box 12, titled "Selective Prediction"
+backend = RealHardwareBackend()
+backend.is_available()  # False (placeholder)
+register_backend("my_chip", backend)
+```
 
-:::info
-**Selective prediction in a nutshell:**  UQ evaluation with selective prediction, as introduced in [Paper](https://proceedings.neurips.cc/paper_files/paper/2017/file/4a8423d5e91fda00bb7e46540e2b0cf1-Paper.pdf). Here, samples with with a predictive uncertainty **(classification: entropies, regression: standard deviation)** above a given threshold are omitted from prediction and referred to an expert and optionally another method. If the corresponding UQ method has higher uncertainties for inaccurate predictions, leaving out the predictions for these samples should increase the overall accuracy. This could resemble a deployment scenario, where predictions are monitored and if the predictive uncertainties surpass a given threshold, the sample is referred to an expert and/or additionally evaluated with another method. Instead of a fixed threshold on the predictive uncertainties across methods, one can chose a UQ specific threshold based on the 0.8 quantile of predictive uncertainties computed on a held out validation dataset for each method. These method-specific thresholds are then utilized on the separate test set for which we report results.
+---
 
-:::
+## Source modules
 
-- **regression task:** over multiple forward passes compute the mean of predictions [Link](https://github.com/lightning-uq-box/lightning-uq-box/blob/acd1fc2bfc33860111c272be767e0ddcf1f5b34f/lightning_uq_box/uq_methods/utils.py#L118) and standard deviation, as e.g. in  [Link](https://github.com/lightning-uq-box/lightning-uq-box/blob/acd1fc2bfc33860111c272be767e0ddcf1f5b34f/lightning_uq_box/uq_methods/utils.py#L151)
--  on a validation set (it should kinda all be iid and similar splits) compute the quantiles of the standard deviations (per prediction) as in [Pandas Link](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.quantile.html). An example is given in [Link](https://github.com/nilsleh/tropical_cyclone_uq/blob/main/src/results_tropical.ipynb) - code box 6, titled "selective prediction thresholds based on validation set"
+| Module | Role |
+|---|---|
+| `src/config.py` | `SimConfig` frozen dataclass -- the single config object flowing through the entire stack |
+| `src/hardware.py` | Hardware abstraction -- `HardwareProfile`, noise models, `TimingParams`, backend registry |
+| `src/experiment.py` | `Experiment` context manager -- run directories, logging, train/predict/UQ helpers |
+| `src/circuits.py` | Perceval circuit builders: `build_circuit()`, `build_parametric_circuit()` |
+| `src/simulation.py` | Central orchestrator `run_simulation_sequence_np()`; routes to backends; handles memristive feedback, noise, swipe |
+| `src/numpy_backend.py` | Fast vectorized path -- Clements unitary, Born-rule singles, 2x2 permanents for coincidences |
+| `src/autograd.py` | PSR gradient engine -- `photonic_psr_coeffs_torch()`, `MemristorLossPSR` autograd Function |
+| `src/loss.py` | `PhotonicModel(nn.Module)` -- wraps circuit + PSR; supports MSE and cross-entropy |
+| `src/training.py` | `train_pytorch_generic()` -- main Adam training loop |
+| `src/data.py` | Synthetic dataset generators and `encode_2d_to_phase()` for 2D inputs |
+| `src/coincidence.py` | Multi-photon coincidence indexing, postselection, noise/accidental-correction |
+| `src/logging_config.py` | Structured logging setup with file handler support |
+| `src/circuit_visualization.py` | Annotated circuit display and export utilities |
 
+---
 
-- compute accuracy according to different quantile UQ thresholds on test datasets, plot should look like:
+## Circuit architectures
 
-![](https://s3.desy.de/hackmd/uploads/b40060f6-6324-4a3a-bbfa-5f042bf76474.png)
-Above is the RMSE with Selective Prediction Results across Quantiles for the Tropical Cyclone Dataset.
+### Clements mesh
+
+Rectangular mesh of Mach-Zehnder Interferometers (MZIs). Scales to arbitrary size:
+
+- `n_modes * (n_modes - 1)` phase parameters
+- Default architecture when `memristive_phase_idx=None`
+- Supports singles and coincidence output modes
+- Implemented analytically in `numpy_backend.py` for speed
+
+### Memristor circuit
+
+Compact photonic memristor with history-dependent phase feedback:
+
+- Requires `memristive_phase_idx` to be set
+- Requires `sim_backend="perceval"` (Perceval handles the feedback loop)
+- Memory buffer length controlled by `memory_depth`
+- Photon feedback modes specified via `memristive_output_modes`
+
+---
+
+## Gradient computation (PSR)
+
+The Parameter-Shift Rule computes **exact** gradients without finite differences:
+
+- Each phase parameter contributes **2n shift terms** (n = photon count)
+- Phase parameters: exact PSR gradients
+- Memristor weights: finite differences (non-unitary parameters)
+- `n_photons` must match the total photon number in the system -- mismatches produce incorrect gradient coefficients
+
+---
+
+## Uncertainty quantification
+
+`Experiment.run_uncertainty_analysis` runs `n_passes` parallel forward passes, each with Gaussian noise `~ N(0, unc_noise_std^2)` added to the phase parameters. This approximates the effect of parameter uncertainty or hardware noise.
+
+Passes run in parallel via `ProcessPoolExecutor` up to `os.cpu_count()` workers.
+
+**Regression:**
+```python
+unc = exp.run_uncertainty_analysis(theta, enc_test, n_passes=20, noise_std=0.05)
+mean = unc["mean"]   # (n_test,)
+std  = unc["std"]    # (n_test,)  -- predictive uncertainty
+```
+
+**Classification:**
+```python
+unc = exp.run_uncertainty_analysis(theta, enc_test, n_passes=20, noise_std=0.05)
+mean_probs = unc["mean"]   # (n_test, n_classes)
+entropy = -np.sum(mean_probs * np.log(mean_probs + 1e-15), axis=1)
+```
+
+The returned dict contains:
+- `"mean"` -- mean prediction across all passes
+- `"std"` -- standard deviation across all passes
+- `"all_preds"` -- raw predictions from every pass
+
+---
+
+## Synthetic datasets
+
+### Regression functions
+
+Available via `src.data.get_data(n_data, sigma_noise, function_name)`:
+
+| Name | Description |
+|---|---|
+| `quartic_data` | x^4 |
+| `sinusoid_data` | sin(2*pi*x) * 0.5 + 0.5 |
+| `multi_modal_data` | Sum of Gaussian peaks |
+| `step_function_data` | Smooth tanh step |
+| `oscillating_poly_data` | x^3 - 0.5*x^2 + 0.1*sin(15x) |
+| `damped_cosine_data` | Damped cosine wave |
+| `neg_quadratic_data` | Negative quadratic |
+| `neg_qubic_data` | Negative cubic |
+
+### Classification datasets
+
+Via `src.data.get_classification_data(n_data, data_type)`:
+
+| `data_type` | Description |
+|---|---|
+| `binary_threshold` | Threshold at x=0.5 (2 classes) |
+| `multi_class_regions` | Three equal regions (3 classes) |
+| `sinusoidal` | Classes from sign of sin(2*pi*x) (2 classes) |
+
+### 2D datasets
+
+`get_two_moons_data()` generates the scikit-learn `make_moons` dataset. Use `encode_2d_to_phase()` to reduce 2D inputs to a single phase value before training.
+
+---
+
+## Development
+
+```bash
+# Lint and format
+uv run ruff check .
+uv run ruff format .
+
+# Run all tests
+uv run pytest tests/
+
+# Run a single test file
+uv run pytest tests/test_circuits.py
+```

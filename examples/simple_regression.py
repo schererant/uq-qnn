@@ -32,7 +32,7 @@ CONFIG = {
     "n_classes": 1,
     # Training
     "lr": 0.05,
-    "epochs": 3,
+    "epochs": 100,
     "n_samples": 20,
     "memory_depth": 2,
     "n_photons": None,

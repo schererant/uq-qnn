@@ -21,10 +21,12 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 
+from src.config import SimConfig
+from src.hardware import HardwareProfile, get_profile
 from src.simulation import sim_logger
 from src.logging_config import get_logger, add_file_handler, remove_file_handler
 
@@ -61,15 +63,47 @@ class Experiment:
         config: Complete experiment configuration dict.  All circuit,
             training, and task parameters must be specified explicitly —
             there are no hidden defaults.
+        hardware: Optional hardware profile. Can be a ``HardwareProfile``
+            instance, a profile name string (looked up via ``get_profile``),
+            or ``None`` (no hardware profile applied).  When provided, the
+            profile's backend is merged into the config (explicit config
+            keys take precedence), and the profile's noise model is applied
+            to ``predict()`` and ``run_uncertainty_analysis()`` outputs.
     """
 
-    def __init__(self, name: str, *, config: dict[str, Any]):
+    def __init__(
+        self,
+        name: str,
+        *,
+        config: dict[str, Any],
+        hardware: Optional[Union[HardwareProfile, str]] = None,
+    ):
         self.name = name
         self.config = config.copy()
+
+        # Resolve hardware profile
+        if isinstance(hardware, str):
+            self.hardware: Optional[HardwareProfile] = get_profile(hardware)
+        else:
+            self.hardware = hardware
+
+        # Apply hardware profile to config (explicit keys take precedence)
+        if self.hardware is not None:
+            self.config = self.hardware.apply_to_config(self.config)
+            # If profile has noise, disable SimConfig-level noise_std to avoid double noise
+            if self.hardware.noise is not None and self.config.get("noise_std") is not None:
+                logger.warning(
+                    "HardwareProfile %r has a noise model and config has noise_std set. "
+                    "Profile noise takes precedence; setting noise_std=None.",
+                    self.hardware.name,
+                )
+                self.config["noise_std"] = None
 
         missing = _REQUIRED_CONFIG_KEYS - self.config.keys()
         if missing:
             raise ValueError(f"Missing required config keys: {sorted(missing)}")
+
+        self.sim_cfg = SimConfig.from_experiment_config(self.config)
 
         self.timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         self.project_root = Path(__file__).resolve().parent.parent
@@ -89,6 +123,8 @@ class Experiment:
         logger.info("=== Experiment: %s ===", self.name)
         logger.info("Run directory: %s", self.run_dir.resolve())
         logger.info("Timestamp: %s", self.timestamp)
+        if self.hardware is not None:
+            logger.info("Hardware profile: %s", self.hardware.name)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -141,27 +177,10 @@ class Experiment:
     def _training_kwargs(self) -> dict[str, Any]:
         c = self.config
         return {
-            "memory_depth": c["memory_depth"],
+            "sim_cfg": self.sim_cfg,
             "lr": c["lr"],
             "epochs": c["epochs"],
-            "n_samples": c["n_samples"],
-            "n_swipe": c["n_swipe"],
-            "swipe_span": c["swipe_span"],
-            "n_modes": c["n_modes"],
-            "encoding_mode": c["encoding_mode"],
-            "n_photons": c["n_photons"],
-            "target_mode": c["target_mode"],
-            "memristive_phase_idx": c["memristive_phase_idx"],
-            "memristive_output_modes": c["memristive_output_modes"],
-            "encoding_phase_idx": c.get("encoding_phase_idx"),
-            "output_mode": c["output_mode"],
-            "input_modes": c.get("input_modes"),
-            "working_detectors": c.get("working_detectors"),
-            "noise_std": c.get("noise_std"),
-            "loss_type": c["loss_type"],
-            "n_classes": c["n_classes"],
             "seed": c["seed"],
-            "backend": c["sim_backend"],
         }
 
     # ── prediction ─────────────────────────────────────────────
@@ -175,6 +194,9 @@ class Experiment:
     ) -> np.ndarray:
         """Run a single forward pass through the trained circuit.
 
+        If a hardware profile with a noise model is set, noise is applied
+        to the raw simulation outputs.
+
         Args:
             theta: Optimized parameter vector.
             encoded_phases: Phase-encoded input data.
@@ -182,27 +204,52 @@ class Experiment:
         """
         from src.simulation import run_simulation_sequence_np
 
-        c = self.config
-        return run_simulation_sequence_np(
+        raw = run_simulation_sequence_np(
             theta,
-            c["memory_depth"],
-            c["n_samples"],
-            encoded_phases=encoded_phases,
-            n_swipe=c["n_swipe"],
-            swipe_span=c["swipe_span"],
-            n_modes=c["n_modes"],
-            encoding_mode=c["encoding_mode"],
-            target_mode=c["target_mode"],
-            memristive_phase_idx=c["memristive_phase_idx"],
-            memristive_output_modes=c["memristive_output_modes"],
-            encoding_phase_idx=c.get("encoding_phase_idx"),
-            output_mode=c["output_mode"],
-            input_modes=c.get("input_modes"),
-            working_detectors=c.get("working_detectors"),
-            noise_std=c.get("noise_std"),
-            backend=c["sim_backend"],
+            encoded_phases,
+            self.sim_cfg,
             return_class_probs=return_class_probs,
         )
+        if self.hardware is not None and self.hardware.noise is not None:
+            raw = self._apply_hardware_noise(raw)
+        return raw
+
+    def _apply_hardware_noise(
+        self,
+        preds: np.ndarray,
+        *,
+        seed: Optional[int] = None,
+    ) -> np.ndarray:
+        """Apply the hardware profile's noise model to prediction outputs.
+
+        For multi-class outputs (2D array), noise is applied row-by-row.
+        For scalar outputs (1D array), each value is wrapped into a
+        single-element array, noised, and unwrapped.
+        """
+        from src.coincidence import get_cc_labels
+
+        noise = self.hardware.noise
+        rng = np.random.default_rng(seed or self.config.get("seed", 42))
+
+        if preds.ndim == 2:
+            # Multi-class: each row is a probability vector
+            n_channels = preds.shape[1]
+            working_indices = tuple(range(n_channels))
+            labels = [f"C{i}" for i in range(n_channels)]
+            result = np.empty_like(preds)
+            for i in range(len(preds)):
+                result[i] = noise(preds[i], working_indices, labels, rng=rng)
+            return result
+        else:
+            # Scalar regression: apply noise to each prediction individually
+            working_indices = (0,)
+            labels = ["C0"]
+            result = np.empty_like(preds)
+            for i in range(len(preds)):
+                row = np.array([preds[i]])
+                noised = noise(row, working_indices, labels, rng=rng)
+                result[i] = noised[0]
+            return result
 
     # ── uncertainty ────────────────────────────────────────────
 
@@ -245,23 +292,7 @@ class Experiment:
         else:
             all_preds = np.zeros((len(encoded_phases), n_passes))
 
-        unc_cfg = {
-            "memory_depth": c["memory_depth"],
-            "n_swipe": 0,
-            "swipe_span": 0.0,
-            "n_modes": c["n_modes"],
-            "encoding_mode": c["encoding_mode"],
-            "target_mode": c["target_mode"],
-            "memristive_phase_idx": c["memristive_phase_idx"],
-            "memristive_output_modes": c["memristive_output_modes"],
-            "encoding_phase_idx": c.get("encoding_phase_idx"),
-            "output_mode": c["output_mode"],
-            "input_modes": c.get("input_modes"),
-            "working_detectors": c.get("working_detectors"),
-            "noise_std": None,
-            "backend": c["sim_backend"],
-            "return_class_probs": is_classification,
-        }
+        unc_sim_cfg = self.sim_cfg.replace(n_swipe=0, swipe_span=0.0, noise_std=None)
 
         rng = np.random.default_rng(c["seed"])
         n_samples_base = c["n_samples"]
@@ -279,7 +310,15 @@ class Experiment:
                 )
             else:
                 perturbed += rng.normal(0, noise_std, size=len(perturbed))
-            jobs.append((perturbed, sample_count, encoded_phases, unc_cfg))
+            jobs.append(
+                (
+                    perturbed,
+                    sample_count,
+                    encoded_phases,
+                    unc_sim_cfg.to_dict(),
+                    is_classification,
+                )
+            )
 
         max_workers = min(n_passes, os.cpu_count() or 2)
         with ProcessPoolExecutor(max_workers=max_workers) as pool:
@@ -291,7 +330,14 @@ class Experiment:
                 )
             )
 
+        has_hw_noise = self.hardware is not None and self.hardware.noise is not None
+
         for i, preds in enumerate(results):
+            if has_hw_noise:
+                preds = self._apply_hardware_noise(
+                    np.atleast_2d(preds) if (is_classification and n_classes > 1) else preds,
+                    seed=(c["seed"] + i + 1),
+                )
             if is_classification and n_classes > 1:
                 all_preds[:, :, i] = preds
             else:
@@ -355,6 +401,7 @@ class Experiment:
             "python": sys.version.split()[0],
             "git_commit": self._get_git_sha(),
             "config": self._json_safe(self.config),
+            "hardware": self.hardware.to_dict() if self.hardware is not None else None,
             "metrics": self._json_safe(self.metrics),
             "artifacts": self.artifacts,
         }
