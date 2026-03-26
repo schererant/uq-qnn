@@ -11,6 +11,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import get_data
 from src.experiment import Experiment
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # ===================== EXPERIMENT CONFIG =====================
 CONFIG = {
@@ -62,7 +65,8 @@ def main():
 
         enc_test = 2 * np.arccos(X_test)
         unc = exp.run_uncertainty_analysis(
-            theta, enc_test,
+            theta,
+            enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
         )
@@ -70,7 +74,7 @@ def main():
         std_preds = unc["std"]
 
         mse = np.mean((mean_preds - y_test) ** 2)
-        print(f"Test MSE: {mse:.6f}")
+        logger.info("Test MSE: %.6f", mse)
         exp.save_metrics({"test_mse": mse})
 
         # ── plots ──
@@ -88,7 +92,9 @@ def main():
             X_test,
             mean_preds - 2 * std_preds,
             mean_preds + 2 * std_preds,
-            color="r", alpha=0.3, label="95% CI",
+            color="r",
+            alpha=0.3,
+            label="95% CI",
         )
         axes[0, 1].set(xlabel="x", ylabel="y", title="Regression with Uncertainty")
         axes[0, 1].legend()
@@ -106,7 +112,8 @@ def main():
             [0, np.max(std_preds)], [0, 2 * np.max(std_preds)], "k--", label="y=2x"
         )
         axes[1, 1].set(
-            xlabel="Uncertainty (std)", ylabel="Absolute error",
+            xlabel="Uncertainty (std)",
+            ylabel="Absolute error",
             title="Calibration: Error vs. Uncertainty",
         )
         axes[1, 1].legend()

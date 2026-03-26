@@ -19,6 +19,9 @@ from PIL import Image
 
 from .circuits import build_circuit, get_mzi_modes_for_phase
 from .simulation import _normalize_memristive_phase_idx
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def display_circuit_annotated(
@@ -155,7 +158,7 @@ def display_circuit_annotated(
 
     if path:
         plt.savefig(path, dpi=dpi, bbox_inches="tight")
-        print(f"Saved circuit to {path}")
+        logger.info("Saved circuit to %s", path)
     if show:
         plt.show()
     else:
