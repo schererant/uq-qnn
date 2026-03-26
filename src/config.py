@@ -12,8 +12,92 @@ defaults" policy enforced by _REQUIRED_CONFIG_KEYS in experiment.py.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, fields, replace as _dc_replace
+from dataclasses import asdict, dataclass, fields
+from dataclasses import replace as _dc_replace
 from typing import Any, Optional, Tuple, Union
+
+
+@dataclass(frozen=True)
+class CircuitConfig:
+    """Geometry + measurement description for a photonic circuit.
+
+    Unlike :class:`SimConfig`, ``CircuitConfig`` focuses purely on the
+    physics/measurement side of a circuit (number of modes, encoding
+    strategy, singles vs. coincidence readout).  It intentionally carries
+    sane defaults so that simple scripts can construct a circuit without
+    specifying every policy knob used by the training stack.
+    """
+
+    n_modes: int
+    encoding_mode: int = 0
+    encoding_phase_idx: Optional[int] = None
+    output_mode: str = "singles"  # "singles" | "coincidence"
+    input_modes: Optional[Tuple[int, ...]] = None
+    working_detectors: Optional[Tuple[int, ...]] = None
+
+    @property
+    def n_phases(self) -> int:
+        """Total number of Clements mesh phases for ``n_modes``."""
+
+        return self.n_modes * (self.n_modes - 1)
+
+    @property
+    def n_coincidences(self) -> int:
+        """Number of unique coincidence channels for ``n_modes``."""
+
+        return self.n_modes * (self.n_modes - 1) // 2
+
+    def validate(self) -> None:
+        """Validate that the circuit description is internally consistent."""
+
+        if self.n_modes < 2:
+            raise ValueError(f"n_modes must be >= 2, got {self.n_modes}")
+        if self.encoding_mode < 0 or self.encoding_mode >= self.n_modes:
+            raise ValueError(
+                f"encoding_mode must be in [0, {self.n_modes - 1}], got {self.encoding_mode}"
+            )
+        if self.encoding_phase_idx is not None:
+            n_phases = self.n_phases
+            idx = int(self.encoding_phase_idx)
+            if idx < 0 or idx >= n_phases:
+                raise ValueError(
+                    f"encoding_phase_idx must be in [0, {n_phases - 1}], got {idx}"
+                )
+        if self.output_mode not in ("singles", "coincidence"):
+            raise ValueError(
+                "output_mode must be either 'singles' or 'coincidence', "
+                f"got {self.output_mode!r}"
+            )
+        if self.output_mode == "coincidence":
+            if self.input_modes is not None and len(self.input_modes) != 2:
+                raise ValueError(
+                    "Coincidence mode requires exactly two input_modes entries"
+                )
+            if self.input_modes is not None:
+                for m in self.input_modes:
+                    if m < 0 or m >= self.n_modes:
+                        raise ValueError(
+                            "input_modes indices must lie within the circuit modes"
+                        )
+            if self.working_detectors is not None:
+                for wd in self.working_detectors:
+                    if wd < 0 or wd >= self.n_modes:
+                        raise ValueError(
+                            "working_detectors indices must lie within the circuit modes"
+                        )
+
+    @classmethod
+    def from_sim_config(cls, cfg: "SimConfig") -> "CircuitConfig":
+        """Extract a :class:`CircuitConfig` from an existing ``SimConfig``."""
+
+        return cls(
+            n_modes=cfg.n_modes,
+            encoding_mode=cfg.encoding_mode,
+            encoding_phase_idx=cfg.encoding_phase_idx,
+            output_mode=cfg.output_mode,
+            input_modes=cfg.input_modes,
+            working_detectors=cfg.working_detectors,
+        )
 
 
 def _seq_as_tuples(v: Any) -> Any:
@@ -162,3 +246,16 @@ class SimConfig:
             unc_cfg = sim_cfg.replace(n_swipe=0, swipe_span=0.0, noise_std=None)
         """
         return _dc_replace(self, **overrides)
+
+    @property
+    def circuit_config(self) -> CircuitConfig:
+        """Lightweight :class:`CircuitConfig` view of the circuit-specific fields."""
+
+        return CircuitConfig(
+            n_modes=self.n_modes,
+            encoding_mode=self.encoding_mode,
+            encoding_phase_idx=self.encoding_phase_idx,
+            output_mode=self.output_mode,
+            input_modes=self.input_modes,
+            working_detectors=self.working_detectors,
+        )

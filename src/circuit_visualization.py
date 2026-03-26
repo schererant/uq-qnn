@@ -17,8 +17,11 @@ import numpy as np
 import perceval as pcvl
 from PIL import Image
 
-from .circuits import build_circuit, get_mzi_modes_for_phase
-from .simulation import _normalize_memristive_phase_idx
+from .circuits import (
+    build_circuit,
+    get_mzi_modes_for_phase,
+    normalize_memristive_phase_idx,
+)
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +67,7 @@ def display_circuit_annotated(
     if target_mode is None:
         target_mode = (n_modes - 1,)
 
-    memristive_indices = _normalize_memristive_phase_idx(
+    memristive_indices = normalize_memristive_phase_idx(
         memristive_phase_idx, n_modes, n_phases
     )
 

@@ -1,158 +1,37 @@
 from __future__ import annotations
 
 import time
-from collections import Counter
-from typing import Any, Optional, Union, Tuple, Sequence
+from typing import Optional, Sequence, Tuple, Union
+
 import numpy as np
 import perceval as pcvl
 from perceval.algorithm import Sampler
 
-from .config import SimConfig
-from .circuits import build_circuit, build_parametric_circuit, get_mzi_modes_for_phase
-from .numpy_backend import (
+from ..circuits import (
+    build_circuit,
+    build_parametric_circuit,
+    normalize_memristive_output_modes,
+    normalize_memristive_phase_idx,
+)
+from ..coincidence import (
+    apply_noise_to_outcomes,
+    get_cc_labels,
+    postselect_measurement,
+    probs_to_coincidences,
+    working_detectors_to_cc_indices,
+)
+from ..config import SimConfig
+from ..logging_config import get_logger
+from ..numpy_backend import (
     run_vectorized_non_memristive,
-    singles_prob_from_unitary,
     singles_class_probs_from_unitary,
+    singles_prob_from_unitary,
     unitary_for_point,
 )
-from .coincidence import (
-    get_cc_labels,
-    working_detectors_to_cc_indices,
-    probs_to_coincidences,
-    postselect_measurement,
-    apply_noise_to_outcomes,
-)
-from .logging_config import get_logger
+from .logger import sim_logger
+from .memristive import MemristiveState
 
 logger = get_logger(__name__)
-
-
-class SimulationLogger:
-    def __init__(self):
-        self.call_count = 0
-        self.total_time = 0.0
-        self.samples_counter = Counter()
-        self.circuit_call_count = 0
-        self.circuit_total_time = 0.0
-
-    def log(self, elapsed: float, n_samples: int):
-        self.call_count += 1
-        self.total_time += elapsed
-        self.samples_counter[n_samples] += 1
-
-    def log_circuit(self, elapsed: float):
-        self.circuit_call_count += 1
-        self.circuit_total_time += elapsed
-
-    def log_circuits(self, elapsed: float, count: int = 1):
-        """Record timing for multiple logical circuit evaluations (e.g. vectorized batch)."""
-        self.circuit_call_count += count
-        self.circuit_total_time += elapsed
-
-    def report(self):
-        lines = [
-            f"Circuit sequence runs: {self.call_count}",
-            f"Total sequence time: {self.total_time:.3f}s",
-        ]
-        if self.call_count > 0:
-            lines.append(
-                f"Avg time per sequence: {self.total_time / self.call_count:.6f}s"
-            )
-        sample_parts = [f"{n}×{freq}" for n, freq in self.samples_counter.items()]
-        lines.append(f"Sampler sample counts: {', '.join(sample_parts) or 'none'}")
-        lines.append(f"Individual circuit sims: {self.circuit_call_count}")
-        lines.append(f"Total circuit sim time: {self.circuit_total_time:.3f}s")
-        if self.circuit_call_count > 0:
-            lines.append(
-                f"Avg time per circuit sim: "
-                f"{self.circuit_total_time / self.circuit_call_count:.6f}s"
-            )
-        logger.info("Simulation statistics:\n  " + "\n  ".join(lines))
-
-    def stats_dict(self) -> dict[str, Any]:
-        """Return all statistics as a JSON-serializable dictionary."""
-        return {
-            "call_count": self.call_count,
-            "total_time": self.total_time,
-            "samples_counter": dict(self.samples_counter),
-            "circuit_call_count": self.circuit_call_count,
-            "circuit_total_time": self.circuit_total_time,
-            "avg_time_per_sequence": self.total_time / self.call_count
-            if self.call_count > 0
-            else 0,
-            "avg_time_per_circuit": self.circuit_total_time / self.circuit_call_count
-            if self.circuit_call_count > 0
-            else 0,
-        }
-
-
-# Global simulation logger instance
-sim_logger = SimulationLogger()
-
-
-def _normalize_memristive_output_modes(
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    memristive_indices: Tuple[int, ...],
-    n_modes: int,
-) -> Tuple[Tuple[int, int], ...]:
-    """
-    Normalize memristive_output_modes to a tuple of (mode_p1, mode_p2) per memristive index.
-    When None, uses get_mzi_modes_for_phase for each index (default: MZI output modes).
-    """
-    if memristive_output_modes is None:
-        return tuple(
-            get_mzi_modes_for_phase(idx, n_modes) for idx in memristive_indices
-        )
-    modes = tuple((int(m1), int(m2)) for m1, m2 in memristive_output_modes)
-    if len(modes) != len(memristive_indices):
-        raise ValueError(
-            f"memristive_output_modes must have {len(memristive_indices)} entries "
-            f"(one per memristive phase), got {len(modes)}"
-        )
-    for j, (m1, m2) in enumerate(modes):
-        if m1 < 0 or m1 >= n_modes or m2 < 0 or m2 >= n_modes:
-            raise ValueError(
-                f"memristive_output_modes[{j}] = ({m1}, {m2}): modes must be in [0, {n_modes - 1}]"
-            )
-        if m1 == m2:
-            raise ValueError(
-                f"memristive_output_modes[{j}] = ({m1}, {m2}): the two modes must differ"
-            )
-    return modes
-
-
-def _normalize_memristive_phase_idx(
-    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
-    n_modes: int,
-    n_phases: int,
-) -> Tuple[int, ...]:
-    """
-    Normalize memristive_phase_idx to a tuple of phase indices.
-    Returns empty tuple when None or empty - no memristive behavior.
-    """
-    if memristive_phase_idx is None:
-        return ()
-    if isinstance(memristive_phase_idx, int):
-        idx = memristive_phase_idx
-        if idx < 0 or idx >= n_phases:
-            raise ValueError(
-                f"memristive_phase_idx must be in [0, {n_phases - 1}] for {n_modes} modes, got {idx}"
-            )
-        return (idx,)
-    # Sequence (tuple, list, etc.)
-    indices = tuple(int(x) for x in memristive_phase_idx)
-    if len(indices) == 0:
-        return ()
-    for idx in indices:
-        if idx < 0 or idx >= n_phases:
-            raise ValueError(
-                f"Each memristive_phase_idx must be in [0, {n_phases - 1}] for {n_modes} modes, got {idx}"
-            )
-    if len(indices) != len(set(indices)):
-        raise ValueError(
-            f"memristive_phase_idx must not contain duplicates, got {memristive_phase_idx}"
-        )
-    return indices
 
 
 def run_simulation_sequence_np(
@@ -187,17 +66,23 @@ def run_simulation_sequence_np(
         raise ValueError(f"backend must be 'numpy' or 'perceval', got {cfg.backend!r}")
 
     n_phases = cfg.n_modes * (cfg.n_modes - 1)
-    memristive_indices = _normalize_memristive_phase_idx(
+    memristive_indices = normalize_memristive_phase_idx(
         cfg.memristive_phase_idx, cfg.n_modes, n_phases
     )
     n_memristive = len(memristive_indices)
-    output_modes = (
-        _normalize_memristive_output_modes(
+    if n_memristive > 0:
+        output_modes = normalize_memristive_output_modes(
             cfg.memristive_output_modes, memristive_indices, cfg.n_modes
         )
-        if n_memristive > 0
-        else ()
-    )
+        mem_state = MemristiveState(
+            n_indices=n_memristive,
+            memory_depth=cfg.memory_depth,
+            output_modes=output_modes,
+            encoding_mode=cfg.encoding_mode,
+        )
+    else:
+        output_modes = ()
+        mem_state = None
 
     # Continuous mode only when memristive is active
     if n_swipe > 0 and n_memristive == 0:
@@ -219,9 +104,7 @@ def run_simulation_sequence_np(
 
     weights = params[-n_memristive:] if n_memristive else None
 
-    target_mode = (
-        cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
-    )
+    target_mode = cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
 
     # Input state: singles (1 photon) or coincidence (2 photons)
     if cfg.output_mode == "coincidence":
@@ -269,14 +152,15 @@ def run_simulation_sequence_np(
         cc_labels = []
         add_noise = False
 
-    state_m1_list = []
-    state_m2_list = []
-    for j in range(n_memristive):
-        m1, m2 = output_modes[j]
-        s1, s2 = [0] * cfg.n_modes, [0] * cfg.n_modes
-        s1[m1], s2[m2] = 1, 1
-        state_m1_list.append(pcvl.BasicState(s1))
-        state_m2_list.append(pcvl.BasicState(s2))
+    state_m1_list: list[pcvl.BasicState] = []
+    state_m2_list: list[pcvl.BasicState] = []
+    if mem_state:
+        for j in range(n_memristive):
+            m1, m2 = output_modes[j]
+            s1, s2 = [0] * cfg.n_modes, [0] * cfg.n_modes
+            s1[m1], s2[m2] = 1, 1
+            state_m1_list.append(pcvl.BasicState(s1))
+            state_m2_list.append(pcvl.BasicState(s2))
 
     # Build target states list for multi-class / probability extraction
     target_modes_list = []
@@ -285,9 +169,6 @@ def run_simulation_sequence_np(
         tm[m] = 1
         target_modes_list.append(pcvl.BasicState(tm))
 
-    if n_memristive > 0:
-        mem_p1 = np.zeros((cfg.memory_depth, n_memristive), dtype=float)
-        mem_p2 = np.zeros((cfg.memory_depth, n_memristive), dtype=float)
     num_pts = len(encoded_phases)
 
     # Determine if we need multi-class output
@@ -316,9 +197,7 @@ def run_simulation_sequence_np(
     if cfg.backend == "numpy" and mode == "discrete" and n_memristive == 0:
         t_np = time.perf_counter()
         cfg_vec = (
-            cfg
-            if cfg.target_mode is not None
-            else cfg.replace(target_mode=target_mode)
+            cfg if cfg.target_mode is not None else cfg.replace(target_mode=target_mode)
         )
         preds = run_vectorized_non_memristive(
             params=params,
@@ -340,20 +219,11 @@ def run_simulation_sequence_np(
             )
         for i in range(num_pts):
             t = i % cfg.memory_depth
-            if n_memristive > 0:
-                mem_phis = np.empty(n_memristive, dtype=float)
-                for j in range(n_memristive):
-                    if i == 0:
-                        mem_phis[j] = np.pi / 4
-                    else:
-                        m1m = mem_p1[:, j].mean()
-                        m2m = mem_p2[:, j].mean()
-                        arg = np.clip(m1m + weights[j] * m2m, 1e-9, 1 - 1e-9)
-                        mem_phis[j] = np.arccos(np.sqrt(arg))
+            mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
             if mode == "discrete":
                 enc_phi = float(encoded_phases[i])
-                if n_memristive > 0:
+                if mem_state:
                     phases_loc = params[:-n_memristive].copy()
                     for j, idx in enumerate(memristive_indices):
                         phases_loc[idx] = mem_phis[j]
@@ -368,11 +238,8 @@ def run_simulation_sequence_np(
                     cfg.encoding_mode,
                     cfg.encoding_phase_idx,
                 )
-                if n_memristive > 0:
-                    for j in range(n_memristive):
-                        m1, m2 = output_modes[j]
-                        mem_p1[t, j] = float(np.abs(u[m1, cfg.encoding_mode]) ** 2)
-                        mem_p2[t, j] = float(np.abs(u[m2, cfg.encoding_mode]) ** 2)
+                if mem_state:
+                    mem_state.update_from_unitary(i, u)
                 if return_class_probs and n_classes > 1:
                     preds[i, :] = singles_class_probs_from_unitary(
                         u, cfg.encoding_mode, target_mode
@@ -423,10 +290,9 @@ def run_simulation_sequence_np(
                     preds[i] = target_swipe.mean(axis=0)
                 else:
                     preds[i] = target_swipe.mean()
-                for j in range(n_memristive):
-                    mem_p1[t, j], mem_p2[t, j] = (
-                        p1_swipe[:, j].mean(),
-                        p2_swipe[:, j].mean(),
+                if mem_state:
+                    mem_state.update_from_prob_arrays(
+                        i, p1_swipe.mean(axis=0), p2_swipe.mean(axis=0)
                     )
 
         elapsed = time.perf_counter() - start_time
@@ -456,20 +322,11 @@ def run_simulation_sequence_np(
 
     for i in range(num_pts):
         t = i % cfg.memory_depth
-        if n_memristive > 0:
-            mem_phis = np.empty(n_memristive, dtype=float)
-            for j in range(n_memristive):
-                if i == 0:
-                    mem_phis[j] = np.pi / 4
-                else:
-                    m1 = mem_p1[:, j].mean()
-                    m2 = mem_p2[:, j].mean()
-                    arg = np.clip(m1 + weights[j] * m2, 1e-9, 1 - 1e-9)
-                    mem_phis[j] = np.arccos(np.sqrt(arg))
+        mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
         if mode == "discrete":
             enc_phi = encoded_phases[i]
-            if n_memristive > 0:
+            if mem_state:
                 phases = params[:-n_memristive].copy()
                 for j, idx in enumerate(memristive_indices):
                     phases[idx] = mem_phis[j]
@@ -495,10 +352,10 @@ def run_simulation_sequence_np(
                 probs = Sampler(proc).probs(cfg.n_samples)["results"]
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
-            if n_memristive > 0:
-                for j in range(n_memristive):
-                    mem_p1[t, j] = probs.get(state_m1_list[j], 0.0)
-                    mem_p2[t, j] = probs.get(state_m2_list[j], 0.0)
+            if mem_state:
+                p1_vals = [probs.get(state, 0.0) for state in state_m1_list]
+                p2_vals = [probs.get(state, 0.0) for state in state_m2_list]
+                mem_state.update_from_prob_arrays(i, p1_vals, p2_vals)
             if cfg.output_mode == "coincidence":
                 coinc = probs_to_coincidences(probs, cfg.n_modes)
                 out = postselect_measurement(
@@ -611,10 +468,11 @@ def run_simulation_sequence_np(
                 preds[i] = target_swipe.mean(axis=0)
             else:
                 preds[i] = target_swipe.mean()
-            for j in range(n_memristive):
-                mem_p1[t, j], mem_p2[t, j] = (
-                    p1_swipe[:, j].mean(),
-                    p2_swipe[:, j].mean(),
+            if mem_state:
+                mem_state.update_from_prob_arrays(
+                    i,
+                    p1_swipe.mean(axis=0),
+                    p2_swipe.mean(axis=0),
                 )
 
     # finalize

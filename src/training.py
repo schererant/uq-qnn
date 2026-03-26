@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from typing import List, Optional, Sequence, Tuple, Union
+
 import numpy as np
 import torch
 from tqdm import tqdm
 
+from .circuits import normalize_memristive_phase_idx
 from .config import SimConfig
-from .loss import PhotonicModel
-from .simulation import _normalize_memristive_phase_idx
 from .logging_config import get_logger, log_params
+from .loss import PhotonicModel
 
 logger = get_logger(__name__)
 
@@ -24,7 +25,7 @@ def _init_theta(
     """
     expected_phases = n_modes * (n_modes - 1)
     phases = rng.uniform(0.0, 2 * np.pi, size=expected_phases)
-    memristive_indices = _normalize_memristive_phase_idx(
+    memristive_indices = normalize_memristive_phase_idx(
         memristive_phase_idx, n_modes, expected_phases
     )
     if len(memristive_indices) == 0:
@@ -85,10 +86,12 @@ def train_pytorch_generic(
         log_params(logger, params)
 
     rng = np.random.default_rng(seed)
-    init_theta = _init_theta(rng, sim_cfg_work.n_modes, sim_cfg_work.memristive_phase_idx)
+    init_theta = _init_theta(
+        rng, sim_cfg_work.n_modes, sim_cfg_work.memristive_phase_idx
+    )
 
     expected_phases = sim_cfg_work.n_modes * (sim_cfg_work.n_modes - 1)
-    memristive_indices = _normalize_memristive_phase_idx(
+    memristive_indices = normalize_memristive_phase_idx(
         sim_cfg_work.memristive_phase_idx, sim_cfg_work.n_modes, expected_phases
     )
     phase_idx = tuple(i for i in range(expected_phases) if i not in memristive_indices)
@@ -171,14 +174,14 @@ def gradient_check(
     """
     Performs a gradient check comparing finite difference and analytic gradients.
     """
-    from .data import get_data
     from .autograd import MemristorLossPSR
+    from .data import get_data
     from .simulation import run_simulation_sequence_np
 
     X, y, *_ = get_data(60, 0.0)
     enc = 2 * np.arccos(X)
     n_phases = n_modes * (n_modes - 1)
-    memristive_indices = _normalize_memristive_phase_idx(
+    memristive_indices = normalize_memristive_phase_idx(
         memristive_phase_idx, n_modes, n_phases
     )
     n_memristive = len(memristive_indices)
@@ -213,16 +216,7 @@ def gradient_check(
     )
 
     def L(params):
-        return (
-            0.5
-            * (
-                (
-                    run_simulation_sequence_np(params, enc, cfg)
-                    - y
-                )
-                ** 2
-            ).mean()
-        )
+        return 0.5 * ((run_simulation_sequence_np(params, enc, cfg) - y) ** 2).mean()
 
     eps = 1e-5
     num_grad = np.zeros_like(theta0)

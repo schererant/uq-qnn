@@ -8,21 +8,23 @@ This example demonstrates training and evaluating Clements circuits
 with and without memristive phases on the same dataset.
 """
 
-import sys
 import os
-import numpy as np
+import sys
+
 import matplotlib.pyplot as plt
+import numpy as np
+
 # from tqdm import tqdm
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import begin_console_capture, write_run_summary
+from example_logging import example_run, write_summary
 
-from src.data import get_data
 from src.config import SimConfig
-from src.training import train_pytorch
+from src.data import get_data
 from src.simulation import run_simulation_sequence_np, sim_logger
+from src.training import train_pytorch
+
 # Local config — no dependency on legacy utils.config
 SIM_BACKEND = "numpy"
 MEMORY_DEPTH = 2
@@ -312,27 +314,26 @@ def main():
     """Main function to run the comparison."""
     print("=== UQ-QNN: Circuit Architecture Comparison ===")
 
-    report_dir, _end_capture = begin_console_capture(__file__)
-    try:
+    with example_run(__file__) as (report_dir, logger):
         # Set random seed for reproducibility
         np.random.seed(42)
-    
+
         # Configure parameters
         n_samples = 500
         epochs = 5
         clements_n_modes = 3  # Number of modes for Clements architecture
-    
+
         # Generate synthetic data
-        print("Generating synthetic data...")
+        logger.info("Generating synthetic %s data…", "sinusoid_data")
         datafunction = "sinusoid_data"  # A good test function for comparison
         X_train, y_train, X_test, y_test = get_data(
             100,  # n_data
             0.05,  # sigma_noise
             datafunction,
         )
-    
+
         results = {}
-    
+
         # 1. Clements with memristive phase
         results["memristive"] = train_and_evaluate_circuit(
             "memristive",
@@ -345,10 +346,10 @@ def main():
             n_modes=clements_n_modes,
             memristive_phase_idx=[2],
         )
-    
+
         # 2. Standard Clements (no memristive)
         try:
-            print(f"Attempting Clements with {clements_n_modes} modes...")
+            logger.info("Attempting Clements with %d modes…", clements_n_modes)
             results["standard"] = train_and_evaluate_circuit(
                 "standard",
                 X_train,
@@ -360,7 +361,7 @@ def main():
                 n_modes=clements_n_modes,
                 memristive_phase_idx=None,
             )
-    
+
             # Check for NaN values in results
             mean_preds, std_preds = results["standard"]["predictions"]
             if (
@@ -368,26 +369,28 @@ def main():
                 or np.isnan(std_preds).any()
                 or np.isnan(results["standard"]["metrics"]["rmse"])
             ):
-                print("Warning: NaN values detected in Clements results. Using fallback.")
+                logger.warning(
+                    "NaN values detected in Clements results. Using fallback."
+                )
                 raise ValueError("NaN values in results")
-    
+
         except Exception as e:
-            print(f"Error with Clements architecture: {e}")
-            print("Using simplified synthetic results for Clements architecture")
-    
+            logger.error("Error with Clements architecture: %s", e)
+            logger.info("Using simplified synthetic results for Clements architecture")
+
             # Create synthetic results that follow a simple function
             X_simple = np.linspace(0, 1, len(X_test))
             dummy_preds = 0.5 * np.sin(2 * np.pi * X_simple) + 0.5
             dummy_std = np.ones_like(X_test) * 0.1
-    
+
             # Calculate metrics
             dummy_mse = np.mean((dummy_preds - y_test) ** 2)
             dummy_rmse = np.sqrt(dummy_mse)
             dummy_mae = np.mean(np.abs(dummy_preds - y_test))
-    
+
             # Create synthetic training history
             dummy_history = np.logspace(-1, -3, epochs)
-    
+
             results["standard"] = {
                 "theta": np.ones(6) * 0.5,  # 6 phases for 3-mode Clements
                 "history": list(dummy_history),
@@ -401,30 +404,28 @@ def main():
                     "target_mode": (2,),
                 },
             }
-    
+
         # Plot comparison
         fig = plot_comparison(results, X_train, y_train, X_test, y_test)
-    
+
         # Save the figure
         fig.savefig(report_dir / "circuit_comparison.png", dpi=300, bbox_inches="tight")
         plt.show()
-    
+
         sim_logger.report()
-    
-    
-        # Print simulation statistics
-        write_run_summary(
+
+        logger.info("Memristive metrics: %s", results["memristive"]["metrics"])
+        logger.info("Standard metrics: %s", results["standard"]["metrics"])
+
+        write_summary(
             report_dir,
-            metrics={
+            summary={
                 "memristive": results["memristive"]["metrics"],
                 "standard": results["standard"]["metrics"],
             },
-            artifacts=["circuit_comparison.png", "run.log"],
-            simulation=sim_logger.stats_dict()
+            simulation_stats=sim_logger.stats_dict(),
         )
-    
-    finally:
-        _end_capture()
+
 
 if __name__ == "__main__":
     main()

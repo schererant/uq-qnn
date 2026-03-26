@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-03-27 — PhotonicCircuit core and simulation package cleanup
+
+### Added
+
+- **`src/config.py`** — Introduced `CircuitConfig` (geometry + measurement) with validation helpers and exposed it via `SimConfig.circuit_config`.
+- **`src/circuit.py`** — New `PhotonicCircuit` façade that wraps the NumPy backend; provides singles/coincidence (batched) outputs, cached mesh unitaries, and convenience helpers (`target_probability`, `with_phases`, `random`).
+- **`src/simulation/logger.py`**, **`src/simulation/memristive.py`**, **`src/simulation/__init__.py`** — Broke out the global `SimulationLogger`, introduced a `MemristiveState` buffer manager, and re-exported the public simulation API from the new package namespace.
+- **`tests/test_photonic_circuit.py`** — Regression tests covering phase validation, batch/vectorized paths, coincidence math, and parity with `run_simulation_sequence_np`.
+
+### Changed
+
+- **`src/simulation/runner.py`** — Former `simulation.py` is now the runner module; imports the new logger/memristive helpers, keeps the existing function signatures, and continues to support NumPy and Perceval backends.
+- **`src/circuits.py`** — Promoted `_clements_mzi_pairs` / memristive normalizers to public functions (with backwards-compatible aliases) so downstream code (training, visualization, etc.) no longer imports private helpers from the simulation module.
+- **`src/numpy_backend.py`** — Added `all_singles_from_unitary` / `all_coincidences_from_unitary` conveniences, updated imports to the public circuit helpers.
+- **`src/training.py`**, **`src/circuit_visualization.py`**, **`src/experiment.py`** — Updated to consume `normalize_memristive_phase_idx` from `circuits`; `Experiment.predict` now short-circuits through `PhotonicCircuit` when the config is a plain NumPy singles/coincidence run.
+- **`src/coincidence.py`** — Made the Perceval import lazy so basic coincidence helpers work without Perceval installed.
+- **`README.md`** — Documented the new `PhotonicCircuit` workflow for quick, SimConfig-free simulations.
+
+### Removed
+
+- **`src/inference.py`** — Dead, broken module replaced by `PhotonicCircuit` and the `Experiment` API.
+
 ## 2026-03-26 — Hardware abstraction layer, noise models, and legacy cleanup
 
 ### Added

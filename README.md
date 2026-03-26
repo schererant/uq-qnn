@@ -55,6 +55,28 @@ uv run python examples/simple_regression.py
 uv run python examples/simple_classification.py
 ```
 
+### Simple circuit simulation via `PhotonicCircuit`
+
+Need a quick probability vector without constructing a full `SimConfig`? Use the lightweight `PhotonicCircuit` core:
+
+```python
+import numpy as np
+from src import PhotonicCircuit
+
+# 6-mode Clements mesh (30 phases)
+phases = np.random.uniform(0, 2 * np.pi, 6 * (6 - 1))
+circuit = PhotonicCircuit(n_modes=6, phases=phases)
+
+encoded = np.linspace(0, np.pi, 64)
+singles = circuit.singles_batch(encoded)          # shape (64, 6)
+coinc = circuit.coincidences(0.25, input_modes=(1, 4))  # shape (15,)
+
+# Circuit metadata is available via CircuitConfig
+print(circuit.config.n_phases)    # -> 30
+```
+
+`PhotonicCircuit` always returns all output channels (singles: `n_modes`, coincidences: `n_modes * (n_modes - 1) / 2`). Downstream code can slice or average the modes it cares about, while the legacy simulation runner (`run_simulation_sequence_np`) remains available for memristive, swipe, or Perceval-backed workflows.
+
 ---
 
 ## Creating experiments with the `Experiment` class

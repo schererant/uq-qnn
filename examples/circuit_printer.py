@@ -8,17 +8,17 @@ This script creates memristor and Clements circuits and prints them out in detai
 showing their structure, components, and operation.
 """
 
-import sys
 import os
+import sys
+
 import numpy as np
 
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import begin_console_capture, write_run_summary
-
 import perceval as pcvl
-from src.circuits import clements_circuit, build_circuit
+from example_logging import example_run, write_summary
+
+from src.circuits import build_circuit, clements_circuit
 
 
 def print_circuit_matrix(circuit):
@@ -189,30 +189,24 @@ def main():
     """Main function to create and print circuits."""
     print("=== Circuit Printer Example ===")
 
-    report_dir, _end_capture = begin_console_capture(__file__)
-    try:
+    with example_run(__file__) as (report_dir, logger):
         # 1. Create and print 3-mode Clements circuit
-        with tee_stdout(report_dir / "console.txt"):
-            create_clements_with_memristive(n_modes=3)
-    
-            # 2. Create and print 6-mode Clements circuit
-            clements_circuit_6 = create_clements_circuit(n_modes=6)
-    
-            # 3. Create and print 3-mode Clements circuit for comparison
-            clements_circuit_3 = create_clements_circuit(n_modes=3)
-    
-            print("\nCircuit printing complete.")
-    
-        write_run_summary(
+        create_clements_with_memristive(n_modes=3)
+
+        # 2. Create and print 6-mode Clements circuit
+        clements_circuit_6 = create_clements_circuit(n_modes=6)
+
+        # 3. Create and print 3-mode Clements circuit for comparison
+        clements_circuit_3 = create_clements_circuit(n_modes=3)
+
+        print("\nCircuit printing complete.")
+
+        write_summary(
             report_dir,
-            extra={"note": "Text-only example; full console capture in console.txt."},
-            artifacts=["console.txt", "run.log"],
-            simulation=sim_logger.stats_dict()
+            summary={"note": "Console output contains the detailed circuit printouts."},
+            simulation_stats=sim_logger.stats_dict(),
         )
-    
-    
-    finally:
-        _end_capture()
+
 
 if __name__ == "__main__":
     main()

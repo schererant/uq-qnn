@@ -7,9 +7,12 @@ For n modes and 2 photons, there are n*(n-1)/2 collision-free coincidence channe
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
+
 import numpy as np
-import perceval as pcvl
+
+if TYPE_CHECKING:
+    import perceval as pcvl
 
 
 def get_cc_mode_pairs(n_modes: int) -> List[tuple[int, int]]:
@@ -60,13 +63,15 @@ def working_detectors_to_cc_indices(
 
 
 def probs_to_singles(
-    probs: Dict[pcvl.BasicState, float],
+    probs: Dict["pcvl.BasicState", float],
     n_modes: int,
 ) -> np.ndarray:
     """
     Extract single-photon counts (C0..C(n-1)) from SLOS probs dict.
     Cj = sum of probabilities over all states where mode j has >= 1 photon.
     """
+    import perceval as pcvl
+
     singles = np.zeros(n_modes, dtype=float)
     for state, prob in probs.items():
         for j in range(n_modes):
@@ -76,13 +81,15 @@ def probs_to_singles(
 
 
 def probs_to_coincidences(
-    probs: Dict[pcvl.BasicState, float],
+    probs: Dict["pcvl.BasicState", float],
     n_modes: int,
 ) -> np.ndarray:
     """
     Extract collision-free coincidence probabilities from SLOS probs dict.
     For each pair (j, k) with j < k, CCjk = prob of state with exactly 1 photon in j and 1 in k.
     """
+    import perceval as pcvl
+
     pairs = get_cc_mode_pairs(n_modes)
     coinc = np.zeros(len(pairs), dtype=float)
     for j, (mj, mk) in enumerate(pairs):

@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 # ===================== EXPERIMENT CONFIG =====================
 CONFIG = {
     # Circuit
-    "n_modes": 6,  # waveguide modes; gives 6*(6-1)=30 phase parameters
+    "n_modes": 12,  # waveguide modes; gives 6*(6-1)=30 phase parameters
     "encoding_mode": 4,  # input mode that receives the data-encoded phase
     "target_mode": (4,),  # output mode(s) whose Born-rule probability is the prediction
     "memristive_phase_idx": None,  # phase index(es) with history-dependent feedback; None = pure Clements
