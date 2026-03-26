@@ -46,6 +46,7 @@ from .simulation import (
 from .autograd import photonic_psr_coeffs_torch, MemristorLossPSR
 from .loss import PhotonicModel
 from .training import train_pytorch, train_pytorch_generic, gradient_check
+from .experiment import Experiment
 from .utils import main, config, print_run_params
 from .circuit_visualization import display_circuit_annotated, save_circuit_annotated
 from .coincidence import (
@@ -92,6 +93,7 @@ __all__ = [
     "train_pytorch",
     "train_pytorch_generic",
     "gradient_check",
+    "Experiment",
     "main",
     "config",
     "print_run_params",

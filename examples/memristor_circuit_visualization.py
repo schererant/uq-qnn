@@ -21,7 +21,7 @@ import random
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import make_run_dir, print_report_banner, write_run_summary
+from reporting import begin_console_capture, write_run_summary
 
 import perceval as pcvl
 from src.circuits import memristor_circuit, build_circuit
@@ -141,176 +141,179 @@ def main():
 
     print("=== Memristor Circuit Visualization ===")
 
-    report_dir = make_run_dir(__file__)
-    print_report_banner(report_dir)
-
-    # 1. Create a standalone memristor circuit
-    mem_circuit, phases = create_memristor_circuit()
-
-    print("\nPhase parameters:")
-    phase_names = ["phi1", "mem_phi", "phi3"]
-    for i, phase in enumerate(phases):
-        print(f"  {phase_names[i]}: {phase:.4f} radians ({phase * 180 / np.pi:.1f}°)")
-
-    # 2. Create a full circuit with encoding
-    encoding_mode = 0
-    full_circuit, phases, enc_phi = create_full_circuit(encoding_mode)
-    print(f"\nFull circuit created with encoding on mode {encoding_mode}")
-    print(f"Encoding phase: {enc_phi:.4f} radians ({enc_phi * 180 / np.pi:.1f}°)")
-
-    # 3. Define different input states
-    input_states = [
-        # Standard input state: |0,1,0>
-        pcvl.BasicState([0, 1, 0]),
-        # Alternative input: |1,0,0>
-        pcvl.BasicState([1, 0, 0]),
-        # Alternative input: |0,0,1>
-        pcvl.BasicState([0, 0, 1]),
-        # Two-photon input: |0,2,0>
-        pcvl.BasicState([0, 2, 0]),
-    ]
-
-    # 4. Simulate and visualize results for each input state
-    for i, input_state in enumerate(input_states):
-        print(f"\nSimulating with input state {i + 1}: {input_state}")
-
-        # Run simulation
-        results = simulate_with_input(full_circuit, input_state, n_samples)
-
-        # Print all results
-        print("Output states and probabilities:")
-        for state, prob in sorted(results.items(), key=lambda x: x[1], reverse=True):
-            print(f"  {state}: {prob:.6f}")
-
-        # Analyze mode probabilities
-        mode_probs = analyze_mode_probabilities(results)
-        print("Mode occupation probabilities:")
-        for mode, prob in enumerate(mode_probs):
-            print(f"  Mode {mode}: {prob:.6f}")
-
-        # Plot output distribution
-        fig1 = plot_output_distribution(results, input_state, f"Input State {i + 1}")
-        fig1.savefig(
-            report_dir / f"memristor_output_dist_{i + 1}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-
-        # Plot mode probabilities
-        fig2 = plot_mode_probabilities(mode_probs, f"Input State {i + 1}")
-        fig2.savefig(
-            report_dir / f"memristor_mode_probs_{i + 1}.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-
-    # 5. Now simulate quartic function training with the memristor circuit
-    print("\n=== Simulating Quartic Function Training ===")
-
-    # Import required modules for training
-    from src.data import get_data
-    from src.training import train_pytorch
-    from src.simulation import run_simulation_sequence_np
-    from src.utils import config
-
-    # Configure parameters
-    config["n_data"] = 40  # Small dataset for demonstration
-    config["sigma_noise"] = 0.05
-    config["lr"] = 0.03
-    config["epochs"] = 5  # Few epochs for quick demonstration
-    config["memory_depth"] = 2
-
-    # Generate synthetic data
-    X_train, y_train, X_test, y_test = get_data(
-        config["n_data"], config["sigma_noise"], "quartic_data"
-    )
-
-    # Train the model
-    print("Training model on quartic function...")
-    n_modes = 3  # 3x3 Clements with memristive phase 2
-    theta_opt, history = train_pytorch(
-        X_train,
-        y_train,
-        memory_depth=config["memory_depth"],
-        lr=config["lr"],
-        epochs=config["epochs"],
-        n_samples=n_samples // 20,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_modes=n_modes,
-        encoding_mode=0,
-        target_mode=(n_modes - 1,),
-        memristive_phase_idx=[2],
-    )
-
-    # Print optimized parameters
-    print("\nOptimized parameters:")
-    param_names = ["phi1", "phi3", "weight"]
-    for i, param in enumerate(theta_opt):
-        print(f"  {param_names[i]}: {param:.6f}")
-
-    # Generate predictions
-    print("\nGenerating predictions...")
-    enc_test = 2 * np.arccos(X_test)
-    predictions = run_simulation_sequence_np(
-        theta_opt,
-        config["memory_depth"],
-        n_samples // 20,
-        encoded_phases=enc_test,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_modes=n_modes,
-        encoding_mode=0,
-        target_mode=(n_modes - 1,),
-        memristive_phase_idx=[2],
-    )
-
-    # Compute MSE
-    mse = np.mean((predictions - y_test) ** 2)
-    print(f"Test MSE: {mse:.6f}")
-
-    # Plot results
-    plt.figure(figsize=(10, 6))
-    plt.scatter(X_train, y_train, label="Training data", alpha=0.7)
-    plt.plot(X_test, y_test, "k--", label="True function (x^4)")
-    plt.plot(X_test, predictions, "r-", label="Memristor predictions")
-    plt.title("Memristor Circuit - Quartic Function Learning")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(report_dir / "memristor_quartic_function.png", dpi=300, bbox_inches="tight")
-
-    # Plot training loss
-    plt.figure(figsize=(8, 5))
-    plt.plot(history)
-    plt.yscale("log")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training Loss")
-    plt.grid(True)
-    plt.savefig(report_dir / "memristor_training_loss.png", dpi=300, bbox_inches="tight")
-
-    # Show all plots
-    plt.show()
-
-    n_in = len(input_states)
-    artifacts = (
-        [f"memristor_output_dist_{j}.png" for j in range(1, n_in + 1)]
-        + [f"memristor_mode_probs_{j}.png" for j in range(1, n_in + 1)]
-        + [
-            "memristor_quartic_function.png",
-            "memristor_training_loss.png",
+    report_dir, _end_capture = begin_console_capture(__file__)
+    try:
+        # 1. Create a standalone memristor circuit
+        mem_circuit, phases = create_memristor_circuit()
+    
+        print("\nPhase parameters:")
+        phase_names = ["phi1", "mem_phi", "phi3"]
+        for i, phase in enumerate(phases):
+            print(f"  {phase_names[i]}: {phase:.4f} radians ({phase * 180 / np.pi:.1f}°)")
+    
+        # 2. Create a full circuit with encoding
+        encoding_mode = 0
+        full_circuit, phases, enc_phi = create_full_circuit(encoding_mode)
+        print(f"\nFull circuit created with encoding on mode {encoding_mode}")
+        print(f"Encoding phase: {enc_phi:.4f} radians ({enc_phi * 180 / np.pi:.1f}°)")
+    
+        # 3. Define different input states
+        input_states = [
+            # Standard input state: |0,1,0>
+            pcvl.BasicState([0, 1, 0]),
+            # Alternative input: |1,0,0>
+            pcvl.BasicState([1, 0, 0]),
+            # Alternative input: |0,0,1>
+            pcvl.BasicState([0, 0, 1]),
+            # Two-photon input: |0,2,0>
+            pcvl.BasicState([0, 2, 0]),
         ]
-    )
-    write_run_summary(
-        report_dir,
-        metrics={"quartic_test_mse": float(mse)},
-        artifacts=artifacts,
-    )
-
-    print(f"\nVisualization complete. Artifacts saved under {report_dir.resolve()}.")
-
+    
+        # 4. Simulate and visualize results for each input state
+        for i, input_state in enumerate(input_states):
+            print(f"\nSimulating with input state {i + 1}: {input_state}")
+    
+            # Run simulation
+            results = simulate_with_input(full_circuit, input_state, n_samples)
+    
+            # Print all results
+            print("Output states and probabilities:")
+            for state, prob in sorted(results.items(), key=lambda x: x[1], reverse=True):
+                print(f"  {state}: {prob:.6f}")
+    
+            # Analyze mode probabilities
+            mode_probs = analyze_mode_probabilities(results)
+            print("Mode occupation probabilities:")
+            for mode, prob in enumerate(mode_probs):
+                print(f"  Mode {mode}: {prob:.6f}")
+    
+            # Plot output distribution
+            fig1 = plot_output_distribution(results, input_state, f"Input State {i + 1}")
+            fig1.savefig(
+                report_dir / f"memristor_output_dist_{i + 1}.png",
+                dpi=300,
+                bbox_inches="tight",
+            )
+    
+            # Plot mode probabilities
+            fig2 = plot_mode_probabilities(mode_probs, f"Input State {i + 1}")
+            fig2.savefig(
+                report_dir / f"memristor_mode_probs_{i + 1}.png",
+                dpi=300,
+                bbox_inches="tight",
+            )
+    
+        # 5. Now simulate quartic function training with the memristor circuit
+        print("\n=== Simulating Quartic Function Training ===")
+    
+        # Import required modules for training
+        from src.data import get_data
+        from src.training import train_pytorch
+        from src.simulation import run_simulation_sequence_np
+        from src.utils import config
+    
+        # Configure parameters
+        config["n_data"] = 40  # Small dataset for demonstration
+        config["sigma_noise"] = 0.05
+        config["lr"] = 0.03
+        config["epochs"] = 5  # Few epochs for quick demonstration
+        config["memory_depth"] = 2
+    
+        # Generate synthetic data
+        X_train, y_train, X_test, y_test = get_data(
+            config["n_data"], config["sigma_noise"], "quartic_data"
+        )
+    
+        # Train the model
+        print("Training model on quartic function...")
+        n_modes = 3  # 3x3 Clements with memristive phase 2
+        theta_opt, history = train_pytorch(
+            X_train,
+            y_train,
+            memory_depth=config["memory_depth"],
+            lr=config["lr"],
+            epochs=config["epochs"],
+            n_samples=n_samples // 20,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,),
+            memristive_phase_idx=[2],
+        )
+    
+        # Print optimized parameters
+        print("\nOptimized parameters:")
+        param_names = ["phi1", "phi3", "weight"]
+        for i, param in enumerate(theta_opt):
+            print(f"  {param_names[i]}: {param:.6f}")
+    
+        # Generate predictions
+        print("\nGenerating predictions...")
+        enc_test = 2 * np.arccos(X_test)
+        predictions = run_simulation_sequence_np(
+            theta_opt,
+            config["memory_depth"],
+            n_samples // 20,
+            encoded_phases=enc_test,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_modes=n_modes,
+            encoding_mode=0,
+            target_mode=(n_modes - 1,),
+            memristive_phase_idx=[2],
+        )
+    
+        # Compute MSE
+        mse = np.mean((predictions - y_test) ** 2)
+        print(f"Test MSE: {mse:.6f}")
+    
+        # Plot results
+        plt.figure(figsize=(10, 6))
+        plt.scatter(X_train, y_train, label="Training data", alpha=0.7)
+        plt.plot(X_test, y_test, "k--", label="True function (x^4)")
+        plt.plot(X_test, predictions, "r-", label="Memristor predictions")
+        plt.title("Memristor Circuit - Quartic Function Learning")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(report_dir / "memristor_quartic_function.png", dpi=300, bbox_inches="tight")
+    
+        # Plot training loss
+        plt.figure(figsize=(8, 5))
+        plt.plot(history)
+        plt.yscale("log")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training Loss")
+        plt.grid(True)
+        plt.savefig(report_dir / "memristor_training_loss.png", dpi=300, bbox_inches="tight")
+    
+        # Show all plots
+        plt.show()
+    
+        n_in = len(input_states)
+        artifacts = (
+            [f"memristor_output_dist_{j}.png" for j in range(1, n_in + 1)]
+            + [f"memristor_mode_probs_{j}.png" for j in range(1, n_in + 1)]
+            + [
+                "memristor_quartic_function.png",
+                "memristor_training_loss.png",
+            ]
+        )
+        write_run_summary(
+            report_dir,
+            metrics={"quartic_test_mse": float(mse)},
+            artifacts=artifacts,
+            simulation=sim_logger.stats_dict()
+        )
+    
+        print(f"\nVisualization complete. Artifacts saved under {report_dir.resolve()}.")
+    
+    
+    finally:
+        _end_capture()
 
 if __name__ == "__main__":
     main()

@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import make_run_dir, print_report_banner, write_run_summary
+from reporting import begin_console_capture, write_run_summary
 
 import perceval as pcvl
 from src.data import get_data, quartic_data
@@ -350,94 +350,97 @@ def main():
     """Main function to create circuits, visualize them, and train on quartic function."""
     print("=== UQ-QNN: Circuit Visualization and Training Example ===")
 
-    report_dir = make_run_dir(__file__)
-    print_report_banner(report_dir)
-
-    # Set random seed for reproducibility
-    np.random.seed(42)
-
-    # Configure parameters
-    config["n_data"] = 80
-    config["sigma_noise"] = 0.05
-    config["lr"] = 0.02  # Slightly lower learning rate for better convergence
-    config["epochs"] = 10  # Reduced for demonstration
-    config["memory_depth"] = 2
-
-    # Create and visualize memristor circuit
-    mem_circuit, mem_input, mem_measurement = create_and_visualize_memristor()
-
-    # Create and visualize 6-mode Clements circuit
-    clem_circuit, clem_input, clem_measurement = create_and_visualize_clements(
-        n_modes=6
-    )
-
-    # Generate synthetic data
-    print("\n=== Generating Quartic Function Data ===")
-    X_train, y_train, X_test, y_test = get_data(
-        config["n_data"], config["sigma_noise"], "quartic_data"
-    )
-
-    # Show example of the quartic function
-    x_sample = np.linspace(0, 1, 100)
-    y_sample = quartic_data(x_sample)
-    print(f"Quartic function examples: f(0.5) = {0.5**4}, f(0.8) = {0.8**4}")
-
-    # Plot quartic function
-    plt.figure(figsize=(8, 5))
-    plt.scatter(X_train, y_train, label="Training data", alpha=0.7)
-    plt.plot(x_sample, y_sample, "r-", label="Quartic function (x^4)")
-    plt.title("Quartic Function Data")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(report_dir / "quartic_function.png", dpi=300)
-
-    # Train and evaluate both circuit types
-    results = {}
-
-    # 1. Clements with memristive phase
-    results["memristive"] = train_and_evaluate(
-        "memristive", 3, X_train, y_train, X_test, y_test, memristive_phase_idx=[2]
-    )
-
-    # 2. Standard Clements (no memristive)
+    report_dir, _end_capture = begin_console_capture(__file__)
     try:
-        print("\nNote: Using 3-mode Clements circuit")
-        results["standard"] = train_and_evaluate(
-            "standard", 3, X_train, y_train, X_test, y_test, memristive_phase_idx=None
+        # Set random seed for reproducibility
+        np.random.seed(42)
+    
+        # Configure parameters
+        config["n_data"] = 80
+        config["sigma_noise"] = 0.05
+        config["lr"] = 0.02  # Slightly lower learning rate for better convergence
+        config["epochs"] = 10  # Reduced for demonstration
+        config["memory_depth"] = 2
+    
+        # Create and visualize memristor circuit
+        mem_circuit, mem_input, mem_measurement = create_and_visualize_memristor()
+    
+        # Create and visualize 6-mode Clements circuit
+        clem_circuit, clem_input, clem_measurement = create_and_visualize_clements(
+            n_modes=6
         )
-    except Exception as e:
-        print(f"Error training Clements circuit: {e}")
-        print("Using simplified results for visualization")
-
-        # Create dummy results for visualization
-        dummy_preds = quartic_data(X_test) + np.random.normal(0, 0.1, size=len(X_test))
-        dummy_mse = np.mean((dummy_preds - y_test) ** 2)
-        dummy_rmse = np.sqrt(dummy_mse)
-
-        results["standard"] = {
-            "history": [1.0, 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1],
-            "predictions": dummy_preds,
-            "metrics": {"rmse": dummy_rmse, "mse": dummy_mse},
-            "theta": np.random.rand(6),  # 6 phases for 3-mode Clements
-        }
-
-    # Plot and compare results
-    fig = plot_results(results, X_train, y_train, X_test, y_test, report_dir)
-    plt.show()
-
-    write_run_summary(
-        report_dir,
-        metrics={
-            k: results[k]["metrics"] for k in ("memristive", "standard") if k in results
-        },
-        artifacts=["quartic_function.png", "circuit_training_comparison.png"],
-    )
-
-    # Print simulation statistics
-    sim_logger.report()
-
+    
+        # Generate synthetic data
+        print("\n=== Generating Quartic Function Data ===")
+        X_train, y_train, X_test, y_test = get_data(
+            config["n_data"], config["sigma_noise"], "quartic_data"
+        )
+    
+        # Show example of the quartic function
+        x_sample = np.linspace(0, 1, 100)
+        y_sample = quartic_data(x_sample)
+        print(f"Quartic function examples: f(0.5) = {0.5**4}, f(0.8) = {0.8**4}")
+    
+        # Plot quartic function
+        plt.figure(figsize=(8, 5))
+        plt.scatter(X_train, y_train, label="Training data", alpha=0.7)
+        plt.plot(x_sample, y_sample, "r-", label="Quartic function (x^4)")
+        plt.title("Quartic Function Data")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(report_dir / "quartic_function.png", dpi=300)
+    
+        # Train and evaluate both circuit types
+        results = {}
+    
+        # 1. Clements with memristive phase
+        results["memristive"] = train_and_evaluate(
+            "memristive", 3, X_train, y_train, X_test, y_test, memristive_phase_idx=[2]
+        )
+    
+        # 2. Standard Clements (no memristive)
+        try:
+            print("\nNote: Using 3-mode Clements circuit")
+            results["standard"] = train_and_evaluate(
+                "standard", 3, X_train, y_train, X_test, y_test, memristive_phase_idx=None
+            )
+        except Exception as e:
+            print(f"Error training Clements circuit: {e}")
+            print("Using simplified results for visualization")
+    
+            # Create dummy results for visualization
+            dummy_preds = quartic_data(X_test) + np.random.normal(0, 0.1, size=len(X_test))
+            dummy_mse = np.mean((dummy_preds - y_test) ** 2)
+            dummy_rmse = np.sqrt(dummy_mse)
+    
+            results["standard"] = {
+                "history": [1.0, 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1],
+                "predictions": dummy_preds,
+                "metrics": {"rmse": dummy_rmse, "mse": dummy_mse},
+                "theta": np.random.rand(6),  # 6 phases for 3-mode Clements
+            }
+    
+        # Plot and compare results
+        fig = plot_results(results, X_train, y_train, X_test, y_test, report_dir)
+        plt.show()
+    
+        sim_logger.report()
+    
+    
+        # Print simulation statistics
+        write_run_summary(
+            report_dir,
+            metrics={
+                k: results[k]["metrics"] for k in ("memristive", "standard") if k in results
+            },
+            artifacts=["quartic_function.png", "circuit_training_comparison.png", "run.log"],
+            simulation=sim_logger.stats_dict()
+        )
+    
+    finally:
+        _end_capture()
 
 if __name__ == "__main__":
     main()

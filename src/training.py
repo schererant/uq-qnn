@@ -41,7 +41,7 @@ def train_pytorch_generic(
     swipe_span: float,
     n_modes: int,
     encoding_mode: int,
-    n_photons: Sequence[int],
+    n_photons: Optional[Sequence[int]],
     target_mode: Optional[Tuple[int, ...]],
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
@@ -127,7 +127,9 @@ def train_pytorch_generic(
         memristive_phase_idx, n_modes, expected_phases
     )
     phase_idx = tuple(i for i in range(expected_phases) if i not in memristive_indices)
-    # n_photons = tuple([1] * len(phase_idx))
+    
+    if n_photons is None:
+        n_photons = tuple([1] * len(phase_idx))
 
     model = PhotonicModel(
         init_theta,
@@ -186,7 +188,7 @@ def train_pytorch(
     swipe_span: float,
     n_modes: int,
     encoding_mode: int,
-    n_photons: Sequence[int],
+    n_photons: Optional[Sequence[int]],
     target_mode: Optional[Tuple[int, ...]],
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
