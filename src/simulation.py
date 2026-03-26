@@ -66,6 +66,18 @@ class SimulationLogger:
                 f"[SimulationLogger] Avg time per circuit sim: {self.circuit_total_time / self.circuit_call_count:.6f} seconds"
             )
 
+    def stats_dict(self) -> dict[str, Any]:
+        """Return all statistics as a JSON-serializable dictionary."""
+        return {
+            "call_count": self.call_count,
+            "total_time": self.total_time,
+            "samples_counter": dict(self.samples_counter),
+            "circuit_call_count": self.circuit_call_count,
+            "circuit_total_time": self.circuit_total_time,
+            "avg_time_per_sequence": self.total_time / self.call_count if self.call_count > 0 else 0,
+            "avg_time_per_circuit": self.circuit_total_time / self.circuit_call_count if self.circuit_call_count > 0 else 0,
+        }
+
 
 # Global simulation logger instance
 sim_logger = SimulationLogger()
@@ -658,4 +670,5 @@ def uncertainty_forward_pass(job: tuple) -> np.ndarray:
         working_detectors=cfg["working_detectors"],
         noise_std=cfg.get("noise_std"),
         backend=cfg.get("backend", "numpy"),
+        return_class_probs=cfg.get("return_class_probs", False),
     )

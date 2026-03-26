@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import make_run_dir, print_report_banner, write_run_summary
+from reporting import begin_console_capture, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -225,103 +225,105 @@ def main():
     """Main function to run the comparison."""
     print("=== UQ-QNN: Function Comparison Example ===")
 
-    report_dir = make_run_dir(__file__)
-    print_report_banner(report_dir)
-
-    # Set random seed for reproducibility
-    np.random.seed(42)
+    report_dir, _end_capture = begin_console_capture(__file__)
+    try:
+        # Set random seed for reproducibility
+        np.random.seed(42)
     
-    # Configure parameters
-    lr = 0.05
-    memory_depth = 1
-    n_modes = 3
-    config["phase_idx"] = (0, 1, 2)
-    config["n_photons"] = (1, 1, 1)
-    n_phases = n_modes * (
-        n_modes - 1
-    )  # Number of external phase parameters (excluding memory phase)
-
-
-    # Functions to compare
-    functions = [
-        "quartic_data",
-        "sinusoid_data",
-        "multi_modal_data",
-        "step_function_data",
-        "oscillating_poly_data",
-        "damped_cosine_data",
-    ]
-
-    # Print parameter structure info
-    print(
-        f"Using array-based circuit structure with {n_phases} phase parameters (+ memory phase)"
-    )
-
-    # Parameters
-    n_data = 80
-    sigma_noise = 0.02
-    n_samples = 20
-    epochs = 300
-    encoding_mode = 2
-    target_mode = (n_phases - 1,)  # Last mode as target
-    lr = 0.05
-
-    # Store results
-    results = {}
-
-    # Train and evaluate on each function
-    for func_name in functions:
-        print(f"\n=== Training on {func_name} ===")
-        X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = (
-            train_and_evaluate(
-                datafunction=func_name,
-                encoding_mode=encoding_mode,
-                target_mode=target_mode,
-                n_data=n_data,
-                sigma_noise=sigma_noise,
-                n_samples=n_samples,
-                epochs=epochs,
-                n_phases=n_phases,
-                n_modes=n_modes,
-                memory_depth=memory_depth,
-                lr=lr,
-            )
+        # Configure parameters
+        lr = 0.05
+        memory_depth = 1
+        n_modes = 3
+        config["phase_idx"] = (0, 1, 2)
+        config["n_photons"] = (1, 1, 1)
+        n_phases = n_modes * (
+            n_modes - 1
+        )  # Number of external phase parameters (excluding memory phase)
+    
+        # Functions to compare
+        functions = [
+            "quartic_data",
+            "sinusoid_data",
+            "multi_modal_data",
+            "step_function_data",
+            "oscillating_poly_data",
+            "damped_cosine_data",
+        ]
+    
+        # Print parameter structure info
+        print(
+            f"Using array-based circuit structure with {n_phases} phase parameters (+ memory phase)"
         )
-
-        metrics = compute_metrics(y_test, mean_preds, std_preds)
-        print(f"  RMSE: {metrics['rmse']:.6f}")
-        print(f"  MAE: {metrics['mae']:.6f}")
-        print(f"  Uncertainty Score: {metrics['uncertainty_score']:.6f}")
-        print(f"  Coverage (95% interval): {metrics['coverage']:.6f}")
-
-        results[func_name] = {
-            "data": (X_train, y_train, X_test, y_test),
-            "predictions": (mean_preds, std_preds),
-            "theta": theta_opt,
-            "history": history,
-            "metrics": metrics,
-        }
-
-    # Plot comparison
-    fig, fig_table = plot_function_comparison(results, functions)
-
-    # Save figures
-    fig.savefig(report_dir / "function_comparison.png", dpi=300, bbox_inches="tight")
-    fig_table.savefig(report_dir / "function_metrics.png", dpi=300, bbox_inches="tight")
-
-    plt.show()
-
-    write_run_summary(
-        report_dir,
-        metrics={
-            "by_function": {name: results[name]["metrics"] for name in functions}
-        },
-        artifacts=["function_comparison.png", "function_metrics.png"],
-    )
-
-    # Print simulation statistics
-    sim_logger.report()
-
+    
+        # Parameters
+        n_data = 80
+        sigma_noise = 0.02
+        n_samples = 20
+        epochs = 300
+        encoding_mode = 2
+        target_mode = (n_phases - 1,)  # Last mode as target
+        lr = 0.05
+    
+        # Store results
+        results = {}
+    
+        # Train and evaluate on each function
+        for func_name in functions:
+            print(f"\n=== Training on {func_name} ===")
+            X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = (
+                train_and_evaluate(
+                    datafunction=func_name,
+                    encoding_mode=encoding_mode,
+                    target_mode=target_mode,
+                    n_data=n_data,
+                    sigma_noise=sigma_noise,
+                    n_samples=n_samples,
+                    epochs=epochs,
+                    n_phases=n_phases,
+                    n_modes=n_modes,
+                    memory_depth=memory_depth,
+                    lr=lr,
+                )
+            )
+    
+            metrics = compute_metrics(y_test, mean_preds, std_preds)
+            print(f"  RMSE: {metrics['rmse']:.6f}")
+            print(f"  MAE: {metrics['mae']:.6f}")
+            print(f"  Uncertainty Score: {metrics['uncertainty_score']:.6f}")
+            print(f"  Coverage (95% interval): {metrics['coverage']:.6f}")
+    
+            results[func_name] = {
+                "data": (X_train, y_train, X_test, y_test),
+                "predictions": (mean_preds, std_preds),
+                "theta": theta_opt,
+                "history": history,
+                "metrics": metrics,
+            }
+    
+        # Plot comparison
+        fig, fig_table = plot_function_comparison(results, functions)
+    
+        # Save figures
+        fig.savefig(report_dir / "function_comparison.png", dpi=300, bbox_inches="tight")
+        fig_table.savefig(report_dir / "function_metrics.png", dpi=300, bbox_inches="tight")
+    
+        plt.show()
+    
+        sim_logger.report()
+    
+    
+        # Print simulation statistics
+        write_run_summary(
+            report_dir,
+            metrics={
+                "by_function": {name: results[name]["metrics"] for name in functions}
+            },
+            artifacts=["function_comparison.png", "function_metrics.png", "run.log"],
+            simulation=sim_logger.stats_dict()
+        )
+    
+    finally:
+        _end_capture()
 
 if __name__ == "__main__":
     main()

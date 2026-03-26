@@ -274,9 +274,8 @@ def unitary_for_point(
     enc_phi = float(enc_phi) % (2 * np.pi)
     if encoding_phase_idx is None:
         u_clem = clements_unitary(phases, n_modes)
-        e = _encoding_unitary_2x2_batch(np.array([enc_phi]))
         return _full_unitary_separate_encoding_batch(
-            u_clem, e, encoding_mode, n_modes
+            u_clem, np.array([enc_phi]), encoding_mode, n_modes
         )[0]
     mp = phases.copy()
     idx = int(encoding_phase_idx)

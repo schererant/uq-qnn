@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import make_run_dir, print_report_banner, write_run_summary
+from reporting import begin_console_capture, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -110,163 +110,164 @@ def run_experiment(
 def main():
     print("=== Quartic Regression: 6x6 Architecture Comparison ===")
 
-    report_dir = make_run_dir(__file__)
-    print_report_banner(report_dir)
-
-    np.random.seed(42)
-
-    config["n_data"] = 100
-    config["sigma_noise"] = 0.02
-    config["lr"] = 0.04
-    config["epochs"] = 300
-    n_samples = 20
-
-    # Save annotated circuit diagram (encoding, target, memristive phases)
-    print("Saving annotated circuit diagram...")
-    # Visualize the same inline-encoding configuration used in training
-    ENCODING_PHASE_IDX = 0
-    save_circuit_annotated(
-        str(report_dir / "quartic_circuit_annotated.png"),
-        n_modes=N_MODES,
-        encoding_mode=0,
-        target_mode=(N_MODES - 1,),
-        memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
-        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
-        encoding_phase_idx=ENCODING_PHASE_IDX,
-    )
-
-    print("Generating quartic data (y = x^4)...")
-    X_train, y_train, X_test, y_test = get_data(
-        config["n_data"],
-        config["sigma_noise"],
-        "quartic_data",
-    )
-
-    results = {}
-
-    # 1. No memristor
-    results["no_memristor"] = run_experiment(
-        "6x6, no memristor",
-        memristive_phase_idx=None,
-        memory_depth=2,  # unused when no memristor
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test,
-        y_test=y_test,
-        n_samples=n_samples,
-        lr=config["lr"],
-        epochs=config["epochs"],
-    )
-
-    # 2. Memristors, depth 1 (minimal memory), custom output modes
-    results["memristor_depth1"] = run_experiment(
-        "6x6, memristors (4th & 5th MZI), depth=1",
-        memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
-        memory_depth=1,
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test,
-        y_test=y_test,
-        n_samples=n_samples,
-        lr=config["lr"],
-        epochs=config["epochs"],
-        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
-    )
-
-    # 3. Memristors, depth 2, custom output modes
-    results["memristor_depth2"] = run_experiment(
-        "6x6, memristors (4th & 5th MZI), depth=2",
-        memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
-        memory_depth=2,
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test,
-        y_test=y_test,
-        n_samples=n_samples,
-        lr=config["lr"],
-        epochs=config["epochs"],
-        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
-    )
-
-    # 4. Memristors, depth 3, custom output modes
-    results["memristor_depth3"] = run_experiment(
-        "6x6, memristors (4th & 5th MZI), depth=3",
-        memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
-        memory_depth=3,
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test,
-        y_test=y_test,
-        n_samples=n_samples,
-        lr=config["lr"],
-        epochs=config["epochs"],
-        memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
-    )
-
-    # Summary table
-    print("\n" + "=" * 60)
-    print("Summary (MSE on test set)")
-    print("=" * 60)
-    for key, (_, _, _, mse) in results.items():
-        print(f"  {key:25s}: {mse:.6f}")
-    print("=" * 60)
-
-    # Plot: predictions comparison
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-
-    labels = [
-        ("No memristor", "no_memristor"),
-        ("Memristors, depth=1", "memristor_depth1"),
-        ("Memristors, depth=2", "memristor_depth2"),
-        ("Memristors, depth=3", "memristor_depth3"),
-    ]
-
-    for ax, (title, key) in zip(axes.flat, labels):
-        _, _, preds, mse = results[key]
-        ax.scatter(X_train, y_train, s=15, alpha=0.6, label="Train", c="gray")
-        ax.plot(X_test, y_test, "k--", lw=2, label="Ground truth")
-        ax.plot(X_test, preds, "r-", lw=1.5, label="Prediction")
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_title(f"{title}\nMSE = {mse:.6f}")
-        ax.legend(loc="upper right", fontsize=8)
-        ax.grid(True, alpha=0.3)
-
-    plt.suptitle(
-        "Quartic Regression: 6x6 Clements, Memristors on 4th & 5th MZI", fontsize=12
-    )
-    plt.tight_layout()
-    plt.savefig(report_dir / "quartic_regression_comparison.png", dpi=300)
-    plt.show()
-
-    # Plot: training loss comparison
-    fig2, ax2 = plt.subplots(figsize=(10, 5))
-    for key, (_, history, _, _) in results.items():
-        ax2.plot(history, label=key, alpha=0.8)
-    ax2.set_yscale("log")
-    ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("Loss")
-    ax2.set_title("Training Loss Comparison")
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(report_dir / "quartic_regression_loss_comparison.png", dpi=300)
-    plt.show()
-
-    write_run_summary(
-        report_dir,
-        metrics={
-            key: float(mse) for key, (_, _, _, mse) in results.items()
-        },
-        artifacts=[
-            "quartic_circuit_annotated.png",
-            "quartic_regression_comparison.png",
-            "quartic_regression_loss_comparison.png",
-        ],
-    )
-
-    sim_logger.report()
-
+    report_dir, _end_capture = begin_console_capture(__file__)
+    try:
+        np.random.seed(42)
+    
+        config["n_data"] = 100
+        config["sigma_noise"] = 0.02
+        config["lr"] = 0.04
+        config["epochs"] = 300
+        n_samples = 20
+    
+        # Save annotated circuit diagram (encoding, target, memristive phases)
+        print("Saving annotated circuit diagram...")
+        # Visualize the same inline-encoding configuration used in training
+        ENCODING_PHASE_IDX = 0
+        save_circuit_annotated(
+            str(report_dir / "quartic_circuit_annotated.png"),
+            n_modes=N_MODES,
+            encoding_mode=0,
+            target_mode=(N_MODES - 1,),
+            memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
+            memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+            encoding_phase_idx=ENCODING_PHASE_IDX,
+        )
+    
+        print("Generating quartic data (y = x^4)...")
+        X_train, y_train, X_test, y_test = get_data(
+            config["n_data"],
+            config["sigma_noise"],
+            "quartic_data",
+        )
+    
+        results = {}
+    
+        # 1. No memristor
+        results["no_memristor"] = run_experiment(
+            "6x6, no memristor",
+            memristive_phase_idx=None,
+            memory_depth=2,  # unused when no memristor
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            n_samples=n_samples,
+            lr=config["lr"],
+            epochs=config["epochs"],
+        )
+    
+        # 2. Memristors, depth 1 (minimal memory), custom output modes
+        results["memristor_depth1"] = run_experiment(
+            "6x6, memristors (4th & 5th MZI), depth=1",
+            memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
+            memory_depth=1,
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            n_samples=n_samples,
+            lr=config["lr"],
+            epochs=config["epochs"],
+            memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+        )
+    
+        # 3. Memristors, depth 2, custom output modes
+        results["memristor_depth2"] = run_experiment(
+            "6x6, memristors (4th & 5th MZI), depth=2",
+            memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
+            memory_depth=2,
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            n_samples=n_samples,
+            lr=config["lr"],
+            epochs=config["epochs"],
+            memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+        )
+    
+        # 4. Memristors, depth 3, custom output modes
+        results["memristor_depth3"] = run_experiment(
+            "6x6, memristors (4th & 5th MZI), depth=3",
+            memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
+            memory_depth=3,
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            n_samples=n_samples,
+            lr=config["lr"],
+            epochs=config["epochs"],
+            memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
+        )
+    
+        # Summary table
+        print("\n" + "=" * 60)
+        print("Summary (MSE on test set)")
+        print("=" * 60)
+        for key, (_, _, _, mse) in results.items():
+            print(f"  {key:25s}: {mse:.6f}")
+        print("=" * 60)
+    
+        # Plot: predictions comparison
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    
+        labels = [
+            ("No memristor", "no_memristor"),
+            ("Memristors, depth=1", "memristor_depth1"),
+            ("Memristors, depth=2", "memristor_depth2"),
+            ("Memristors, depth=3", "memristor_depth3"),
+        ]
+    
+        for ax, (title, key) in zip(axes.flat, labels):
+            _, _, preds, mse = results[key]
+            ax.scatter(X_train, y_train, s=15, alpha=0.6, label="Train", c="gray")
+            ax.plot(X_test, y_test, "k--", lw=2, label="Ground truth")
+            ax.plot(X_test, preds, "r-", lw=1.5, label="Prediction")
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+            ax.set_title(f"{title}\nMSE = {mse:.6f}")
+            ax.legend(loc="upper right", fontsize=8)
+            ax.grid(True, alpha=0.3)
+    
+        plt.suptitle(
+            "Quartic Regression: 6x6 Clements, Memristors on 4th & 5th MZI", fontsize=12
+        )
+        plt.tight_layout()
+        plt.savefig(report_dir / "quartic_regression_comparison.png", dpi=300)
+        plt.show()
+    
+        # Plot: training loss comparison
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        for key, (_, history, _, _) in results.items():
+            ax2.plot(history, label=key, alpha=0.8)
+        ax2.set_yscale("log")
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("Loss")
+        ax2.set_title("Training Loss Comparison")
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(report_dir / "quartic_regression_loss_comparison.png", dpi=300)
+        plt.show()
+    
+        sim_logger.report()
+    
+    
+        write_run_summary(
+            report_dir,
+            metrics={
+                key: float(mse) for key, (_, _, _, mse) in results.items()
+            },
+            artifacts=["quartic_circuit_annotated.png",
+                "quartic_regression_comparison.png",
+                "quartic_regression_loss_comparison.png",, "run.log"],
+            simulation=sim_logger.stats_dict()
+        )
+    
+    finally:
+        _end_capture()
 
 if __name__ == "__main__":
     main()

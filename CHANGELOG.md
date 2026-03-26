@@ -1,5 +1,50 @@
 # Changelog
 
+## 2026-03-26 — Experiment: script-level CONFIG, API bridge, no hidden defaults
+
+### Added
+
+- **`Experiment` API** (`src/experiment.py`) — Context manager with:
+    - **`config` dict only** — No merge with `src.utils.config`; required keys are validated at construction.
+    - **`train(X, y, *, encoded=False)`** — Maps config to `train_pytorch_generic` (standard `2 * arccos(X)` encoding unless `encoded=True` for pre-encoded phases).
+    - **`predict(theta, encoded_phases, *, return_class_probs=False)`** — Single forward pass via `run_simulation_sequence_np` using the same config.
+    - **`run_uncertainty_analysis(theta, encoded_phases, *, n_passes, noise_std)`** — Parallel UQ via `uncertainty_forward_pass`; classification uses `return_class_probs` when `loss_type == "cross_entropy"`.
+    - **`savefig(fig, name, ...)`** — Saves under `run_dir` and records the path in `run_summary.json` artifacts.
+    - Run directories: **`reports/<slug>/<YYYY-mm-dd_HHMMSS>/`** (slug from experiment name).
+- **`src/__init__.py`** — Exports **`Experiment`**.
+
+### Changed
+
+- **Example scripts** — Each file starts with an explicit **`CONFIG = { ... }`** block (all circuit, training, task, data, and UQ-related values used by that script). `main()` calls `exp.train` / `exp.predict` / `exp.run_uncertainty_analysis` instead of repeating long keyword lists to `train_pytorch` / `run_simulation_sequence_np`.
+    - Updated: **`examples/simple_regression.py`**, **`examples/simple_classification.py`**, **`examples/coincidence_regression.py`**, **`examples/two_moons_classification.py`**, **`examples/multi_class_classification.py`**, **`examples/simple_regression_test.py`**.
+- **`uncertainty_forward_pass`** (`src/simulation.py`) — Forwards **`return_class_probs`** from the job `cfg` into `run_simulation_sequence_np`, so UQ matches classification inference without a duplicate worker in `experiment.py`.
+
+### Fixed
+
+- **Broken examples** — **`two_moons_classification.py`**, **`multi_class_classification.py`**, and **`simple_regression_test.py`** no longer import the removed **`examples/reporting.py`**; they use **`Experiment`** like the other examples.
+
+---
+
+## 2026-03-25 — Experiment lifecycle, reporting, and explicit training kwargs
+
+### Added
+
+- **`src/experiment.py`** (initial iteration) — Context manager: timestamped `reports/`, stdout tee to `run.log`, `run_summary.json`, UQ helper.
+- **`SimulationLogger.stats_dict()`** in `src/simulation.py` — JSON-serializable simulation statistics for reporting.
+
+### Changed
+
+- **`src/training.py`** — Removed default values from `train_pytorch` and `train_pytorch_generic` keyword-only arguments so callers (and later `Experiment`) pass parameters explicitly.
+- **`examples/simple_regression.py`**, **`examples/simple_classification.py`**, **`examples/coincidence_regression.py`** — First pass: adopt `Experiment` (superseded by the 2026-03-26 CONFIG-centric layout above).
+
+### Fixed
+
+- **`src/numpy_backend.py`** — `ValueError` in `unitary_for_point` when a pre-computed encoding unitary was passed into batch code (broadcasting mismatch).
+
+### Removed
+
+- **`examples/reporting.py`** — Replaced by `src/experiment.py`.
+
 ## 2026-03-25 — Simulation performance: NumPy backend, parametric Perceval, parallel uncertainty
 
 ### Added
@@ -16,7 +61,7 @@
 
 - **`src/simulation.py`** — Dispatches on `backend`; Perceval path reuses one Processor/Sampler with `set_value` on the encoding parameter when discrete, non-memristive, and separate encoding; swipe inner loop uses the same pattern when applicable.
 - **`src/circuits.py`** — `@lru_cache` on `_clements_mzi_pairs` (returns `tuple`).
-- **`examples/coincidence_regression.py`**, **`examples/simple_regression.py`** — `SIM_BACKEND` constant; uncertainty estimation uses **`ProcessPoolExecutor`** + `uncertainty_forward_pass`.
+- **`examples/coincidence_regression.py`**, **`examples/simple_regression.py`** — Uncertainty estimation uses **`ProcessPoolExecutor`** + **`uncertainty_forward_pass`** (later wired through **`Experiment.run_uncertainty_analysis`**; see 2026-03-26 entry).
 - **`src/__init__.py`** — Exports `numpy_backend`, `build_parametric_circuit`, `encoding_circuit_parametric`, `uncertainty_forward_pass`.
 - **`src/utils.py`** — `config["sim_backend"]` default `"numpy"`.
 - **`tests/test_imports.py`** — Imports `numpy_backend` module.
@@ -28,8 +73,7 @@
 
 ### Example run reports
 
-- **`examples/reporting.py`** — `make_run_dir(__file__)`, `write_run_summary` (writes `run_summary.json` with schema `uq-qnn.example_run.v1`), optional **`tee_stdout`** for text-only examples.
-- **All example scripts** — Save figures and optional metrics under **`reports/<example_stem>/<YYYY-mm-dd_HHMMSS>/`**; repo **`.gitignore`** ignores generated run folders but keeps **`reports/README.md`** and **`reports/.gitkeep`**.
+- **Figures and summaries** — Example scripts save outputs under **`reports/<slug>/<YYYY-mm-dd_HHMMSS>/`** via **`Experiment`** (`run_summary.json` schema **`uq-qnn.experiment_run.v1`**). Repo **`.gitignore`** ignores generated run folders; **`reports/README.md`** and **`reports/.gitkeep`** stay tracked.
 
 ## 2026-03-24 — Fix broken PSR gradients for coincidence (2-photon) mode
 

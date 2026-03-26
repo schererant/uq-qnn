@@ -15,7 +15,7 @@ import numpy as np
 # Add the parent directory to the path so we can import the library
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import make_run_dir, print_report_banner, write_run_summary
+from reporting import begin_console_capture, write_run_summary
 
 import perceval as pcvl
 from src.circuits import clements_circuit, build_circuit
@@ -191,54 +191,57 @@ def main():
     """Main function to create and plot Clements circuits."""
     print("=== Clements Circuit Plotter ===")
 
-    report_dir = make_run_dir(__file__)
-    print_report_banner(report_dir)
-
-    # Create and plot Clements circuits with different numbers of modes
-    for n_modes in [3, 6]:
-        print(f"\nCreating {n_modes}-mode Clements circuit...")
-
-        # Create the standalone Clements circuit
-        circuit, phases = create_clements_circuit(n_modes)
-
-        # Print phase information
-        print(f"\nPhase parameters for {n_modes}x{n_modes} Clements circuit:")
-        for i, phase in enumerate(phases):
-            print(f"  Phase {i}: {phase:.4f} radians ({phase * 180 / np.pi:.1f}°)")
-
-        # Create input state with a single photon in the first mode
-        input_modes = [0] * n_modes
-        input_modes[0] = 1
-        input_state = pcvl.BasicState(input_modes)
-
-        # Plot the circuit
-        # plot_circuit(circuit, f"Clements Circuit {n_modes}x{n_modes}")
-        pcvl.pdisplay(circuit)
-
-        # # Run the circuit and plot the output distribution
-        # run_and_plot_circuit(circuit, input_state, f"Clements {n_modes}x{n_modes}")
-
-        # # Analyze the circuit
-        # analyze_circuit(circuit, input_state, f"Clements {n_modes}x{n_modes}")
-
-        # Now create and plot the full circuit with encoding
-        full_circuit, _, enc_phi = create_full_circuit(n_modes)
-        print(f"\nEncoding phase: {enc_phi:.4f} radians ({enc_phi * 180 / np.pi:.1f}°)")
-
-        # plot_circuit(full_circuit, f"Full Clements Circuit {n_modes}x{n_modes}")
-        # run_and_plot_circuit(full_circuit, input_state, f"Full Clements {n_modes}x{n_modes}")
-        # analyze_circuit(full_circuit, input_state, f"Full Clements {n_modes}x{n_modes}")
-
-    write_run_summary(
-        report_dir,
-        extra={
-            "note": "Interactive Perceval display only; no image files saved by this script.",
-        },
-    )
-
-    print("\nCircuit plotting complete. Perceval display output is interactive.")
-    print(f"Run metadata and summary JSON: {report_dir.resolve()}")
-
+    report_dir, _end_capture = begin_console_capture(__file__)
+    try:
+        # Create and plot Clements circuits with different numbers of modes
+        for n_modes in [3, 6]:
+            print(f"\nCreating {n_modes}-mode Clements circuit...")
+    
+            # Create the standalone Clements circuit
+            circuit, phases = create_clements_circuit(n_modes)
+    
+            # Print phase information
+            print(f"\nPhase parameters for {n_modes}x{n_modes} Clements circuit:")
+            for i, phase in enumerate(phases):
+                print(f"  Phase {i}: {phase:.4f} radians ({phase * 180 / np.pi:.1f}°)")
+    
+            # Create input state with a single photon in the first mode
+            input_modes = [0] * n_modes
+            input_modes[0] = 1
+            input_state = pcvl.BasicState(input_modes)
+    
+            # Plot the circuit
+            # plot_circuit(circuit, f"Clements Circuit {n_modes}x{n_modes}")
+            pcvl.pdisplay(circuit)
+    
+            # # Run the circuit and plot the output distribution
+            # run_and_plot_circuit(circuit, input_state, f"Clements {n_modes}x{n_modes}")
+    
+            # # Analyze the circuit
+            # analyze_circuit(circuit, input_state, f"Clements {n_modes}x{n_modes}")
+    
+            # Now create and plot the full circuit with encoding
+            full_circuit, _, enc_phi = create_full_circuit(n_modes)
+            print(f"\nEncoding phase: {enc_phi:.4f} radians ({enc_phi * 180 / np.pi:.1f}°)")
+    
+            # plot_circuit(full_circuit, f"Full Clements Circuit {n_modes}x{n_modes}")
+            # run_and_plot_circuit(full_circuit, input_state, f"Full Clements {n_modes}x{n_modes}")
+            # analyze_circuit(full_circuit, input_state, f"Full Clements {n_modes}x{n_modes}")
+    
+        write_run_summary(
+            report_dir,
+            extra={
+                "note": "Interactive Perceval display only; no image files saved by this script.",
+            },
+            simulation=sim_logger.stats_dict()
+        )
+    
+        print("\nCircuit plotting complete. Perceval display output is interactive.")
+        print(f"Run metadata and summary JSON: {report_dir.resolve()}")
+    
+    
+    finally:
+        _end_capture()
 
 if __name__ == "__main__":
     main()

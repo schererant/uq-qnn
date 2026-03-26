@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from reporting import make_run_dir, print_report_banner, write_run_summary
+from reporting import begin_console_capture, write_run_summary
 
 from src.data import get_data
 from src.training import train_pytorch
@@ -301,54 +301,38 @@ def main():
     """Main function to run the comparison."""
     print("=== UQ-QNN: Circuit Architecture Comparison ===")
 
-    report_dir = make_run_dir(__file__)
-    print_report_banner(report_dir)
-
-    # Set random seed for reproducibility
-    np.random.seed(42)
-
-    # Configure parameters
-    config["lr"] = 0.02
-    config["memory_depth"] = 2
-    n_samples = 500
-    epochs = 5
-    clements_n_modes = 3  # Number of modes for Clements architecture
-
-    # Explicitly disable continuous swipe mode for both architectures
-    # This is especially important for Clements which doesn't support continuous mode
-    config["n_swipe"] = 0
-    config["swipe_span"] = 0.0
-    n_swipe = 0  # Ensure n_swipe is explicitly set to 0 in all code paths
-
-    # Generate synthetic data
-    print("Generating synthetic data...")
-    datafunction = "sinusoid_data"  # A good test function for comparison
-    X_train, y_train, X_test, y_test = get_data(
-        100,  # n_data
-        0.05,  # sigma_noise
-        datafunction,
-    )
-
-    results = {}
-
-    # 1. Clements with memristive phase
-    results["memristive"] = train_and_evaluate_circuit(
-        "memristive",
-        X_train,
-        y_train,
-        X_test,
-        y_test,
-        n_samples=n_samples,
-        epochs=epochs,
-        n_modes=clements_n_modes,
-        memristive_phase_idx=[2],
-    )
-
-    # 2. Standard Clements (no memristive)
+    report_dir, _end_capture = begin_console_capture(__file__)
     try:
-        print(f"Attempting Clements with {clements_n_modes} modes...")
-        results["standard"] = train_and_evaluate_circuit(
-            "standard",
+        # Set random seed for reproducibility
+        np.random.seed(42)
+    
+        # Configure parameters
+        config["lr"] = 0.02
+        config["memory_depth"] = 2
+        n_samples = 500
+        epochs = 5
+        clements_n_modes = 3  # Number of modes for Clements architecture
+    
+        # Explicitly disable continuous swipe mode for both architectures
+        # This is especially important for Clements which doesn't support continuous mode
+        config["n_swipe"] = 0
+        config["swipe_span"] = 0.0
+        n_swipe = 0  # Ensure n_swipe is explicitly set to 0 in all code paths
+    
+        # Generate synthetic data
+        print("Generating synthetic data...")
+        datafunction = "sinusoid_data"  # A good test function for comparison
+        X_train, y_train, X_test, y_test = get_data(
+            100,  # n_data
+            0.05,  # sigma_noise
+            datafunction,
+        )
+    
+        results = {}
+    
+        # 1. Clements with memristive phase
+        results["memristive"] = train_and_evaluate_circuit(
+            "memristive",
             X_train,
             y_train,
             X_test,
@@ -356,69 +340,88 @@ def main():
             n_samples=n_samples,
             epochs=epochs,
             n_modes=clements_n_modes,
-            memristive_phase_idx=None,
+            memristive_phase_idx=[2],
         )
-
-        # Check for NaN values in results
-        mean_preds, std_preds = results["standard"]["predictions"]
-        if (
-            np.isnan(mean_preds).any()
-            or np.isnan(std_preds).any()
-            or np.isnan(results["standard"]["metrics"]["rmse"])
-        ):
-            print("Warning: NaN values detected in Clements results. Using fallback.")
-            raise ValueError("NaN values in results")
-
-    except Exception as e:
-        print(f"Error with Clements architecture: {e}")
-        print("Using simplified synthetic results for Clements architecture")
-
-        # Create synthetic results that follow a simple function
-        X_simple = np.linspace(0, 1, len(X_test))
-        dummy_preds = 0.5 * np.sin(2 * np.pi * X_simple) + 0.5
-        dummy_std = np.ones_like(X_test) * 0.1
-
-        # Calculate metrics
-        dummy_mse = np.mean((dummy_preds - y_test) ** 2)
-        dummy_rmse = np.sqrt(dummy_mse)
-        dummy_mae = np.mean(np.abs(dummy_preds - y_test))
-
-        # Create synthetic training history
-        dummy_history = np.logspace(-1, -3, epochs)
-
-        results["standard"] = {
-            "theta": np.ones(6) * 0.5,  # 6 phases for 3-mode Clements
-            "history": list(dummy_history),
-            "predictions": (dummy_preds, dummy_std),
-            "metrics": {"mse": dummy_mse, "rmse": dummy_rmse, "mae": dummy_mae},
-            "circuit_config": {
-                "type": "standard",
-                "n_modes": 3,
-                "n_phases": 6,
-                "encoding_mode": 0,
-                "target_mode": (2,),
+    
+        # 2. Standard Clements (no memristive)
+        try:
+            print(f"Attempting Clements with {clements_n_modes} modes...")
+            results["standard"] = train_and_evaluate_circuit(
+                "standard",
+                X_train,
+                y_train,
+                X_test,
+                y_test,
+                n_samples=n_samples,
+                epochs=epochs,
+                n_modes=clements_n_modes,
+                memristive_phase_idx=None,
+            )
+    
+            # Check for NaN values in results
+            mean_preds, std_preds = results["standard"]["predictions"]
+            if (
+                np.isnan(mean_preds).any()
+                or np.isnan(std_preds).any()
+                or np.isnan(results["standard"]["metrics"]["rmse"])
+            ):
+                print("Warning: NaN values detected in Clements results. Using fallback.")
+                raise ValueError("NaN values in results")
+    
+        except Exception as e:
+            print(f"Error with Clements architecture: {e}")
+            print("Using simplified synthetic results for Clements architecture")
+    
+            # Create synthetic results that follow a simple function
+            X_simple = np.linspace(0, 1, len(X_test))
+            dummy_preds = 0.5 * np.sin(2 * np.pi * X_simple) + 0.5
+            dummy_std = np.ones_like(X_test) * 0.1
+    
+            # Calculate metrics
+            dummy_mse = np.mean((dummy_preds - y_test) ** 2)
+            dummy_rmse = np.sqrt(dummy_mse)
+            dummy_mae = np.mean(np.abs(dummy_preds - y_test))
+    
+            # Create synthetic training history
+            dummy_history = np.logspace(-1, -3, epochs)
+    
+            results["standard"] = {
+                "theta": np.ones(6) * 0.5,  # 6 phases for 3-mode Clements
+                "history": list(dummy_history),
+                "predictions": (dummy_preds, dummy_std),
+                "metrics": {"mse": dummy_mse, "rmse": dummy_rmse, "mae": dummy_mae},
+                "circuit_config": {
+                    "type": "standard",
+                    "n_modes": 3,
+                    "n_phases": 6,
+                    "encoding_mode": 0,
+                    "target_mode": (2,),
+                },
+            }
+    
+        # Plot comparison
+        fig = plot_comparison(results, X_train, y_train, X_test, y_test)
+    
+        # Save the figure
+        fig.savefig(report_dir / "circuit_comparison.png", dpi=300, bbox_inches="tight")
+        plt.show()
+    
+        sim_logger.report()
+    
+    
+        # Print simulation statistics
+        write_run_summary(
+            report_dir,
+            metrics={
+                "memristive": results["memristive"]["metrics"],
+                "standard": results["standard"]["metrics"],
             },
-        }
-
-    # Plot comparison
-    fig = plot_comparison(results, X_train, y_train, X_test, y_test)
-
-    # Save the figure
-    fig.savefig(report_dir / "circuit_comparison.png", dpi=300, bbox_inches="tight")
-    plt.show()
-
-    write_run_summary(
-        report_dir,
-        metrics={
-            "memristive": results["memristive"]["metrics"],
-            "standard": results["standard"]["metrics"],
-        },
-        artifacts=["circuit_comparison.png"],
-    )
-
-    # Print simulation statistics
-    sim_logger.report()
-
+            artifacts=["circuit_comparison.png", "run.log"],
+            simulation=sim_logger.stats_dict()
+        )
+    
+    finally:
+        _end_capture()
 
 if __name__ == "__main__":
     main()
