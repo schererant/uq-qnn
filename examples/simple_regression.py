@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """Simple regression example using the UQ-QNN framework."""
 
-import sys
 import os
-import numpy as np
+import sys
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,36 +19,36 @@ logger = get_logger(__name__)
 # ===================== EXPERIMENT CONFIG =====================
 CONFIG = {
     # Circuit
-    "n_modes": 6,
-    "encoding_mode": 0,
-    "target_mode": (4,),
-    "memristive_phase_idx": None,
-    "memristive_output_modes": None,
-    "encoding_phase_idx": None,
+    "n_modes": 6,  # waveguide modes; gives 6*(6-1)=30 phase parameters
+    "encoding_mode": 4,  # input mode that receives the data-encoded phase
+    "target_mode": (4,),  # output mode(s) whose Born-rule probability is the prediction
+    "memristive_phase_idx": None,  # phase index(es) with history-dependent feedback; None = pure Clements
+    "memristive_output_modes": None,  # output mode pairs feeding back into memristive phases
+    "encoding_phase_idx": None,  # override which phase slot holds the encoding; None = auto
     # Task
-    "output_mode": "singles",
-    "input_modes": None,
-    "working_detectors": None,
-    "loss_type": "mse",
-    "n_classes": 1,
+    "output_mode": "singles",  # "singles" = 1-photon probabilities; "coincidence" = 2-photon
+    "input_modes": None,  # coincidence only: modes where the two photons enter
+    "working_detectors": None,  # coincidence only: functioning detector indices for postselection
+    "loss_type": "mse",  # "mse" for regression, "cross_entropy" for classification
+    "n_classes": 1,  # 1 for regression; must equal len(target_mode) for classification
     # Training
-    "lr": 0.05,
-    "epochs": 100,
-    "n_samples": 20,
-    "memory_depth": 2,
-    "n_photons": None,
-    "n_swipe": 0,
-    "swipe_span": 0.0,
-    "noise_std": None,
-    "seed": 42,
+    "lr": 0.05,  # Adam learning rate
+    "epochs": 100,  # full passes over the training set
+    "n_samples": 20,  # photon samples per data point (higher = less shot noise, slower)
+    "memory_depth": 2,  # memristor buffer length (past time steps); irrelevant here
+    "n_photons": None,  # photon count per phase for PSR shift computation; None = auto-infer
+    "n_swipe": 0,  # phase points swept per sample in continuous-swipe mode; 0 = discrete
+    "swipe_span": 0.0,  # total phase range (rad) swept around each encoded phase
+    "noise_std": None,  # Gaussian noise on coincidence counts; None = noiseless
+    "seed": 42,  # RNG seed for parameter initialisation and UQ pass noise
     # Backend
-    "sim_backend": "numpy",
+    "sim_backend": "numpy",  # "numpy" = fast vectorised path; "perceval" = full SLOS (required for memristor)
     # Data
-    "n_data": 20,
-    "sigma_noise": 0.005,
+    "n_data": 20,  # number of synthetic training + test samples to generate
+    "sigma_noise": 0.005,  # label noise std on the synthetic quartic targets
     # Uncertainty
-    "unc_n_passes": 10,
-    "unc_noise_std": 0.05,
+    "unc_n_passes": 100,  # number of noisy forward passes for uncertainty estimation
+    "unc_noise_std": 0.05,  # std of Gaussian noise added to phases on each UQ pass
 }
 # =============================================================
 
@@ -121,7 +122,7 @@ def main():
 
         fig.tight_layout()
         exp.savefig(fig, "regression_with_uncertainty.png")
-        plt.show()
+        # plt.show()
 
 
 if __name__ == "__main__":
