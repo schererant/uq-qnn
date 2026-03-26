@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import time
 from collections import Counter
-from typing import Any, Optional, Union, Tuple, Sequence, Literal
+from typing import Any, Optional, Union, Tuple, Sequence
 import numpy as np
 import perceval as pcvl
 from perceval.algorithm import Sampler
 
+from .config import SimConfig
 from .circuits import build_circuit, build_parametric_circuit, get_mzi_modes_for_phase
 from .numpy_backend import (
     run_vectorized_non_memristive,
@@ -156,69 +157,43 @@ def _normalize_memristive_phase_idx(
 
 def run_simulation_sequence_np(
     params: np.ndarray,
-    memory_depth: int,
-    n_samples: int,
     encoded_phases: np.ndarray,
-    n_swipe: int,
-    swipe_span: float,
-    n_modes: int,
-    encoding_mode: int,
-    target_mode: Optional[Tuple[int, ...]],
-    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    encoding_phase_idx: Optional[int],
+    cfg: SimConfig,
+    *,
     return_class_probs: bool = False,
-    output_mode: Literal["singles", "coincidence"] = "singles",
-    input_modes: Optional[Sequence[int]] = None,
-    working_detectors: Optional[Sequence[int]] = None,
-    noise_std: Optional[Union[float, Sequence[float]]] = None,
-    backend: Literal["numpy", "perceval"] = "numpy",
 ) -> np.ndarray:
     """
     Runs a sequence of photonic-circuit simulations. Architecture is always Clements (3x3, 6x6, etc.).
 
+    Structural parameters are read from ``cfg``; ``params`` and ``encoded_phases`` vary per solve.
+
     Args:
-        params (np.ndarray): Phase parameters. If memristive_phase_idx is None/empty: [phase_0, ..., phase_{n-1}].
+        params: Phase parameters. If no memristive phases: [phase_0, ..., phase_{n-1}].
             If memristive: [phase_0, ..., phase_{n-1}, w_0, ..., w_{k-1}] for k memristive phases.
-        memory_depth (int): Depth of the memory buffer (only used when memristive).
-        n_samples (int): Number of samples for the Sampler.
-        encoded_phases (np.ndarray): Phase values (radians) for each data point.
-        n_swipe (int): Phase points per data point (0=discrete, >0=continuous; only when memristive).
-        swipe_span (float): Phase span for swiping (only when n_swipe > 0).
-        n_modes (int): Number of modes (3 for 3x3, 6 for 6x6, etc.).
-        encoding_mode (int): Mode to apply encoding to.
-        target_mode (Optional[Tuple[int, ...]]): Target output mode(s).
-        return_class_probs (bool): If True and multiple targets, returns (n_data, n_classes).
-        memristive_phase_idx (Optional[Union[int, Sequence[int]]]): Phase indices to make memristive.
-            None or empty = no memristive behavior. e.g. [2] or (2, 5) for one or two MZIs.
-        memristive_output_modes (Optional[Sequence[Tuple[int, int]]]): For each memristive phase index,
-            the (mode_p1, mode_p2) output modes to use for feedback. When None, uses the MZI's
-            own output modes. e.g. [(1, 2), (3, 4)] for two memristive phases.
-        output_mode: "singles" (1-photon) or "coincidence" (2-photon).
-        input_modes: For coincidence, mode indices for 2-photon input (e.g. [1, 4]). Default [1, 4] for 6 modes.
-        working_detectors: For coincidence, mode indices of functioning detectors (e.g. [0, 1, 5]).
-        noise_std: For coincidence, Gaussian noise std (float or per-channel). 0/None = no noise.
-        backend: ``numpy`` (default): fast unitary + Born rule; ``perceval``: full Perceval/SLOS pipeline.
+        encoded_phases: Phase values (radians) for each data point.
+        cfg: :class:`SimConfig` with modes, backend, sampling counts, etc.
+        return_class_probs: If True and multiple targets, returns (n_data, n_classes).
 
     Returns:
-        np.ndarray: Predicted probability per input point, or class probabilities if return_class_probs.
+        Predicted probability per input point, or class probabilities if return_class_probs.
     """
     start_time = time.perf_counter()
+    n_swipe = cfg.n_swipe
     if n_swipe < 0:
         raise ValueError("n_swipe must be >= 0.")
-    if not isinstance(n_samples, int) or n_samples <= 0:
-        raise ValueError(f"n_samples must be a positive int, got {n_samples!r}")
-    if backend not in ("numpy", "perceval"):
-        raise ValueError(f"backend must be 'numpy' or 'perceval', got {backend!r}")
+    if not isinstance(cfg.n_samples, int) or cfg.n_samples <= 0:
+        raise ValueError(f"n_samples must be a positive int, got {cfg.n_samples!r}")
+    if cfg.backend not in ("numpy", "perceval"):
+        raise ValueError(f"backend must be 'numpy' or 'perceval', got {cfg.backend!r}")
 
-    n_phases = n_modes * (n_modes - 1)
+    n_phases = cfg.n_modes * (cfg.n_modes - 1)
     memristive_indices = _normalize_memristive_phase_idx(
-        memristive_phase_idx, n_modes, n_phases
+        cfg.memristive_phase_idx, cfg.n_modes, n_phases
     )
     n_memristive = len(memristive_indices)
     output_modes = (
         _normalize_memristive_output_modes(
-            memristive_output_modes, memristive_indices, n_modes
+            cfg.memristive_output_modes, memristive_indices, cfg.n_modes
         )
         if n_memristive > 0
         else ()
@@ -230,7 +205,7 @@ def run_simulation_sequence_np(
             "Continuous mode requires memristive phases — switching to discrete."
         )
         n_swipe = 0
-    if n_swipe > 0 and swipe_span <= 0:
+    if n_swipe > 0 and cfg.swipe_span <= 0:
         raise ValueError("swipe_span must be > 0 for continuous mode.")
 
     mode = "continuous" if n_swipe > 0 else "discrete"
@@ -239,63 +214,66 @@ def run_simulation_sequence_np(
         raise ValueError(
             f"Expected {expected_params} parameters ({n_phases} phases"
             + (f" + {n_memristive} weights" if n_memristive else "")
-            + f") for {n_modes} modes, got {len(params)}"
+            + f") for {cfg.n_modes} modes, got {len(params)}"
         )
 
     weights = params[-n_memristive:] if n_memristive else None
 
+    target_mode = (
+        cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
+    )
+
     # Input state: singles (1 photon) or coincidence (2 photons)
-    if output_mode == "coincidence":
+    if cfg.output_mode == "coincidence":
         if n_memristive > 0:
             raise ValueError("Coincidence mode does not support memristive phases yet")
         in_modes = (
             (1, 4)
-            if n_modes >= 6
+            if cfg.n_modes >= 6
             else (0, 1)
-            if input_modes is None
-            else tuple(int(m) for m in input_modes)
+            if cfg.input_modes is None
+            else tuple(int(m) for m in cfg.input_modes)
         )
         if len(in_modes) != 2:
             raise ValueError(
                 f"Coincidence mode requires exactly 2 input modes, got {in_modes}"
             )
-        inp = [0] * n_modes
+        inp = [0] * cfg.n_modes
         for m in in_modes:
-            if m < 0 or m >= n_modes:
+            if m < 0 or m >= cfg.n_modes:
                 raise ValueError(
-                    f"input_modes {input_modes} out of range [0, {n_modes - 1}]"
+                    f"input_modes {cfg.input_modes} out of range [0, {cfg.n_modes - 1}]"
                 )
             inp[m] += 1
         input_state = pcvl.BasicState(inp)
-        working_detectors = (
-            tuple(working_detectors) if working_detectors is not None else (0, 1, 5)
+        wd_tuple = (
+            tuple(cfg.working_detectors)
+            if cfg.working_detectors is not None
+            else (0, 1, 5)
         )
-        working_cc_indices = working_detectors_to_cc_indices(working_detectors, n_modes)
-        cc_labels = get_cc_labels(n_modes)
-        add_noise = noise_std is not None and (
-            (isinstance(noise_std, (int, float)) and float(noise_std) > 0)
+        working_cc_indices = working_detectors_to_cc_indices(wd_tuple, cfg.n_modes)
+        cc_labels = get_cc_labels(cfg.n_modes)
+        add_noise = cfg.noise_std is not None and (
+            (isinstance(cfg.noise_std, (int, float)) and float(cfg.noise_std) > 0)
             or (
-                hasattr(noise_std, "__len__")
-                and len(noise_std) > 0
-                and any(float(s) > 0 for s in noise_std)
+                hasattr(cfg.noise_std, "__len__")
+                and len(cfg.noise_std) > 0
+                and any(float(s) > 0 for s in cfg.noise_std)
             )
         )
     else:
-        inp = [0] * n_modes
-        inp[encoding_mode] = 1
+        inp = [0] * cfg.n_modes
+        inp[cfg.encoding_mode] = 1
         input_state = pcvl.BasicState(inp)
         working_cc_indices: Tuple[int, ...] = ()
         cc_labels = []
         add_noise = False
 
-    if target_mode is None:
-        target_mode = (n_modes - 1,)
-
     state_m1_list = []
     state_m2_list = []
     for j in range(n_memristive):
         m1, m2 = output_modes[j]
-        s1, s2 = [0] * n_modes, [0] * n_modes
+        s1, s2 = [0] * cfg.n_modes, [0] * cfg.n_modes
         s1[m1], s2[m2] = 1, 1
         state_m1_list.append(pcvl.BasicState(s1))
         state_m2_list.append(pcvl.BasicState(s2))
@@ -303,17 +281,17 @@ def run_simulation_sequence_np(
     # Build target states list for multi-class / probability extraction
     target_modes_list = []
     for m in target_mode:
-        tm = [0] * n_modes
+        tm = [0] * cfg.n_modes
         tm[m] = 1
         target_modes_list.append(pcvl.BasicState(tm))
 
     if n_memristive > 0:
-        mem_p1 = np.zeros((memory_depth, n_memristive), dtype=float)
-        mem_p2 = np.zeros((memory_depth, n_memristive), dtype=float)
+        mem_p1 = np.zeros((cfg.memory_depth, n_memristive), dtype=float)
+        mem_p2 = np.zeros((cfg.memory_depth, n_memristive), dtype=float)
     num_pts = len(encoded_phases)
 
     # Determine if we need multi-class output
-    if output_mode == "coincidence" and working_cc_indices:
+    if cfg.output_mode == "coincidence" and working_cc_indices:
         n_classes = len(working_cc_indices)
     else:
         n_classes = len(target_mode) if target_mode is not None else 1
@@ -327,7 +305,7 @@ def run_simulation_sequence_np(
         enc_base = encoded_phases
         # TODO: Use Iris data for that
         offsets = np.linspace(
-            -swipe_span / 2, swipe_span / 2, n_swipe, dtype=encoded_phases.dtype
+            -cfg.swipe_span / 2, cfg.swipe_span / 2, n_swipe, dtype=encoded_phases.dtype
         )
     else:
         # Initialize offsets as empty array for discrete mode to avoid reference errors
@@ -335,35 +313,33 @@ def run_simulation_sequence_np(
         enc_base = encoded_phases
 
     # ----- NumPy backend: vectorized non-memristive discrete -----
-    if backend == "numpy" and mode == "discrete" and n_memristive == 0:
+    if cfg.backend == "numpy" and mode == "discrete" and n_memristive == 0:
         t_np = time.perf_counter()
+        cfg_vec = (
+            cfg
+            if cfg.target_mode is not None
+            else cfg.replace(target_mode=target_mode)
+        )
         preds = run_vectorized_non_memristive(
             params=params,
             encoded_phases=encoded_phases,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            encoding_phase_idx=encoding_phase_idx,
-            output_mode=output_mode,
-            input_modes=input_modes,
-            working_detectors=working_detectors,
-            target_mode=target_mode,
+            cfg=cfg_vec,
             return_class_probs=return_class_probs,
-            noise_std=noise_std,
         )
         elapsed_np = time.perf_counter() - t_np
         sim_logger.log_circuits(elapsed_np, num_pts)
-        sim_logger.log(time.perf_counter() - start_time, n_samples)
+        sim_logger.log(time.perf_counter() - start_time, cfg.n_samples)
         return preds
 
     # ----- NumPy backend: memristive and/or swipe (singles only) -----
-    if backend == "numpy":
-        if output_mode == "coincidence":
+    if cfg.backend == "numpy":
+        if cfg.output_mode == "coincidence":
             raise ValueError(
                 "numpy backend does not support coincidence with memristive/swipe; "
                 "use backend='perceval'"
             )
         for i in range(num_pts):
-            t = i % memory_depth
+            t = i % cfg.memory_depth
             if n_memristive > 0:
                 mem_phis = np.empty(n_memristive, dtype=float)
                 for j in range(n_memristive):
@@ -388,21 +364,23 @@ def run_simulation_sequence_np(
                 u = unitary_for_point(
                     phases_loc,
                     enc_phi,
-                    n_modes,
-                    encoding_mode,
-                    encoding_phase_idx,
+                    cfg.n_modes,
+                    cfg.encoding_mode,
+                    cfg.encoding_phase_idx,
                 )
                 if n_memristive > 0:
                     for j in range(n_memristive):
                         m1, m2 = output_modes[j]
-                        mem_p1[t, j] = float(np.abs(u[m1, encoding_mode]) ** 2)
-                        mem_p2[t, j] = float(np.abs(u[m2, encoding_mode]) ** 2)
+                        mem_p1[t, j] = float(np.abs(u[m1, cfg.encoding_mode]) ** 2)
+                        mem_p2[t, j] = float(np.abs(u[m2, cfg.encoding_mode]) ** 2)
                 if return_class_probs and n_classes > 1:
                     preds[i, :] = singles_class_probs_from_unitary(
-                        u, encoding_mode, target_mode
+                        u, cfg.encoding_mode, target_mode
                     )
                 else:
-                    preds[i] = singles_prob_from_unitary(u, encoding_mode, target_mode)
+                    preds[i] = singles_prob_from_unitary(
+                        u, cfg.encoding_mode, target_mode
+                    )
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
             else:
@@ -424,21 +402,21 @@ def run_simulation_sequence_np(
                     u = unitary_for_point(
                         phases_loc,
                         enc_phi,
-                        n_modes,
-                        encoding_mode,
-                        encoding_phase_idx,
+                        cfg.n_modes,
+                        cfg.encoding_mode,
+                        cfg.encoding_phase_idx,
                     )
                     for j in range(n_memristive):
                         m1, m2 = output_modes[j]
-                        p1_swipe[k, j] = float(np.abs(u[m1, encoding_mode]) ** 2)
-                        p2_swipe[k, j] = float(np.abs(u[m2, encoding_mode]) ** 2)
+                        p1_swipe[k, j] = float(np.abs(u[m1, cfg.encoding_mode]) ** 2)
+                        p2_swipe[k, j] = float(np.abs(u[m2, cfg.encoding_mode]) ** 2)
                     if return_class_probs and n_classes > 1:
                         target_swipe[k, :] = singles_class_probs_from_unitary(
-                            u, encoding_mode, target_mode
+                            u, cfg.encoding_mode, target_mode
                         )
                     else:
                         target_swipe[k] = singles_prob_from_unitary(
-                            u, encoding_mode, target_mode
+                            u, cfg.encoding_mode, target_mode
                         )
                     sim_logger.log_circuit(time.perf_counter() - t0)
                 if return_class_probs and n_classes > 1:
@@ -452,12 +430,12 @@ def run_simulation_sequence_np(
                     )
 
         elapsed = time.perf_counter() - start_time
-        sim_logger.log(elapsed, n_samples)
+        sim_logger.log(elapsed, cfg.n_samples)
         return preds
 
     # ----- Perceval backend -----
     reuse_enc_param = (
-        mode == "discrete" and n_memristive == 0 and encoding_phase_idx is None
+        mode == "discrete" and n_memristive == 0 and cfg.encoding_phase_idx is None
     )
     enc_param = None
     sampler = None
@@ -468,8 +446,8 @@ def run_simulation_sequence_np(
         circ0 = build_parametric_circuit(
             phases_fixed,
             enc_param,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
+            n_modes=cfg.n_modes,
+            encoding_mode=cfg.encoding_mode,
             encoding_phase_idx=None,
         )
         proc0 = pcvl.Processor("SLOS", circ0)
@@ -477,7 +455,7 @@ def run_simulation_sequence_np(
         sampler = Sampler(proc0)
 
     for i in range(num_pts):
-        t = i % memory_depth
+        t = i % cfg.memory_depth
         if n_memristive > 0:
             mem_phis = np.empty(n_memristive, dtype=float)
             for j in range(n_memristive):
@@ -501,34 +479,34 @@ def run_simulation_sequence_np(
             if reuse_enc_param:
                 enc_param.set_value(float(enc_phi) % (2 * np.pi))
                 t0 = time.perf_counter()
-                probs = sampler.probs(n_samples)["results"]
+                probs = sampler.probs(cfg.n_samples)["results"]
                 sim_logger.log_circuit(time.perf_counter() - t0)
             else:
                 circ = build_circuit(
                     phases,
                     enc_phi,
-                    n_modes=n_modes,
-                    encoding_mode=encoding_mode,
-                    encoding_phase_idx=encoding_phase_idx,
+                    n_modes=cfg.n_modes,
+                    encoding_mode=cfg.encoding_mode,
+                    encoding_phase_idx=cfg.encoding_phase_idx,
                 )
                 proc = pcvl.Processor("SLOS", circ)
                 proc.with_input(input_state)
                 t0 = time.perf_counter()
-                probs = Sampler(proc).probs(n_samples)["results"]
+                probs = Sampler(proc).probs(cfg.n_samples)["results"]
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
             if n_memristive > 0:
                 for j in range(n_memristive):
                     mem_p1[t, j] = probs.get(state_m1_list[j], 0.0)
                     mem_p2[t, j] = probs.get(state_m2_list[j], 0.0)
-            if output_mode == "coincidence":
-                coinc = probs_to_coincidences(probs, n_modes)
+            if cfg.output_mode == "coincidence":
+                coinc = probs_to_coincidences(probs, cfg.n_modes)
                 out = postselect_measurement(
                     coinc, working_cc_indices, cc_labels, fallback_uniform=True
                 )
                 if add_noise:
                     out = apply_noise_to_outcomes(
-                        out, noise_std, working_cc_indices, cc_labels, seed=i
+                        out, cfg.noise_std, working_cc_indices, cc_labels, seed=i
                     )
                 if return_class_probs and len(working_cc_indices) > 1:
                     preds[i, :] = out[working_cc_indices]
@@ -556,7 +534,7 @@ def run_simulation_sequence_np(
             phases_sw = params[:-n_memristive].copy()
             for j, idx in enumerate(memristive_indices):
                 phases_sw[idx] = mem_phis[j]
-            reuse_enc_swipe = encoding_phase_idx is None
+            reuse_enc_swipe = cfg.encoding_phase_idx is None
             enc_param_sw = None
             sampler_sw = None
             if reuse_enc_swipe:
@@ -565,8 +543,8 @@ def run_simulation_sequence_np(
                 circ_sw = build_parametric_circuit(
                     phases_sw,
                     enc_param_sw,
-                    n_modes=n_modes,
-                    encoding_mode=encoding_mode,
+                    n_modes=cfg.n_modes,
+                    encoding_mode=cfg.encoding_mode,
                     encoding_phase_idx=None,
                 )
                 proc_sw = pcvl.Processor("SLOS", circ_sw)
@@ -578,33 +556,33 @@ def run_simulation_sequence_np(
                 if reuse_enc_swipe:
                     enc_param_sw.set_value(float(enc_phi) % (2 * np.pi))
                     t0 = time.perf_counter()
-                    probs = sampler_sw.probs(n_samples)["results"]
+                    probs = sampler_sw.probs(cfg.n_samples)["results"]
                     sim_logger.log_circuit(time.perf_counter() - t0)
                 else:
                     circ = build_circuit(
                         phases_sw,
                         enc_phi,
-                        n_modes=n_modes,
-                        encoding_mode=encoding_mode,
-                        encoding_phase_idx=encoding_phase_idx,
+                        n_modes=cfg.n_modes,
+                        encoding_mode=cfg.encoding_mode,
+                        encoding_phase_idx=cfg.encoding_phase_idx,
                     )
                     proc = pcvl.Processor("SLOS", circ)
                     proc.with_input(input_state)
                     t0 = time.perf_counter()
-                    probs = Sampler(proc).probs(n_samples)["results"]
+                    probs = Sampler(proc).probs(cfg.n_samples)["results"]
                     sim_logger.log_circuit(time.perf_counter() - t0)
                 for j in range(n_memristive):
                     p1_swipe[k, j] = probs.get(state_m1_list[j], 0.0)
                     p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
-                if output_mode == "coincidence":
-                    coinc = probs_to_coincidences(probs, n_modes)
+                if cfg.output_mode == "coincidence":
+                    coinc = probs_to_coincidences(probs, cfg.n_modes)
                     out = postselect_measurement(
                         coinc, working_cc_indices, cc_labels, fallback_uniform=True
                     )
                     if add_noise:
                         out = apply_noise_to_outcomes(
                             out,
-                            noise_std,
+                            cfg.noise_std,
                             working_cc_indices,
                             cc_labels,
                             seed=i * 1000 + k,
@@ -624,7 +602,7 @@ def run_simulation_sequence_np(
                     )
                     if len(target_modes_list) > 1:
                         target_swipe[k] /= len(target_modes_list)
-            if output_mode == "coincidence" and working_cc_indices:
+            if cfg.output_mode == "coincidence" and working_cc_indices:
                 if return_class_probs and len(working_cc_indices) > 1:
                     preds[i] = target_swipe.mean(axis=0)
                 else:
@@ -641,7 +619,7 @@ def run_simulation_sequence_np(
 
     # finalize
     elapsed = time.perf_counter() - start_time
-    sim_logger.log(elapsed, n_samples)
+    sim_logger.log(elapsed, cfg.n_samples)
     return preds
 
 
@@ -649,27 +627,13 @@ def uncertainty_forward_pass(job: tuple) -> np.ndarray:
     """
     Picklable entry point for ProcessPoolExecutor-based uncertainty loops.
 
-    ``job`` is ``(params, n_samples, encoded_phases, cfg)`` where ``cfg`` is a dict of
-    keyword arguments for :func:`run_simulation_sequence_np` (excluding the first three).
+    ``job`` is ``(params, n_samples, encoded_phases, sim_cfg_dict, return_class_probs)``.
     """
-    params, n_samples, encoded_phases, cfg = job
+    params, n_samples, encoded_phases, cfg_dict, return_class_probs = job
+    sim_cfg = SimConfig.from_dict(cfg_dict).replace(n_samples=n_samples)
     return run_simulation_sequence_np(
         params,
-        cfg["memory_depth"],
-        n_samples,
-        encoded_phases=encoded_phases,
-        n_swipe=cfg["n_swipe"],
-        swipe_span=cfg["swipe_span"],
-        n_modes=cfg["n_modes"],
-        encoding_mode=cfg["encoding_mode"],
-        target_mode=cfg["target_mode"],
-        memristive_phase_idx=cfg["memristive_phase_idx"],
-        memristive_output_modes=cfg["memristive_output_modes"],
-        encoding_phase_idx=cfg["encoding_phase_idx"],
-        output_mode=cfg["output_mode"],
-        input_modes=cfg["input_modes"],
-        working_detectors=cfg["working_detectors"],
-        noise_std=cfg.get("noise_std"),
-        backend=cfg.get("backend", "numpy"),
-        return_class_probs=cfg.get("return_class_probs", False),
+        encoded_phases,
+        sim_cfg,
+        return_class_probs=return_class_probs,
     )

@@ -23,10 +23,13 @@ from reporting import begin_console_capture, write_run_summary
 
 import perceval as pcvl
 from src.data import get_data, quartic_data
+from src.config import SimConfig
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.circuits import build_circuit
-from src.utils import config
+SIM_BACKEND = "numpy"
+MEMORY_DEPTH = 2
+LR = 0.02
 
 
 def visualize_circuit(circuit, input_state, measurement_mode, title):
@@ -152,19 +155,33 @@ def train_and_evaluate(
     n_samples = 500
     epochs = 15
 
-    theta_opt, history = train_pytorch(
-        X_train,
-        y_train,
-        memory_depth=config["memory_depth"],
-        lr=config["lr"],
-        epochs=epochs,
-        n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
+    sim_cfg = SimConfig(
         n_modes=n_modes,
         encoding_mode=encoding_mode,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=None,
+        encoding_phase_idx=None,
+        output_mode="singles",
+        input_modes=None,
+        working_detectors=None,
+        noise_std=None,
+        n_samples=n_samples,
+        memory_depth=MEMORY_DEPTH,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_photons=None,
+        backend=SIM_BACKEND,
+        loss_type="mse",
+        n_classes=1,
+    )
+    theta_opt, history = train_pytorch(
+        X_train,
+        y_train,
+        sim_cfg=sim_cfg,
+        lr=LR,
+        epochs=epochs,
+        seed=42,
     )
 
     enc_test = 2 * np.arccos(X_test)
@@ -173,15 +190,8 @@ def train_and_evaluate(
     try:
         predictions = run_simulation_sequence_np(
             theta_opt,
-            config["memory_depth"],
-            n_samples,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
+            enc_test,
+            sim_cfg,
         )
 
         # Handle NaN values in predictions
@@ -343,11 +353,9 @@ def main():
         np.random.seed(42)
     
         # Configure parameters
-        config["n_data"] = 80
-        config["sigma_noise"] = 0.05
-        config["lr"] = 0.02
-        config["epochs"] = 15
-        config["memory_depth"] = 2
+        n_data = 80
+        sigma_noise = 0.05
+        epochs = 15
     
         # Create and visualize memristor circuit
         mem_circuit, mem_input, mem_measurement = create_memristor_circuit()
@@ -358,7 +366,7 @@ def main():
         # Generate synthetic data
         print("\n=== Generating Quartic Function Data ===")
         X_train, y_train, X_test, y_test = get_data(
-            config["n_data"], config["sigma_noise"], "quartic_data"
+            n_data, sigma_noise, "quartic_data"
         )
     
         # Show example of the quartic function
@@ -422,7 +430,7 @@ def main():
                 k: results[k]["metrics"] for k in ("memristive", "standard") if k in results
             },
             artifacts=["quartic_function.png",
-                "circuit_quartic_comparison.png",, "run.log"],
+                "circuit_quartic_comparison.png", "run.log"],
             simulation=sim_logger.stats_dict()
         )
     

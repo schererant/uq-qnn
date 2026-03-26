@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Sequence, Tuple, Optional, Union
+from typing import Sequence, Tuple
 import numpy as np
 import torch
 from torch import Tensor
 
+from .config import SimConfig
 from .simulation import run_simulation_sequence_np
 
 
@@ -57,56 +58,28 @@ class MemristorLossPSR(torch.autograd.Function):
         theta: Tensor,
         enc_phases: Tensor,
         y: Tensor,
-        memory_depth: int,
         phase_idx: Sequence[int],
         n_photons: Sequence[int],
-        n_samples: int,
-        n_swipe: int,
-        swipe_span: float,
-        n_modes: int,
-        encoding_mode: int,
-        target_mode: Optional[Tuple[int, ...]],
-        memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]],
-        memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-        encoding_phase_idx: Optional[int],
-        loss_type: str = "mse",
-        n_classes: int = 1,
-        output_mode: str = "singles",
-        input_modes: Optional[Sequence[int]] = None,
-        working_detectors: Optional[Sequence[int]] = None,
-        noise_std: Optional[Union[float, Sequence[float]]] = None,
-        backend: str = "numpy",
+        sim_cfg: SimConfig,
     ) -> Tensor:
         theta_np = theta.detach().cpu().double().numpy()
         enc_np = enc_phases.detach().cpu().double().numpy()
         y_np = y.detach().cpu().double().numpy()
 
         # Determine if we need multi-class output
-        return_class_probs = loss_type == "cross_entropy" and n_classes > 1
+        return_class_probs = (
+            sim_cfg.loss_type == "cross_entropy" and sim_cfg.n_classes > 1
+        )
 
         preds = run_simulation_sequence_np(
-            params=theta_np,
-            memory_depth=memory_depth,
-            n_samples=n_samples,
-            encoded_phases=enc_np,
-            n_swipe=n_swipe,
-            swipe_span=swipe_span,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            target_mode=target_mode,
+            theta_np,
+            enc_np,
+            sim_cfg,
             return_class_probs=return_class_probs,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx,
-            output_mode=output_mode,
-            input_modes=input_modes,
-            working_detectors=working_detectors,
-            noise_std=noise_std,
-            backend=backend,
         )
 
         # Compute loss based on loss_type
-        if loss_type == "cross_entropy":
+        if sim_cfg.loss_type == "cross_entropy":
             # Classification: cross-entropy loss
             # y_np should be shape (K, n_classes) for multi-class or (K,) for binary
             # preds should be shape (K, n_classes)
@@ -122,11 +95,11 @@ class MemristorLossPSR(torch.autograd.Function):
 
             if y_np.ndim == 1:
                 # Binary: convert to one-hot if needed
-                if n_classes == 2:
+                if sim_cfg.n_classes == 2:
                     y_2d = np.stack([1 - y_np, y_np], axis=1)
                 else:
                     # Multi-class with integer labels
-                    y_2d = np.zeros((len(y_np), n_classes))
+                    y_2d = np.zeros((len(y_np), sim_cfg.n_classes))
                     y_2d[np.arange(len(y_np)), y_np.astype(int)] = 1.0
             else:
                 y_2d = y_np
@@ -141,29 +114,14 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.save_for_backward(theta.detach(), enc_phases.detach(), y.detach())
         ctx.phase_idx = list(phase_idx)
         ctx.n_photons = list(n_photons)
-        ctx.n_swipe = n_swipe
-        ctx.swipe_span = swipe_span
-        ctx.memory_depth = memory_depth
-        ctx.n_samples = n_samples
+        ctx.sim_cfg = sim_cfg
         ctx.preds_np = preds
-        ctx.n_modes = n_modes
-        ctx.encoding_mode = encoding_mode
-        ctx.target_mode = target_mode
-        ctx.loss_type = loss_type
-        ctx.n_classes = n_classes
-        ctx.memristive_phase_idx = memristive_phase_idx
-        ctx.memristive_output_modes = memristive_output_modes
-        ctx.encoding_phase_idx = encoding_phase_idx
-        ctx.output_mode = output_mode
-        ctx.input_modes = tuple(input_modes) if input_modes else None
-        ctx.working_detectors = tuple(working_detectors) if working_detectors else None
-        ctx.noise_std = noise_std
-        ctx.backend = backend
 
         return torch.tensor(loss_val, dtype=theta.dtype, device=theta.device)
 
     @staticmethod
     def backward(ctx, g_out: Tensor):
+        cfg = ctx.sim_cfg
         theta, enc_tensor, y = ctx.saved_tensors
         theta_np = theta.cpu().double().numpy()
         enc_np = enc_tensor.cpu().double().numpy()
@@ -172,9 +130,9 @@ class MemristorLossPSR(torch.autograd.Function):
         N = y.numel()
 
         # Prepare predictions and targets based on loss type
-        return_class_probs = ctx.loss_type == "cross_entropy" and ctx.n_classes > 1
+        return_class_probs = cfg.loss_type == "cross_entropy" and cfg.n_classes > 1
 
-        if ctx.loss_type == "cross_entropy":
+        if cfg.loss_type == "cross_entropy":
             # Classification: prepare y and preds for Equation (15)
             if preds.ndim == 1:
                 preds_2d = np.stack([1 - preds, preds], axis=1)
@@ -182,10 +140,10 @@ class MemristorLossPSR(torch.autograd.Function):
                 preds_2d = preds
 
             if y_np.ndim == 1:
-                if ctx.n_classes == 2:
+                if cfg.n_classes == 2:
                     y_2d = np.stack([1 - y_np, y_np], axis=1)
                 else:
-                    y_2d = np.zeros((len(y_np), ctx.n_classes))
+                    y_2d = np.zeros((len(y_np), cfg.n_classes))
                     y_2d[np.arange(len(y_np)), y_np.astype(int)] = 1.0
             else:
                 y_2d = y_np
@@ -205,32 +163,18 @@ class MemristorLossPSR(torch.autograd.Function):
         for gate_i, p_idx in enumerate(ctx.phase_idx):
             shifts, coeffs = photonic_psr_coeffs_torch(ctx.n_photons[gate_i])
 
-            if ctx.loss_type == "cross_entropy" and ctx.n_classes > 1:
+            if cfg.loss_type == "cross_entropy" and cfg.n_classes > 1:
                 # Classification PSR: Equation (15)
                 # ∂L/∂θ = -(1/K) Σ_q c_q Σ_c (y_c / F^c_Θ(x)) · F^c_{Θ+Θ^q}(x)
-                df_dθ = np.zeros((len(enc_np), ctx.n_classes))
+                df_dθ = np.zeros((len(enc_np), cfg.n_classes))
                 for s, c in zip(shifts.numpy(), coeffs.numpy()):
                     θ_shift = theta_np.copy()
                     θ_shift[p_idx] += s
                     out = run_simulation_sequence_np(
-                        params=θ_shift,
-                        memory_depth=ctx.memory_depth,
-                        n_samples=ctx.n_samples,
-                        encoded_phases=enc_np,
-                        n_swipe=ctx.n_swipe,
-                        swipe_span=ctx.swipe_span,
-                        n_modes=ctx.n_modes,
-                        encoding_mode=ctx.encoding_mode,
-                        target_mode=ctx.target_mode,
+                        θ_shift,
+                        enc_np,
+                        cfg,
                         return_class_probs=True,
-                        memristive_phase_idx=ctx.memristive_phase_idx,
-                        memristive_output_modes=ctx.memristive_output_modes,
-                        encoding_phase_idx=ctx.encoding_phase_idx,
-                        output_mode=ctx.output_mode,
-                        input_modes=ctx.input_modes,
-                        working_detectors=ctx.working_detectors,
-                        noise_std=ctx.noise_std,
-                        backend=ctx.backend,
                     )
                     if out.ndim == 1:
                         out = np.stack([1 - out, out], axis=1)
@@ -247,24 +191,10 @@ class MemristorLossPSR(torch.autograd.Function):
                     θ_shift = theta_np.copy()
                     θ_shift[p_idx] += s
                     out = run_simulation_sequence_np(
-                        params=θ_shift,
-                        memory_depth=ctx.memory_depth,
-                        n_samples=ctx.n_samples,
-                        encoded_phases=enc_np,
-                        n_swipe=ctx.n_swipe,
-                        swipe_span=ctx.swipe_span,
-                        n_modes=ctx.n_modes,
-                        encoding_mode=ctx.encoding_mode,
-                        target_mode=ctx.target_mode,
+                        θ_shift,
+                        enc_np,
+                        cfg,
                         return_class_probs=return_class_probs,
-                        memristive_phase_idx=ctx.memristive_phase_idx,
-                        memristive_output_modes=ctx.memristive_output_modes,
-                        encoding_phase_idx=ctx.encoding_phase_idx,
-                        output_mode=ctx.output_mode,
-                        input_modes=ctx.input_modes,
-                        working_detectors=ctx.working_detectors,
-                        noise_std=ctx.noise_std,
-                        backend=ctx.backend,
                     )
                     if out.ndim > 1:
                         out = out[:, -1]  # Use last class for regression
@@ -286,51 +216,23 @@ class MemristorLossPSR(torch.autograd.Function):
                 θ_p[idx] = θ_p[idx] % (2 * np.pi)
                 θ_m[idx] = θ_m[idx] % (2 * np.pi)
 
-            return_class_probs = ctx.loss_type == "cross_entropy" and ctx.n_classes > 1
+            fdc_return_class = cfg.loss_type == "cross_entropy" and cfg.n_classes > 1
 
             pred_p = run_simulation_sequence_np(
-                params=θ_p,
-                memory_depth=ctx.memory_depth,
-                n_samples=ctx.n_samples,
-                encoded_phases=enc_np,
-                n_swipe=ctx.n_swipe,
-                swipe_span=ctx.swipe_span,
-                n_modes=ctx.n_modes,
-                encoding_mode=ctx.encoding_mode,
-                target_mode=ctx.target_mode,
-                return_class_probs=return_class_probs,
-                memristive_phase_idx=ctx.memristive_phase_idx,
-                memristive_output_modes=ctx.memristive_output_modes,
-                encoding_phase_idx=ctx.encoding_phase_idx,
-                output_mode=ctx.output_mode,
-                input_modes=ctx.input_modes,
-                working_detectors=ctx.working_detectors,
-                noise_std=ctx.noise_std,
-                backend=ctx.backend,
+                θ_p,
+                enc_np,
+                cfg,
+                return_class_probs=fdc_return_class,
             )
             pred_m = run_simulation_sequence_np(
-                params=θ_m,
-                memory_depth=ctx.memory_depth,
-                n_samples=ctx.n_samples,
-                encoded_phases=enc_np,
-                n_swipe=ctx.n_swipe,
-                swipe_span=ctx.swipe_span,
-                n_modes=ctx.n_modes,
-                encoding_mode=ctx.encoding_mode,
-                target_mode=ctx.target_mode,
-                return_class_probs=return_class_probs,
-                memristive_phase_idx=ctx.memristive_phase_idx,
-                memristive_output_modes=ctx.memristive_output_modes,
-                encoding_phase_idx=ctx.encoding_phase_idx,
-                output_mode=ctx.output_mode,
-                input_modes=ctx.input_modes,
-                working_detectors=ctx.working_detectors,
-                noise_std=ctx.noise_std,
-                backend=ctx.backend,
+                θ_m,
+                enc_np,
+                cfg,
+                return_class_probs=fdc_return_class,
             )
 
             # Compute loss based on loss_type
-            if ctx.loss_type == "cross_entropy":
+            if cfg.loss_type == "cross_entropy":
                 # Classification loss
                 if pred_p.ndim == 1:
                     pred_p_2d = np.stack([1 - pred_p, pred_p], axis=1)
@@ -346,10 +248,10 @@ class MemristorLossPSR(torch.autograd.Function):
                 pred_m_2d = np.clip(pred_m_2d, eps_loss, 1 - eps_loss)
 
                 if y_np.ndim == 1:
-                    if ctx.n_classes == 2:
+                    if cfg.n_classes == 2:
                         y_2d = np.stack([1 - y_np, y_np], axis=1)
                     else:
-                        y_2d = np.zeros((len(y_np), ctx.n_classes))
+                        y_2d = np.zeros((len(y_np), cfg.n_classes))
                         y_2d[np.arange(len(y_np)), y_np.astype(int)] = 1.0
                 else:
                     y_2d = y_np
@@ -364,22 +266,6 @@ class MemristorLossPSR(torch.autograd.Function):
 
         return (
             g_out * torch.from_numpy(grads).to(theta),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
             None,
             None,
             None,

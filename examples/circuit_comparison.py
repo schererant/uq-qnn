@@ -20,9 +20,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from reporting import begin_console_capture, write_run_summary
 
 from src.data import get_data
+from src.config import SimConfig
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
-from src.utils import config
+# Local config — no dependency on legacy utils.config
+SIM_BACKEND = "numpy"
+MEMORY_DEPTH = 2
+LR = 0.02
 
 
 def train_and_evaluate_circuit(
@@ -58,19 +62,33 @@ def train_and_evaluate_circuit(
     else:
         print(f"Standard Clements: {n_phases} phases")
 
-    theta_opt, history = train_pytorch(
-        X_train,
-        y_train,
-        memory_depth=config["memory_depth"],
-        lr=config["lr"],
-        epochs=epochs,
-        n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
+    sim_cfg = SimConfig(
         n_modes=n_modes,
         encoding_mode=encoding_mode,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
+        memristive_output_modes=None,
+        encoding_phase_idx=None,
+        output_mode="singles",
+        input_modes=None,
+        working_detectors=None,
+        noise_std=None,
+        n_samples=n_samples,
+        memory_depth=MEMORY_DEPTH,
+        n_swipe=0,
+        swipe_span=0.0,
+        n_photons=None,
+        backend=SIM_BACKEND,
+        loss_type="mse",
+        n_classes=1,
+    )
+    theta_opt, history = train_pytorch(
+        X_train,
+        y_train,
+        sim_cfg=sim_cfg,
+        lr=LR,
+        epochs=epochs,
+        seed=42,
     )
 
     n_forward_passes = 10
@@ -88,15 +106,8 @@ def train_and_evaluate_circuit(
         enc_test = 2 * np.arccos(X_test)
         preds = run_simulation_sequence_np(
             perturbed_theta,
-            config["memory_depth"],
-            sample_count,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
+            enc_test,
+            sim_cfg.replace(n_samples=sample_count),
         )
         all_preds[:, i] = preds
 
@@ -307,17 +318,9 @@ def main():
         np.random.seed(42)
     
         # Configure parameters
-        config["lr"] = 0.02
-        config["memory_depth"] = 2
         n_samples = 500
         epochs = 5
         clements_n_modes = 3  # Number of modes for Clements architecture
-    
-        # Explicitly disable continuous swipe mode for both architectures
-        # This is especially important for Clements which doesn't support continuous mode
-        config["n_swipe"] = 0
-        config["swipe_span"] = 0.0
-        n_swipe = 0  # Ensure n_swipe is explicitly set to 0 in all code paths
     
         # Generate synthetic data
         print("Generating synthetic data...")

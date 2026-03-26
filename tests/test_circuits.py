@@ -128,6 +128,7 @@ class TestCircuitArchitectures(unittest.TestCase):
 
     def test_multiple_memristive_mzis(self):
         """Test simulation with multiple memristive MZIs."""
+        from src.config import SimConfig
         from src.simulation import run_simulation_sequence_np
 
         n_modes = 3
@@ -135,41 +136,60 @@ class TestCircuitArchitectures(unittest.TestCase):
         memristive_phase_idx = (2, 5)
         params = np.concatenate([np.ones(n_phases) * np.pi / 4, np.array([0.5, 0.5])])
         enc = np.linspace(0, np.pi, 5)
-        preds = run_simulation_sequence_np(
-            params,
-            memory_depth=2,
-            n_samples=100,
-            encoded_phases=enc,
-            n_swipe=0,
-            swipe_span=0.0,
+        cfg = SimConfig(
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=(n_modes - 1,),
             memristive_phase_idx=memristive_phase_idx,
+            memristive_output_modes=None,
+            encoding_phase_idx=None,
+            output_mode="singles",
+            input_modes=None,
+            working_detectors=None,
+            noise_std=None,
+            n_samples=100,
+            memory_depth=2,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_photons=None,
+            backend="numpy",
+            loss_type="mse",
+            n_classes=1,
         )
+        preds = run_simulation_sequence_np(params, enc, cfg)
         self.assertEqual(len(preds), 5)
         self.assertTrue(np.all(preds >= 0) and np.all(preds <= 1))
 
     def test_no_memristive(self):
         """Test simulation with no memristive phases (standard Clements)."""
+        from src.config import SimConfig
         from src.simulation import run_simulation_sequence_np
 
         n_modes = 3
         n_phases = n_modes * (n_modes - 1)
         params = np.ones(n_phases) * np.pi / 4
         enc = np.linspace(0, np.pi, 5)
-        preds = run_simulation_sequence_np(
-            params,
-            memory_depth=2,
-            n_samples=100,
-            encoded_phases=enc,
-            n_swipe=0,
-            swipe_span=0.0,
+        cfg = SimConfig(
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=(n_modes - 1,),
             memristive_phase_idx=None,
+            memristive_output_modes=None,
+            encoding_phase_idx=None,
+            output_mode="singles",
+            input_modes=None,
+            working_detectors=None,
+            noise_std=None,
+            n_samples=100,
+            memory_depth=2,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_photons=None,
+            backend="numpy",
+            loss_type="mse",
+            n_classes=1,
         )
+        preds = run_simulation_sequence_np(params, enc, cfg)
         self.assertEqual(len(preds), 5)
         self.assertTrue(np.all(preds >= 0) and np.all(preds <= 1))
 

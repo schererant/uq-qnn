@@ -208,38 +208,52 @@ def main():
     
         # Import required modules for training
         from src.data import get_data
+        from src.config import SimConfig
         from src.training import train_pytorch
         from src.simulation import run_simulation_sequence_np
-        from src.utils import config
-    
         # Configure parameters
-        config["n_data"] = 40  # Small dataset for demonstration
-        config["sigma_noise"] = 0.05
-        config["lr"] = 0.03
-        config["epochs"] = 5  # Few epochs for quick demonstration
-        config["memory_depth"] = 2
-    
+        n_data = 40  # Small dataset for demonstration
+        sigma_noise = 0.05
+        lr = 0.03
+        epochs = 5  # Few epochs for quick demonstration
+        memory_depth = 2
+        sim_backend = "numpy"
+
         # Generate synthetic data
         X_train, y_train, X_test, y_test = get_data(
-            config["n_data"], config["sigma_noise"], "quartic_data"
+            n_data, sigma_noise, "quartic_data"
         )
     
         # Train the model
         print("Training model on quartic function...")
         n_modes = 3  # 3x3 Clements with memristive phase 2
-        theta_opt, history = train_pytorch(
-            X_train,
-            y_train,
-            memory_depth=config["memory_depth"],
-            lr=config["lr"],
-            epochs=config["epochs"],
-            n_samples=n_samples // 20,
-            n_swipe=0,
-            swipe_span=0.0,
+        sim_cfg = SimConfig(
             n_modes=n_modes,
             encoding_mode=0,
             target_mode=(n_modes - 1,),
             memristive_phase_idx=[2],
+            memristive_output_modes=None,
+            encoding_phase_idx=None,
+            output_mode="singles",
+            input_modes=None,
+            working_detectors=None,
+            noise_std=None,
+            n_samples=n_samples // 20,
+            memory_depth=memory_depth,
+            n_swipe=0,
+            swipe_span=0.0,
+            n_photons=None,
+            backend=sim_backend,
+            loss_type="mse",
+            n_classes=1,
+        )
+        theta_opt, history = train_pytorch(
+            X_train,
+            y_train,
+            sim_cfg=sim_cfg,
+            lr=lr,
+            epochs=epochs,
+            seed=42,
         )
     
         # Print optimized parameters
@@ -253,15 +267,8 @@ def main():
         enc_test = 2 * np.arccos(X_test)
         predictions = run_simulation_sequence_np(
             theta_opt,
-            config["memory_depth"],
-            n_samples // 20,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=0,
-            target_mode=(n_modes - 1,),
-            memristive_phase_idx=[2],
+            enc_test,
+            sim_cfg,
         )
     
         # Compute MSE
@@ -302,11 +309,13 @@ def main():
                 "memristor_training_loss.png",
             ]
         )
+        from src.simulation import sim_logger as _sim_logger
+
         write_run_summary(
             report_dir,
             metrics={"quartic_test_mse": float(mse)},
             artifacts=artifacts,
-            simulation=sim_logger.stats_dict()
+            simulation=_sim_logger.stats_dict(),
         )
     
         print(f"\nVisualization complete. Artifacts saved under {report_dir.resolve()}.")

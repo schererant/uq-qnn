@@ -13,6 +13,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from .config import SimConfig
 from .circuits import _clements_mzi_pairs
 from .coincidence import (
     get_cc_mode_pairs,
@@ -154,41 +155,44 @@ def _process_coincidence_rows(
 def run_vectorized_non_memristive(
     params: np.ndarray,
     encoded_phases: np.ndarray,
-    n_modes: int,
-    encoding_mode: int,
-    encoding_phase_idx: Optional[int],
-    output_mode: str,
-    input_modes: Optional[Sequence[int]],
-    working_detectors: Optional[Sequence[int]],
-    target_mode: Tuple[int, ...],
-    return_class_probs: bool,
-    noise_std: Optional[Union[float, Sequence[float]]],
+    cfg: SimConfig,
+    *,
+    return_class_probs: bool = False,
 ) -> np.ndarray:
     """
     Vectorized simulation for non-memristive discrete mode.
     """
-    n_phases = n_modes * (n_modes - 1)
+    target_mode: Tuple[int, ...] = (
+        cfg.target_mode
+        if cfg.target_mode is not None
+        else (cfg.n_modes - 1,)
+    )
+    n_phases = cfg.n_modes * (cfg.n_modes - 1)
     phases = np.asarray(params[:n_phases], dtype=np.float64)
     enc = np.asarray(encoded_phases, dtype=np.float64).reshape(-1)
     num_pts = len(enc)
 
-    if output_mode == "coincidence":
+    if cfg.output_mode == "coincidence":
         in_modes = (
             (1, 4)
-            if n_modes >= 6
+            if cfg.n_modes >= 6
             else (0, 1)
-            if input_modes is None
-            else tuple(int(m) for m in input_modes)
+            if cfg.input_modes is None
+            else tuple(int(m) for m in cfg.input_modes)
         )
-        wd = tuple(working_detectors) if working_detectors is not None else (0, 1, 5)
-        working_cc_indices = working_detectors_to_cc_indices(wd, n_modes)
-        cc_labels = get_cc_labels(n_modes)
-        add_noise = noise_std is not None and (
-            (isinstance(noise_std, (int, float)) and float(noise_std) > 0)
+        wd = (
+            tuple(cfg.working_detectors)
+            if cfg.working_detectors is not None
+            else (0, 1, 5)
+        )
+        working_cc_indices = working_detectors_to_cc_indices(wd, cfg.n_modes)
+        cc_labels = get_cc_labels(cfg.n_modes)
+        add_noise = cfg.noise_std is not None and (
+            (isinstance(cfg.noise_std, (int, float)) and float(cfg.noise_std) > 0)
             or (
-                hasattr(noise_std, "__len__")
-                and len(noise_std) > 0
-                and any(float(s) > 0 for s in noise_std)
+                hasattr(cfg.noise_std, "__len__")
+                and len(cfg.noise_std) > 0
+                and any(float(s) > 0 for s in cfg.noise_std)
             )
         )
         n_classes = len(working_cc_indices)
@@ -203,35 +207,37 @@ def run_vectorized_non_memristive(
     else:
         preds = np.zeros(num_pts, dtype=float)
 
-    if encoding_phase_idx is None:
-        u_clem = clements_unitary(phases, n_modes)
-        u_batch = _full_unitary_separate_encoding_batch(u_clem, enc, encoding_mode, n_modes)
+    if cfg.encoding_phase_idx is None:
+        u_clem = clements_unitary(phases, cfg.n_modes)
+        u_batch = _full_unitary_separate_encoding_batch(
+            u_clem, enc, cfg.encoding_mode, cfg.n_modes
+        )
     else:
-        idx = int(encoding_phase_idx)
-        u_batch = np.empty((num_pts, n_modes, n_modes), dtype=np.complex128)
+        idx = int(cfg.encoding_phase_idx)
+        u_batch = np.empty((num_pts, cfg.n_modes, cfg.n_modes), dtype=np.complex128)
         for i in range(num_pts):
             mp = phases.copy()
             mp[idx] = (mp[idx] + enc[i]) % (2 * np.pi)
-            u_batch[i] = clements_unitary(mp, n_modes)
+            u_batch[i] = clements_unitary(mp, cfg.n_modes)
 
-    if output_mode == "coincidence":
-        coinc = _coincidence_raw_batch(u_batch, in_modes, n_modes)
+    if cfg.output_mode == "coincidence":
+        coinc = _coincidence_raw_batch(u_batch, in_modes, cfg.n_modes)
         _process_coincidence_rows(
             coinc,
             working_cc_indices,
             cc_labels,
             add_noise,
-            noise_std,
+            cfg.noise_std,
             return_class_probs,
             preds,
         )
     elif return_class_probs and n_classes > 1:
         preds[:, :] = _singles_probabilities_batch(
-            u_batch, encoding_mode, target_mode, True
+            u_batch, cfg.encoding_mode, target_mode, True
         )
     else:
         preds[:] = _singles_probabilities_batch(
-            u_batch, encoding_mode, target_mode, False
+            u_batch, cfg.encoding_mode, target_mode, False
         )
 
     return preds
