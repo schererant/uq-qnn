@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from collections import Counter
-from typing import Optional, Union, Tuple, Sequence, Literal
+from typing import Any, Optional, Union, Tuple, Sequence, Literal
 import numpy as np
 import perceval as pcvl
 from perceval.algorithm import Sampler
@@ -21,6 +21,9 @@ from .coincidence import (
     postselect_measurement,
     apply_noise_to_outcomes,
 )
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class SimulationLogger:
@@ -46,25 +49,24 @@ class SimulationLogger:
         self.circuit_total_time += elapsed
 
     def report(self):
-        print(f"[SimulationLogger] Circuit sequence runs: {self.call_count}")
-        print(f"[SimulationLogger] Total sequence time: {self.total_time:.3f} seconds")
+        lines = [
+            f"Circuit sequence runs: {self.call_count}",
+            f"Total sequence time: {self.total_time:.3f}s",
+        ]
         if self.call_count > 0:
-            print(
-                f"[SimulationLogger] Avg time per sequence: {self.total_time / self.call_count:.6f} seconds"
+            lines.append(
+                f"Avg time per sequence: {self.total_time / self.call_count:.6f}s"
             )
-        print("[SimulationLogger] Sampler sample counts used:")
-        for n_samples, freq in self.samples_counter.items():
-            print(f"  {n_samples} samples: {freq} times")
-        print(
-            f"[SimulationLogger] Individual circuit simulations: {self.circuit_call_count}"
-        )
-        print(
-            f"[SimulationLogger] Total circuit sim time: {self.circuit_total_time:.3f} seconds"
-        )
+        sample_parts = [f"{n}×{freq}" for n, freq in self.samples_counter.items()]
+        lines.append(f"Sampler sample counts: {', '.join(sample_parts) or 'none'}")
+        lines.append(f"Individual circuit sims: {self.circuit_call_count}")
+        lines.append(f"Total circuit sim time: {self.circuit_total_time:.3f}s")
         if self.circuit_call_count > 0:
-            print(
-                f"[SimulationLogger] Avg time per circuit sim: {self.circuit_total_time / self.circuit_call_count:.6f} seconds"
+            lines.append(
+                f"Avg time per circuit sim: "
+                f"{self.circuit_total_time / self.circuit_call_count:.6f}s"
             )
+        logger.info("Simulation statistics:\n  " + "\n  ".join(lines))
 
     def stats_dict(self) -> dict[str, Any]:
         """Return all statistics as a JSON-serializable dictionary."""
@@ -74,8 +76,12 @@ class SimulationLogger:
             "samples_counter": dict(self.samples_counter),
             "circuit_call_count": self.circuit_call_count,
             "circuit_total_time": self.circuit_total_time,
-            "avg_time_per_sequence": self.total_time / self.call_count if self.call_count > 0 else 0,
-            "avg_time_per_circuit": self.circuit_total_time / self.circuit_call_count if self.circuit_call_count > 0 else 0,
+            "avg_time_per_sequence": self.total_time / self.call_count
+            if self.call_count > 0
+            else 0,
+            "avg_time_per_circuit": self.circuit_total_time / self.circuit_call_count
+            if self.circuit_call_count > 0
+            else 0,
         }
 
 
@@ -220,8 +226,8 @@ def run_simulation_sequence_np(
 
     # Continuous mode only when memristive is active
     if n_swipe > 0 and n_memristive == 0:
-        print(
-            "Warning: Continuous mode requires memristive phases. Switching to discrete."
+        logger.warning(
+            "Continuous mode requires memristive phases — switching to discrete."
         )
         n_swipe = 0
     if n_swipe > 0 and swipe_span <= 0:
@@ -294,7 +300,6 @@ def run_simulation_sequence_np(
         state_m1_list.append(pcvl.BasicState(s1))
         state_m2_list.append(pcvl.BasicState(s2))
 
-    # pdb.set_trace()  # Debugging: check parameter normalization and setup before running simulations
     # Build target states list for multi-class / probability extraction
     target_modes_list = []
     for m in target_mode:
@@ -397,9 +402,7 @@ def run_simulation_sequence_np(
                         u, encoding_mode, target_mode
                     )
                 else:
-                    preds[i] = singles_prob_from_unitary(
-                        u, encoding_mode, target_mode
-                    )
+                    preds[i] = singles_prob_from_unitary(u, encoding_mode, target_mode)
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
             else:
@@ -454,9 +457,7 @@ def run_simulation_sequence_np(
 
     # ----- Perceval backend -----
     reuse_enc_param = (
-        mode == "discrete"
-        and n_memristive == 0
-        and encoding_phase_idx is None
+        mode == "discrete" and n_memristive == 0 and encoding_phase_idx is None
     )
     enc_param = None
     sampler = None

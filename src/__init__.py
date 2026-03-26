@@ -8,6 +8,7 @@ from . import circuits
 from . import coincidence
 from . import data
 from . import loss
+from . import logging_config
 from . import numpy_backend
 from . import simulation
 from . import training
@@ -47,6 +48,7 @@ from .autograd import photonic_psr_coeffs_torch, MemristorLossPSR
 from .loss import PhotonicModel
 from .training import train_pytorch, train_pytorch_generic, gradient_check
 from .experiment import Experiment
+from .logging_config import get_logger, set_verbosity, add_file_handler, log_params
 from .utils import main, config, print_run_params
 from .circuit_visualization import display_circuit_annotated, save_circuit_annotated
 from .coincidence import (
@@ -66,6 +68,7 @@ __all__ = [
     "circuits",
     "data",
     "loss",
+    "logging_config",
     "numpy_backend",
     "simulation",
     "training",
@@ -94,6 +97,10 @@ __all__ = [
     "train_pytorch_generic",
     "gradient_check",
     "Experiment",
+    "get_logger",
+    "set_verbosity",
+    "add_file_handler",
+    "log_params",
     "main",
     "config",
     "print_run_params",

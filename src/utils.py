@@ -14,6 +14,9 @@ from .data import (
 )
 from .training import train_pytorch
 from .simulation import run_simulation_sequence_np, sim_logger
+from .logging_config import get_logger, log_params
+
+logger = get_logger(__name__)
 
 # ===================== CONFIGURATION =====================
 config = {
@@ -51,18 +54,11 @@ config = {
 
 
 def print_run_params(title: str = "Run parameters", **params) -> None:
-    """
-    Print all set parameters at the beginning of a run for reproducibility.
+    """Log all set parameters at the beginning of a run for reproducibility.
 
-    Args:
-        title (str): Header for the parameter block.
-        **params: Parameter names and values to print (e.g. n_modes=6, lr=0.03).
+    .. deprecated:: Use ``log_params()`` from ``logging_config`` directly.
     """
-    print(f"\n--- {title} ---")
-    for k, v in sorted(params.items()):
-        if v is not None:
-            print(f"  {k}: {v}")
-    print()
+    log_params(logger, params, title=title)
 
 
 def _resolve_n_swipe() -> int:
@@ -79,7 +75,7 @@ def _resolve_n_swipe() -> int:
         config["det_window_us"],
         config["max_swipe"],
     )
-    print(f"[timing] computed n_swipe = {auto}")
+    logger.info("Computed n_swipe = %d", auto)
     return auto
 
 
@@ -138,7 +134,7 @@ def _run_training(
             target_mode=target_mode,
         )
 
-    print("Optimized θ:", theta_opt)
+    logger.info("Optimized θ: %s", theta_opt)
 
     # ── predictions on dense grid ──
     if cont:

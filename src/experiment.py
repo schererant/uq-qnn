@@ -4,7 +4,7 @@ Standardized Experiment class for the UQ-QNN framework.
 
 Provides a context manager that handles:
 - Timestamped run directories under reports/
-- Console capture to run.log
+- Full-fidelity run.log via the package logging configuration (no stdout tee)
 - Config validation and serialization
 - Training, prediction, and uncertainty analysis via config
 - Artifact tracking and run_summary.json
@@ -17,36 +17,40 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator, Optional
-from contextlib import contextmanager
+from typing import Any, Optional
 
 import numpy as np
 
 from src.simulation import sim_logger
+from src.logging_config import get_logger, add_file_handler, remove_file_handler
 
-_REQUIRED_CONFIG_KEYS = frozenset({
-    "n_modes",
-    "memory_depth",
-    "lr",
-    "epochs",
-    "n_samples",
-    "n_swipe",
-    "swipe_span",
-    "encoding_mode",
-    "target_mode",
-    "n_photons",
-    "memristive_phase_idx",
-    "memristive_output_modes",
-    "output_mode",
-    "loss_type",
-    "n_classes",
-    "sim_backend",
-    "seed",
-})
+logger = get_logger(__name__)
+
+_REQUIRED_CONFIG_KEYS = frozenset(
+    {
+        "n_modes",
+        "memory_depth",
+        "lr",
+        "epochs",
+        "n_samples",
+        "n_swipe",
+        "swipe_span",
+        "encoding_mode",
+        "target_mode",
+        "n_photons",
+        "memristive_phase_idx",
+        "memristive_output_modes",
+        "output_mode",
+        "loss_type",
+        "n_classes",
+        "sim_backend",
+        "seed",
+    }
+)
 
 
 class Experiment:
@@ -65,9 +69,7 @@ class Experiment:
 
         missing = _REQUIRED_CONFIG_KEYS - self.config.keys()
         if missing:
-            raise ValueError(
-                f"Missing required config keys: {sorted(missing)}"
-            )
+            raise ValueError(f"Missing required config keys: {sorted(missing)}")
 
         self.timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         self.project_root = Path(__file__).resolve().parent.parent
@@ -76,27 +78,22 @@ class Experiment:
 
         self.metrics: dict[str, Any] = {}
         self.artifacts: list[str] = []
-        self._tee_context: Any = None
+        self._file_handler: Any = None
 
     # ── lifecycle ──────────────────────────────────────────────
 
     def __enter__(self) -> Experiment:
         self.run_dir.mkdir(parents=True, exist_ok=True)
-
         log_path = self.run_dir / "run.log"
-        self._tee_context = self._tee_stdout(log_path)
-        self._tee_context.__enter__()
-
-        print(f"=== Experiment: {self.name} ===")
-        print(f"Run directory: {self.run_dir.resolve()}")
-        print(f"Timestamp: {self.timestamp}")
-        print("-" * (16 + len(self.name)))
-
+        self._file_handler = add_file_handler(log_path)
+        logger.info("=== Experiment: %s ===", self.name)
+        logger.info("Run directory: %s", self.run_dir.resolve())
+        logger.info("Timestamp: %s", self.timestamp)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
-            print(f"\nExperiment failed with error: {exc_val}")
+            logger.error("Experiment failed with error: %s", exc_val)
             self.metrics["status"] = "failed"
             self.metrics["error"] = str(exc_val)
         else:
@@ -104,14 +101,14 @@ class Experiment:
 
         sim_stats = sim_logger.stats_dict()
         if sim_stats:
-            print("\nSimulation Statistics:")
             sim_logger.report()
 
         self._write_run_summary(simulation_stats=sim_stats)
-        print(f"\nExperiment {self.name} finished.")
+        logger.info("Experiment %s finished.", self.name)
 
-        if self._tee_context:
-            self._tee_context.__exit__(exc_type, exc_val, exc_tb)
+        if self._file_handler:
+            remove_file_handler(self._file_handler)
+            self._file_handler = None
 
     # ── training ───────────────────────────────────────────────
 
@@ -241,7 +238,7 @@ class Experiment:
 
         is_classification = c["loss_type"] == "cross_entropy" or return_class_probs
 
-        print(f"Estimating uncertainty with {n_passes} forward passes...")
+        logger.info("Estimating uncertainty with %d forward passes…", n_passes)
 
         if is_classification and n_classes > 1:
             all_preds = np.zeros((len(encoded_phases), n_classes, n_passes))
@@ -269,9 +266,7 @@ class Experiment:
         rng = np.random.default_rng(c["seed"])
         n_samples_base = c["n_samples"]
         n_memristive = (
-            len(c["memristive_phase_idx"])
-            if c["memristive_phase_idx"]
-            else 0
+            len(c["memristive_phase_idx"]) if c["memristive_phase_idx"] else 0
         )
 
         jobs = []
@@ -322,32 +317,6 @@ class Experiment:
         return path
 
     # ── internals ──────────────────────────────────────────────
-
-    @contextmanager
-    def _tee_stdout(self, log_path: Path) -> Iterator[None]:
-        """Duplicate stdout to a log file."""
-        class _Tee:
-            __slots__ = ("_file",)
-
-            def __init__(self, file):
-                self._file = file
-
-            def write(self, data: str):
-                sys.__stdout__.write(data)
-                self._file.write(data)
-
-            def flush(self):
-                sys.__stdout__.flush()
-                self._file.flush()
-
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(log_path, "w", encoding="utf-8") as f:
-            old_stdout = sys.stdout
-            sys.stdout = _Tee(f)  # type: ignore[assignment]
-            try:
-                yield
-            finally:
-                sys.stdout = old_stdout
 
     def _get_git_sha(self) -> Optional[str]:
         try:

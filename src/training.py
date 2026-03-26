@@ -7,6 +7,9 @@ from tqdm import tqdm
 
 from .loss import PhotonicModel
 from .simulation import _normalize_memristive_phase_idx
+from .logging_config import get_logger, log_params
+
+logger = get_logger(__name__)
 
 
 def _init_theta(
@@ -113,11 +116,7 @@ def train_pytorch_generic(
             "memristive_output_modes": memristive_output_modes,
             "encoding_phase_idx": encoding_phase_idx,
         }
-        print("\n--- Run parameters ---")
-        for k, v in sorted(params.items()):
-            if v is not None:
-                print(f"  {k}: {v}")
-        print()
+        log_params(logger, params)
 
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(rng, n_modes, memristive_phase_idx)
@@ -127,7 +126,7 @@ def train_pytorch_generic(
         memristive_phase_idx, n_modes, expected_phases
     )
     phase_idx = tuple(i for i in range(expected_phases) if i not in memristive_indices)
-    
+
     if n_photons is None:
         n_photons = tuple([1] * len(phase_idx))
 
@@ -172,7 +171,7 @@ def train_pytorch_generic(
         pbar.set_postfix(loss=f"{loss.item():.6f}")
     theta_opt = model.theta.detach().cpu().numpy()
     if verbose:
-        print(f"\nFinal parameters: {theta_opt}")
+        logger.info("Final parameters: %s", theta_opt)
     return theta_opt, hist
 
 
@@ -330,7 +329,7 @@ def gradient_check(
     )
     loss.backward()
     psr_grad = th_t.grad.detach().cpu().numpy()
-    print("Finite‑diff  :", num_grad)
-    print("PSR / Torch :", psr_grad)
-    print("Abs‑error   :", np.abs(num_grad - psr_grad))
-    print("Max‑error   :", np.abs(num_grad - psr_grad).max())
+    logger.info("Finite‑diff  : %s", num_grad)
+    logger.info("PSR / Torch : %s", psr_grad)
+    logger.info("Abs‑error   : %s", np.abs(num_grad - psr_grad))
+    logger.info("Max‑error   : %s", np.abs(num_grad - psr_grad).max())
