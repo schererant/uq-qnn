@@ -240,11 +240,9 @@ class Experiment:
         """Apply the hardware profile's noise model to prediction outputs.
 
         For multi-class outputs (2D array), noise is applied row-by-row.
-        For scalar outputs (1D array), each value is wrapped into a
-        single-element array, noised, and unwrapped.
+        For scalar outputs (1D array), each value is embedded into a
+        2-channel distribution before noise is applied.
         """
-        from src.coincidence import get_cc_labels
-
         noise = self.hardware.noise
         rng = np.random.default_rng(seed or self.config.get("seed", 42))
 
@@ -258,12 +256,14 @@ class Experiment:
                 result[i] = noise(preds[i], working_indices, labels, rng=rng)
             return result
         else:
-            # Scalar regression: apply noise to each prediction individually
-            working_indices = (0,)
-            labels = ["C0"]
+            # Scalar outputs are embedded into a 2-channel distribution so the
+            # hardware noise models can perturb them without collapsing them to 1.
+            working_indices = (0, 1)
+            labels = ["C0", "C1"]
             result = np.empty_like(preds)
             for i in range(len(preds)):
-                row = np.array([preds[i]])
+                value = float(np.clip(preds[i], 0.0, 1.0))
+                row = np.array([value, 1.0 - value], dtype=float)
                 noised = noise(row, working_indices, labels, rng=rng)
                 result[i] = noised[0]
             return result
@@ -466,9 +466,13 @@ class Experiment:
 
         rng = np.random.default_rng(c["seed"])
         n_samples_base = c["n_samples"]
-        n_memristive = (
-            len(c["memristive_phase_idx"]) if c["memristive_phase_idx"] else 0
-        )
+        memristive_phase_idx = c["memristive_phase_idx"]
+        if memristive_phase_idx is None:
+            n_memristive = 0
+        elif isinstance(memristive_phase_idx, int):
+            n_memristive = 1
+        else:
+            n_memristive = len(memristive_phase_idx)
 
         jobs = []
         for _ in range(n_passes):

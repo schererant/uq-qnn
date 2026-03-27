@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Sequence, Tuple
+
 import numpy as np
 import torch
 from torch import Tensor
@@ -202,19 +203,14 @@ class MemristorLossPSR(torch.autograd.Function):
                 grads[p_idx] = np.real(np.dot(dL_df.flatten(), df_dθ))
 
         # Finite-difference for memristor weight parameters
-        weight_idxs = set(range(len(theta_np))) - set(ctx.phase_idx)
+        weight_idxs = sorted(set(range(len(theta_np))) - set(ctx.phase_idx))
         for idx in weight_idxs:
             θ_p = theta_np.copy()
             θ_m = theta_np.copy()
             θ_p[idx] += eps
             θ_m[idx] -= eps
-            # Only clip the weight parameter (last index), not the phases
-            if idx == len(theta_np) - 1:  # weight parameter
-                θ_p[idx] = np.clip(θ_p[idx], 0.01, 1)
-                θ_m[idx] = np.clip(θ_m[idx], 0.01, 1)
-            else:  # phase parameters can wrap around
-                θ_p[idx] = θ_p[idx] % (2 * np.pi)
-                θ_m[idx] = θ_m[idx] % (2 * np.pi)
+            θ_p[idx] = np.clip(θ_p[idx], 0.01, 1.0)
+            θ_m[idx] = np.clip(θ_m[idx], 0.01, 1.0)
 
             fdc_return_class = cfg.loss_type == "cross_entropy" and cfg.n_classes > 1
 
