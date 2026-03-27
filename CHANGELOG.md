@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-03-27 — Fix regression hardware noise, memristive UQ edge case, and gradient coverage
+
+### Changed
+
+- **`src/experiment.py`** — Fixed hardware-profile noise for scalar regression outputs by embedding each scalar into a 2-channel distribution before applying noise, preventing predictions from collapsing to `1.0`.
+- **`src/experiment.py`** — `run_uncertainty_analysis()` now accepts `memristive_phase_idx` as `None`, a single `int`, or a sequence, matching the rest of the config API.
+- **`src/autograd.py`** — Finite-difference gradients now clip every memristive weight parameter to `[0.01, 1.0]` instead of treating all but the final weight like wrapped phase parameters.
+
+### Added
+
+- **`tests/test_experiment.py`** — Regression tests for hardware-profile noise on scalar predictions and uncertainty analysis with `memristive_phase_idx` provided as an `int`.
+- **`tests/test_autograd.py`** — Regression test that compares multi-memristive weight gradients against an external finite-difference calculation.
+
 ## 2026-03-27 — PhotonicCircuit core and simulation package cleanup
 
 ### Added
