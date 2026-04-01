@@ -3,24 +3,23 @@
 import numpy as np
 import pytest
 
+from src.data import compute_n_swipe
 from src.hardware import (
-    GaussianNoise,
-    ShotNoise,
-    DarkCountNoise,
-    CompositeNoise,
-    TimingParams,
-    HardwareProfile,
-    RealHardwareBackend,
-    get_profile,
-    register_backend,
-    get_backend,
     IDEAL,
     LAB_6MODE,
     NOISY_PROTOTYPE,
     PROFILES,
+    CompositeNoise,
+    DarkCountNoise,
+    GaussianNoise,
+    HardwareProfile,
+    RealHardwareBackend,
+    ShotNoise,
+    TimingParams,
+    get_backend,
+    get_profile,
+    register_backend,
 )
-from src.data import compute_n_swipe
-
 
 # ── Noise model tests ─────────────────────────────────────────
 
@@ -160,7 +159,7 @@ class TestTimingParams:
             max_swipe=21,
         )
         with pytest.raises(AttributeError):
-            tp.t_phase_ms = 20.0
+            setattr(tp, "t_phase_ms", 20.0)
 
 
 # ── HardwareProfile tests ────────────────────────────────────
@@ -192,7 +191,7 @@ class TestHardwareProfile:
 
     def test_frozen(self):
         with pytest.raises(AttributeError):
-            IDEAL.name = "changed"
+            setattr(IDEAL, "name", "changed")
 
 
 # ── Profile registry tests ───────────────────────────────────

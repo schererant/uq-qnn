@@ -21,7 +21,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 
@@ -243,6 +243,7 @@ class Experiment:
         For scalar outputs (1D array), each value is embedded into a
         2-channel distribution before noise is applied.
         """
+        assert self.hardware is not None and self.hardware.noise is not None
         noise = self.hardware.noise
         rng = np.random.default_rng(seed or self.config.get("seed", 42))
 
@@ -329,7 +330,9 @@ class Experiment:
             cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
         )
         indices = tuple(int(m) for m in target_mode)
-        singles = circuit.singles_batch(encoded_phases)
+        singles = circuit.singles_batch(
+            cast(Sequence[float] | np.ndarray, encoded_phases)
+        )
         if return_class_probs and len(indices) > 1:
             return singles[:, indices]
         selected = singles[:, indices]
@@ -356,7 +359,10 @@ class Experiment:
         )
         cc_labels = get_cc_labels(cfg.n_modes)
         add_noise = self._should_add_noise(cfg.noise_std)
-        coinc = circuit.coincidences_batch(encoded_phases, input_modes=in_modes)
+        coinc = circuit.coincidences_batch(
+            cast(Sequence[float] | np.ndarray, encoded_phases),
+            input_modes=in_modes,
+        )
         n_data = coinc.shape[0]
         n_classes = len(working_cc_indices)
         if return_class_probs and n_classes > 1:
@@ -371,6 +377,7 @@ class Experiment:
                 fallback_uniform=True,
             )
             if add_noise:
+                assert cfg.noise_std is not None
                 out = apply_noise_to_outcomes(
                     out,
                     cfg.noise_std,
@@ -387,7 +394,7 @@ class Experiment:
     def _coincidence_input_modes(self) -> Tuple[int, int]:
         cfg = self.sim_cfg
         if cfg.input_modes is not None:
-            in_modes = tuple(int(m) for m in cfg.input_modes)
+            in_modes = (int(cfg.input_modes[0]), int(cfg.input_modes[1]))
         elif cfg.n_modes >= 6:
             in_modes = (1, 4)
         else:

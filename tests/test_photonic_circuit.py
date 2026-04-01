@@ -91,5 +91,6 @@ def test_consistency_with_run_simulation_sequence_np():
         encoding_mode=0,
         encoding_phase_idx=None,
     )
+    assert cfg.target_mode is not None
     singles = circuit.singles_batch(encoded)[:, cfg.target_mode[0]]
     np.testing.assert_allclose(preds_runner, singles, atol=1e-12)

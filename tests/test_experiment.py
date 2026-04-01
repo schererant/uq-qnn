@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 
 from src.experiment import Experiment
@@ -35,7 +37,8 @@ def base_config() -> dict[str, object]:
 
 def test_predict_with_hardware_noise_preserves_scalar_regression_shape():
     config = base_config()
-    theta = np.linspace(0.1, 0.6, config["n_modes"] * (config["n_modes"] - 1))
+    n_modes = cast(int, config["n_modes"])
+    theta = np.linspace(0.1, 0.6, n_modes * (n_modes - 1))
     encoded = np.array([0.2, 0.7, 1.1])
 
     baseline = run_simulation_sequence_np(
@@ -63,7 +66,8 @@ def test_uncertainty_analysis_accepts_int_memristive_phase_idx():
     config["memristive_phase_idx"] = 2
 
     exp = Experiment("uq_int_memristive", config=config)
-    n_phases = config["n_modes"] * (config["n_modes"] - 1)
+    n_modes = cast(int, config["n_modes"])
+    n_phases = n_modes * (n_modes - 1)
     theta = np.concatenate([np.linspace(0.1, 0.6, n_phases), np.array([0.4])])
     encoded = np.array([0.2, 0.7])
 

@@ -106,7 +106,7 @@ class PhotonicCircuit:
 
     def singles_batch(
         self,
-        encoding_phases: Sequence[float],
+        encoding_phases: Sequence[float] | np.ndarray,
         *,
         input_mode: Optional[int] = None,
     ) -> np.ndarray:
@@ -141,7 +141,7 @@ class PhotonicCircuit:
 
     def coincidences_batch(
         self,
-        encoding_phases: Sequence[float],
+        encoding_phases: Sequence[float] | np.ndarray,
         *,
         input_modes: Tuple[int, int] = (0, 1),
     ) -> np.ndarray:

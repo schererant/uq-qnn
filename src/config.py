@@ -190,7 +190,7 @@ class SimConfig:
         if mom_raw is None:
             mom = None
         else:
-            mom = tuple(tuple(int(a) for a in p) for p in mom_raw)
+            mom = tuple((int(p[0]), int(p[1])) for p in mom_raw)
 
         tm_raw = cfg.get("target_mode")
         if tm_raw is None:

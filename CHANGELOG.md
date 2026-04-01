@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-03-27 — Add ty type-checking support and clean core diagnostics
+
+### Added
+
+- **`ty.toml`** — Added repo-level `ty` configuration to type-check the maintained package and test suite by default while excluding legacy notebooks, playground code, generated reports, and one-off example scripts.
+- **`pyproject.toml`** — Added **`ty>=0.0.26`** to the development dependency group.
+
+### Changed
+
+- **`src/coincidence.py`** — Added overloads and stricter local typing so coincidence postselection/noise helpers return precise types for array vs. dict inputs.
+- **`src/circuit.py`**, **`src/experiment.py`**, **`src/numpy_backend.py`**, **`src/simulation/runner.py`**, **`src/training.py`** — Tightened annotations and assertions so the core runtime passes `ty` cleanly without changing behavior.
+- **`tests/test_autograd.py`**, **`tests/test_experiment.py`**, **`tests/test_hardware.py`**, **`tests/test_photonic_circuit.py`** — Adjusted tests to satisfy stricter typing around frozen dataclasses, optional gradients, and config value narrowing.
+
 ## 2026-03-27 — Fix regression hardware noise, memristive UQ edge case, and gradient coverage
 
 ### Changed

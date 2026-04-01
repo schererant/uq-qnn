@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import time
-from typing import Optional, Sequence, Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import perceval as pcvl
-from perceval.algorithm import Sampler
+from perceval.algorithm import Sampler  # type: ignore[attr-defined]
 
 from ..circuits import (
     build_circuit,
@@ -23,6 +23,7 @@ from ..coincidence import (
 from ..config import SimConfig
 from ..logging_config import get_logger
 from ..numpy_backend import (
+    _has_positive_noise,
     run_vectorized_non_memristive,
     singles_class_probs_from_unitary,
     singles_prob_from_unitary,
@@ -110,13 +111,12 @@ def run_simulation_sequence_np(
     if cfg.output_mode == "coincidence":
         if n_memristive > 0:
             raise ValueError("Coincidence mode does not support memristive phases yet")
-        in_modes = (
-            (1, 4)
-            if cfg.n_modes >= 6
-            else (0, 1)
-            if cfg.input_modes is None
-            else tuple(int(m) for m in cfg.input_modes)
-        )
+        if cfg.input_modes is not None:
+            in_modes = (int(cfg.input_modes[0]), int(cfg.input_modes[1]))
+        elif cfg.n_modes >= 6:
+            in_modes = (1, 4)
+        else:
+            in_modes = (0, 1)
         if len(in_modes) != 2:
             raise ValueError(
                 f"Coincidence mode requires exactly 2 input modes, got {in_modes}"
@@ -134,22 +134,15 @@ def run_simulation_sequence_np(
             if cfg.working_detectors is not None
             else (0, 1, 5)
         )
-        working_cc_indices = working_detectors_to_cc_indices(wd_tuple, cfg.n_modes)
+        working_cc_indices: Tuple[int, ...] = tuple(working_detectors_to_cc_indices(wd_tuple, cfg.n_modes))
         cc_labels = get_cc_labels(cfg.n_modes)
-        add_noise = cfg.noise_std is not None and (
-            (isinstance(cfg.noise_std, (int, float)) and float(cfg.noise_std) > 0)
-            or (
-                hasattr(cfg.noise_std, "__len__")
-                and len(cfg.noise_std) > 0
-                and any(float(s) > 0 for s in cfg.noise_std)
-            )
-        )
+        add_noise = _has_positive_noise(cfg.noise_std)
     else:
         inp = [0] * cfg.n_modes
         inp[cfg.encoding_mode] = 1
         input_state = pcvl.BasicState(inp)
         working_cc_indices: Tuple[int, ...] = ()
-        cc_labels = []
+        cc_labels: list[str] = []
         add_noise = False
 
     state_m1_list: list[pcvl.BasicState] = []
@@ -224,6 +217,7 @@ def run_simulation_sequence_np(
             if mode == "discrete":
                 enc_phi = float(encoded_phases[i])
                 if mem_state:
+                    assert mem_phis is not None
                     phases_loc = params[:-n_memristive].copy()
                     for j, idx in enumerate(memristive_indices):
                         phases_loc[idx] = mem_phis[j]
@@ -262,6 +256,7 @@ def run_simulation_sequence_np(
                 )
                 for k, off in enumerate(offsets):
                     enc_phi = float(enc_base[i] + off)
+                    assert mem_phis is not None
                     phases_loc = params[:-n_memristive].copy()
                     for j, idx in enumerate(memristive_indices):
                         phases_loc[idx] = mem_phis[j]
@@ -327,6 +322,7 @@ def run_simulation_sequence_np(
         if mode == "discrete":
             enc_phi = encoded_phases[i]
             if mem_state:
+                assert mem_phis is not None
                 phases = params[:-n_memristive].copy()
                 for j, idx in enumerate(memristive_indices):
                     phases[idx] = mem_phis[j]
@@ -334,6 +330,8 @@ def run_simulation_sequence_np(
                 phases = params.copy()
 
             if reuse_enc_param:
+                assert enc_param is not None
+                assert sampler is not None
                 enc_param.set_value(float(enc_phi) % (2 * np.pi))
                 t0 = time.perf_counter()
                 probs = sampler.probs(cfg.n_samples)["results"]
@@ -362,6 +360,7 @@ def run_simulation_sequence_np(
                     coinc, working_cc_indices, cc_labels, fallback_uniform=True
                 )
                 if add_noise:
+                    assert cfg.noise_std is not None
                     out = apply_noise_to_outcomes(
                         out, cfg.noise_std, working_cc_indices, cc_labels, seed=i
                     )
@@ -389,6 +388,7 @@ def run_simulation_sequence_np(
                 dtype=float,
             )
             phases_sw = params[:-n_memristive].copy()
+            assert mem_phis is not None
             for j, idx in enumerate(memristive_indices):
                 phases_sw[idx] = mem_phis[j]
             reuse_enc_swipe = cfg.encoding_phase_idx is None
@@ -411,6 +411,8 @@ def run_simulation_sequence_np(
             for k, off in enumerate(offsets):
                 enc_phi = enc_base[i] + off
                 if reuse_enc_swipe:
+                    assert enc_param_sw is not None
+                    assert sampler_sw is not None
                     enc_param_sw.set_value(float(enc_phi) % (2 * np.pi))
                     t0 = time.perf_counter()
                     probs = sampler_sw.probs(cfg.n_samples)["results"]
@@ -437,6 +439,7 @@ def run_simulation_sequence_np(
                         coinc, working_cc_indices, cc_labels, fallback_uniform=True
                     )
                     if add_noise:
+                        assert cfg.noise_std is not None
                         out = apply_noise_to_outcomes(
                             out,
                             cfg.noise_std,

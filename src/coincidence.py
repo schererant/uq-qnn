@@ -7,7 +7,7 @@ For n modes and 2 photons, there are n*(n-1)/2 collision-free coincidence channe
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union, cast, overload
 
 import numpy as np
 
@@ -101,6 +101,24 @@ def probs_to_coincidences(
     return coinc
 
 
+@overload
+def postselect_measurement(
+    outcomes: Dict[str, float],
+    working_cc_indices: Sequence[int],
+    labels: Optional[Sequence[str]] = None,
+    fallback_uniform: bool = False,
+) -> Dict[str, float]: ...
+
+
+@overload
+def postselect_measurement(
+    outcomes: np.ndarray,
+    working_cc_indices: Sequence[int],
+    labels: Optional[Sequence[str]] = None,
+    fallback_uniform: bool = False,
+) -> np.ndarray: ...
+
+
 def postselect_measurement(
     outcomes: Union[Dict[str, float], np.ndarray],
     working_cc_indices: Sequence[int],
@@ -121,13 +139,18 @@ def postselect_measurement(
     """
     working_set = set(working_cc_indices)
     if isinstance(outcomes, dict):
-        if labels is None:
-            labels = list(outcomes.keys())
-        vals = np.array([outcomes.get(l, 0.0) for l in labels])
+        label_seq = (
+            cast(Sequence[str], list(outcomes.keys())) if labels is None else labels
+        )
+        vals = np.array(
+            [
+                float(outcomes[str(label)]) if str(label) in outcomes else 0.0
+                for label in label_seq
+            ]
+        )
     else:
         vals = np.asarray(outcomes).astype(float).copy()
-        if labels is None:
-            labels = [f"CC{i}" for i in range(len(vals))]
+        label_seq = [f"CC{i}" for i in range(len(vals))] if labels is None else labels
 
     total = sum(vals[i] for i in working_cc_indices if i < len(vals))
     if total <= 0:
@@ -148,8 +171,28 @@ def postselect_measurement(
                 vals[i] = 0.0
 
     if isinstance(outcomes, dict):
-        return {labels[i]: float(vals[i]) for i in range(len(labels))}
+        return {label_seq[i]: float(vals[i]) for i in range(len(label_seq))}
     return vals
+
+
+@overload
+def apply_noise_to_outcomes(
+    outcomes: Dict[str, float],
+    noise_std: Union[float, Sequence[float]],
+    working_cc_indices: Sequence[int],
+    labels: Optional[Sequence[str]] = None,
+    seed: Optional[int] = None,
+) -> Dict[str, float]: ...
+
+
+@overload
+def apply_noise_to_outcomes(
+    outcomes: np.ndarray,
+    noise_std: Union[float, Sequence[float]],
+    working_cc_indices: Sequence[int],
+    labels: Optional[Sequence[str]] = None,
+    seed: Optional[int] = None,
+) -> np.ndarray: ...
 
 
 def apply_noise_to_outcomes(
@@ -174,13 +217,18 @@ def apply_noise_to_outcomes(
     """
     rng = np.random.default_rng(seed)
     if isinstance(outcomes, dict):
-        if labels is None:
-            labels = list(outcomes.keys())
-        vals = np.array([outcomes.get(l, 0.0) for l in labels])
+        label_seq = (
+            cast(Sequence[str], list(outcomes.keys())) if labels is None else labels
+        )
+        vals = np.array(
+            [
+                float(outcomes[str(label)]) if str(label) in outcomes else 0.0
+                for label in label_seq
+            ]
+        )
     else:
         vals = np.asarray(outcomes).astype(float).copy()
-        if labels is None:
-            labels = [f"CC{i}" for i in range(len(vals))]
+        label_seq = [f"CC{i}" for i in range(len(vals))] if labels is None else labels
 
     stds = np.atleast_1d(np.asarray(noise_std, dtype=float))
     if len(stds) == 1:
@@ -200,7 +248,7 @@ def apply_noise_to_outcomes(
         vals = vals / total
 
     if isinstance(outcomes, dict):
-        return {labels[i]: float(vals[i]) for i in range(len(labels))}
+        return {label_seq[i]: float(vals[i]) for i in range(len(label_seq))}
     return vals
 
 

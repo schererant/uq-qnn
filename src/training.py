@@ -101,7 +101,7 @@ def train_pytorch_generic(
         n_photons = tuple([1] * len(phase_idx))
 
     model = PhotonicModel(
-        init_theta,
+        init_theta.tolist(),
         enc_np,
         y_np,
         phase_idx,
@@ -210,7 +210,13 @@ def gradient_check(
         n_modes=n_modes,
         encoding_mode=0,
         target_mode=(n_modes - 1,) if n_modes else None,
-        memristive_phase_idx=memristive_phase_idx,
+        memristive_phase_idx=(
+            None
+            if memristive_phase_idx is None
+            else int(memristive_phase_idx)
+            if isinstance(memristive_phase_idx, int)
+            else tuple(int(idx) for idx in memristive_phase_idx)
+        ),
         memristive_output_modes=None,
         output_mode="singles",
     )
@@ -236,6 +242,7 @@ def gradient_check(
         cfg,
     )
     loss.backward()
+    assert th_t.grad is not None
     psr_grad = th_t.grad.detach().cpu().numpy()
     logger.info("Finite‑diff  : %s", num_grad)
     logger.info("PSR / Torch : %s", psr_grad)
