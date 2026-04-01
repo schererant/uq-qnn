@@ -121,7 +121,7 @@ class MemristorLossPSR(torch.autograd.Function):
         return torch.tensor(loss_val, dtype=theta.dtype, device=theta.device)
 
     @staticmethod
-    def backward(ctx, g_out: Tensor):
+    def backward(ctx, g_out: Tensor):  # ty: ignore[invalid-method-override]
         cfg = ctx.sim_cfg
         theta, enc_tensor, y = ctx.saved_tensors
         theta_np = theta.cpu().double().numpy()

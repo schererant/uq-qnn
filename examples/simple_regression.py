@@ -55,7 +55,7 @@ CONFIG = {
 
 def main():
     with Experiment("Simple Regression", config=CONFIG) as exp:
-        np.random.seed(CONFIG["seed"])
+        np.random.seed(int(CONFIG["seed"]))  # type: ignore[arg-type]
 
         X_train, y_train, X_test, y_test = get_data(
             CONFIG["n_data"], CONFIG["sigma_noise"], "quartic_data"

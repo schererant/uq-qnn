@@ -54,6 +54,7 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
         cfg,
     )
     loss.backward()
+    assert theta.grad is not None
     grads = theta.grad.detach().cpu().numpy()
 
     def loss_fn(params: np.ndarray) -> float:

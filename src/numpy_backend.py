@@ -24,6 +24,16 @@ from .coincidence import (
 from .config import SimConfig
 
 
+def _has_positive_noise(
+    noise_std: Optional[Union[float, Sequence[float]]],
+) -> bool:
+    if noise_std is None:
+        return False
+    if isinstance(noise_std, (int, float)):
+        return float(noise_std) > 0
+    return any(float(s) > 0 for s in noise_std)
+
+
 def _bs_2x2() -> np.ndarray:
     return np.array([[1, 1j], [1j, 1]], dtype=np.complex128) / np.sqrt(2)
 
@@ -128,7 +138,7 @@ def _coincidence_raw_batch(
 def _process_coincidence_rows(
     coinc: np.ndarray,
     working_cc_indices: Sequence[int],
-    cc_labels: list,
+    cc_labels: list[str],
     add_noise: bool,
     noise_std: Optional[Union[float, Sequence[float]]],
     return_class_probs: bool,
@@ -140,6 +150,7 @@ def _process_coincidence_rows(
             coinc[i], working_cc_indices, cc_labels, fallback_uniform=True
         )
         if add_noise:
+            assert noise_std is not None
             out = apply_noise_to_outcomes(
                 out, noise_std, working_cc_indices, cc_labels, seed=i
             )
@@ -167,14 +178,14 @@ def run_vectorized_non_memristive(
     enc = np.asarray(encoded_phases, dtype=np.float64).reshape(-1)
     num_pts = len(enc)
 
+    in_modes: tuple[int, int] = (0, 1)
     if cfg.output_mode == "coincidence":
-        in_modes = (
-            (1, 4)
-            if cfg.n_modes >= 6
-            else (0, 1)
-            if cfg.input_modes is None
-            else tuple(int(m) for m in cfg.input_modes)
-        )
+        if cfg.input_modes is not None:
+            in_modes = (int(cfg.input_modes[0]), int(cfg.input_modes[1]))
+        elif cfg.n_modes >= 6:
+            in_modes = (1, 4)
+        else:
+            in_modes = (0, 1)
         wd = (
             tuple(cfg.working_detectors)
             if cfg.working_detectors is not None
@@ -182,20 +193,13 @@ def run_vectorized_non_memristive(
         )
         working_cc_indices = working_detectors_to_cc_indices(wd, cfg.n_modes)
         cc_labels = get_cc_labels(cfg.n_modes)
-        add_noise = cfg.noise_std is not None and (
-            (isinstance(cfg.noise_std, (int, float)) and float(cfg.noise_std) > 0)
-            or (
-                hasattr(cfg.noise_std, "__len__")
-                and len(cfg.noise_std) > 0
-                and any(float(s) > 0 for s in cfg.noise_std)
-            )
-        )
+        add_noise = _has_positive_noise(cfg.noise_std)
         n_classes = len(working_cc_indices)
     else:
         n_classes = len(target_mode)
         add_noise = False
         working_cc_indices = ()
-        cc_labels = []
+        cc_labels: list[str] = []
 
     if return_class_probs and n_classes > 1:
         preds = np.zeros((num_pts, n_classes), dtype=float)
