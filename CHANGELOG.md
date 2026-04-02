@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-04-01 — Faster NumPy path for memristive singles runs
+
+### Added
+
+- **`src/numpy_backend.py`** — Added a dedicated memristive singles fast path that propagates a single-photon state vector through the Clements mesh instead of rebuilding the full unitary at every time step. This keeps the memristive feedback recurrence intact while substantially reducing per-sample overhead for NumPy singles runs in both discrete and swipe modes.
+- **`tests/test_memristive_numpy_backend.py`** — Added regression tests that compare the new fast memristive NumPy path against the legacy unitary-based loop for separate encoding, inline encoding / multi-target outputs, and swipe-mode execution.
+- **`examples/function_memristor_comparison.py`** — Added a function-by-function architecture comparison experiment for a 6-mode standard Clements mesh versus a 6-mode memristive circuit.
+- **`examples/smooth_step_memristor_placement_comparison.py`** — Added a smooth-step regression experiment that compares several single-memristor placements across the 6-mode Clements mesh against a standard no-memristor baseline.
+- **`examples/smooth_step_multi_memristor_comparison.py`** — Added a smooth-step regression experiment that compares no memristor, one-memristor, and two-memristor configurations on phases `6` and `8`.
+- **`examples/benchmark_memristive_backend.py`** — Added a benchmark script that times the fast memristive NumPy path against a local legacy reference implementation for discrete and swipe workloads.
+
+### Changed
+
+- **`src/simulation/runner.py`** — NumPy-backed singles runs with memristive phases now dispatch to the new optimized backend path instead of the older generic per-point unitary loop, including swipe-mode execution.
+- **`README.md`** — Updated backend and architecture documentation to note that NumPy now supports an optimized memristive singles path, and documented the new function-vs-memristor comparison example.
+
 ## 2026-03-27 — Add ty type-checking support and clean core diagnostics
 
 ### Added

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .data import compute_n_swipe
+# from .data import compute_n_swipe
 from .hardware import TimingParams
 from .logging_config import get_logger, log_params
 

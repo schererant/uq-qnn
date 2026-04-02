@@ -44,6 +44,10 @@ This installs all dependencies (PyTorch, Perceval, NumPy, scikit-learn, matplotl
 | `examples/circuit_comparison_quartic.py` | Architecture comparison on quartic |
 | `examples/quartic_regression_comparison.py` | Quartic regression ablation |
 | `examples/function_comparison.py` | Model performance across synthetic functions |
+| `examples/function_memristor_comparison.py` | Standard vs memristor comparison across synthetic functions |
+| `examples/smooth_step_memristor_placement_comparison.py` | Compare smooth-step fitting across memristor placements |
+| `examples/smooth_step_multi_memristor_comparison.py` | Compare smooth-step fitting with one vs two memristors |
+| `examples/benchmark_memristive_backend.py` | Benchmark fast memristive NumPy runs against the legacy loop |
 | `examples/circuit_visualization_training.py` | Live circuit training visualization |
 | `examples/memristor_circuit_visualization.py` | Memristor circuit diagram |
 | `examples/hardware_profile_comparison.py` | Compare ideal vs noisy hardware profiles |
@@ -75,7 +79,7 @@ coinc = circuit.coincidences(0.25, input_modes=(1, 4))  # shape (15,)
 print(circuit.config.n_phases)    # -> 30
 ```
 
-`PhotonicCircuit` always returns all output channels (singles: `n_modes`, coincidences: `n_modes * (n_modes - 1) / 2`). Downstream code can slice or average the modes it cares about, while the legacy simulation runner (`run_simulation_sequence_np`) remains available for memristive, swipe, or Perceval-backed workflows.
+`PhotonicCircuit` always returns all output channels (singles: `n_modes`, coincidences: `n_modes * (n_modes - 1) / 2`). Downstream code can slice or average the modes it cares about, while the simulation runner (`run_simulation_sequence_np`) remains available for memristive, swipe, or Perceval-backed workflows.
 
 ---
 
@@ -283,7 +287,7 @@ Every key listed below is **required** by `Experiment`. There are no hidden defa
 | `n_swipe` | `int` | Number of phase points swept per data point in continuous-swipe mode. `0` = discrete mode (single phase per point). |
 | `swipe_span` | `float` | Total phase range (radians) swept around each encoded phase. Used only when `n_swipe > 0`. |
 | `n_photons` | `tuple[int, ...]` or `None` | Photon count associated with each phase parameter for PSR shift computation. `None` = auto-infer (1 for singles, 2 for coincidence). Must match the total photon number in the system. |
-| `sim_backend` | `str` | `"numpy"` -- fast vectorized path: builds the Clements unitary analytically and applies Born rule. `"perceval"` -- full Scalable Linear Optical Simulator, required for memristive circuits or exact multi-photon statistics. |
+| `sim_backend` | `str` | `"numpy"` -- fast analytic backend: fully vectorized for plain Clements runs and optimized state-propagation for memristive singles runs in both discrete and swipe modes. `"perceval"` -- full Scalable Linear Optical Simulator, still used when you need Perceval fidelity or unsupported NumPy paths. |
 
 ### Task / loss
 
@@ -419,7 +423,7 @@ register_backend("my_chip", backend)
 | `src/experiment.py` | `Experiment` context manager -- run directories, logging, train/predict/UQ helpers |
 | `src/circuits.py` | Perceval circuit builders: `build_circuit()`, `build_parametric_circuit()` |
 | `src/simulation.py` | Central orchestrator `run_simulation_sequence_np()`; routes to backends; handles memristive feedback, noise, swipe |
-| `src/numpy_backend.py` | Fast vectorized path -- Clements unitary, Born-rule singles, 2x2 permanents for coincidences |
+| `src/numpy_backend.py` | Fast analytic backend -- vectorized plain Clements runs, optimized memristive singles scans, 2x2 permanents for coincidences |
 | `src/autograd.py` | PSR gradient engine -- `photonic_psr_coeffs_torch()`, `MemristorLossPSR` autograd Function |
 | `src/loss.py` | `PhotonicModel(nn.Module)` -- wraps circuit + PSR; supports MSE and cross-entropy |
 | `src/training.py` | `train_pytorch_generic()` -- main Adam training loop |
@@ -446,7 +450,8 @@ Rectangular mesh of Mach-Zehnder Interferometers (MZIs). Scales to arbitrary siz
 Compact photonic memristor with history-dependent phase feedback:
 
 - Requires `memristive_phase_idx` to be set
-- Requires `sim_backend="perceval"` (Perceval handles the feedback loop)
+- Supports `sim_backend="numpy"` for singles runs via an optimized sequential state-propagation path (discrete and swipe)
+- `sim_backend="perceval"` remains available for full SLOS execution and unsupported NumPy cases
 - Memory buffer length controlled by `memory_depth`
 - Photon feedback modes specified via `memristive_output_modes`
 

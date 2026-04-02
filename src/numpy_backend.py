@@ -47,6 +47,26 @@ def _mzi_unitary(phi_int: float, phi_ext: float) -> np.ndarray:
     return p_ext @ bs @ p_int @ bs
 
 
+def _apply_mzi_to_state(
+    state: np.ndarray,
+    m1: int,
+    m2: int,
+    phi_int: float,
+    phi_ext: float,
+) -> None:
+    """Apply one MZI directly to a state vector in place."""
+
+    phi_int = float(phi_int) % (2 * np.pi)
+    phi_ext = float(phi_ext) % (2 * np.pi)
+    e_int = np.exp(1j * phi_int)
+    e_ext = np.exp(1j * phi_ext)
+
+    a = state[m1]
+    b = state[m2]
+    state[m1] = 0.5 * ((1.0 - e_int) * a + 1j * (1.0 + e_int) * b)
+    state[m2] = 0.5 * e_ext * (1j * (1.0 + e_int) * a + (-1.0 + e_int) * b)
+
+
 def clements_unitary(phases: np.ndarray, n_modes: int) -> np.ndarray:
     """Full n_modes x n_modes unitary for the Clements mesh (matches Perceval ordering)."""
     phases = np.asarray(phases, dtype=np.float64).reshape(-1)
@@ -101,6 +121,43 @@ def _full_unitary_separate_encoding_batch(
         e[:, 0, 1, None] * u_c[None, :, m] + e[:, 1, 1, None] * u_c[None, :, m + 1]
     )
     return u_out
+
+
+def _encoded_input_state(
+    enc_phi: float,
+    encoding_mode: int,
+    n_modes: int,
+) -> np.ndarray:
+    """Single-photon input state after the separate 2-mode encoding block."""
+
+    m = _valid_encoding_mode(encoding_mode, n_modes)
+    enc_phi = float(enc_phi) % (2 * np.pi)
+    e_phi = np.exp(1j * enc_phi)
+    state = np.zeros(n_modes, dtype=np.complex128)
+    state[m] = 0.5 * (1.0 - e_phi)
+    state[m + 1] = 0.5j * (1.0 + e_phi)
+    return state
+
+
+def _basis_input_state(input_mode: int, n_modes: int) -> np.ndarray:
+    """Single-photon computational basis state for inline encoding."""
+
+    state = np.zeros(n_modes, dtype=np.complex128)
+    state[int(input_mode)] = 1.0
+    return state
+
+
+def _propagate_state_vector(
+    phases: np.ndarray, state: np.ndarray, n_modes: int
+) -> np.ndarray:
+    """Propagate a single-photon state through the Clements mesh."""
+
+    out = np.asarray(state, dtype=np.complex128).copy()
+    pairs = clements_mzi_pairs(n_modes)
+    for mzi_idx, (m1, m2) in enumerate(pairs):
+        phi_idx = 2 * mzi_idx
+        _apply_mzi_to_state(out, m1, m2, phases[phi_idx], phases[phi_idx + 1])
+    return out
 
 
 def _singles_probabilities_batch(
@@ -238,6 +295,107 @@ def run_vectorized_non_memristive(
         preds[:] = _singles_probabilities_batch(
             u_batch, cfg.encoding_mode, target_mode, False
         )
+
+    return preds
+
+
+def run_fast_memristive_singles(
+    params: np.ndarray,
+    encoded_phases: np.ndarray,
+    cfg: SimConfig,
+    *,
+    memristive_indices: Tuple[int, ...],
+    output_modes: Tuple[Tuple[int, int], ...],
+    offsets: Optional[np.ndarray] = None,
+    return_class_probs: bool = False,
+) -> np.ndarray:
+    """
+    Faster sequential NumPy path for discrete singles runs with memristive phases.
+
+    The memristive recurrence still forces a scan over time, but each step only
+    propagates a single-photon state vector instead of building the full unitary.
+    """
+
+    if cfg.output_mode != "singles":
+        raise ValueError("run_fast_memristive_singles only supports singles mode")
+    n_phases = cfg.n_modes * (cfg.n_modes - 1)
+    n_memristive = len(memristive_indices)
+    if n_memristive == 0:
+        raise ValueError("run_fast_memristive_singles requires memristive phases")
+
+    phases_base = np.asarray(params[:n_phases], dtype=np.float64)
+    weights = np.asarray(params[n_phases:], dtype=np.float64)
+    enc = np.asarray(encoded_phases, dtype=np.float64).reshape(-1)
+    target_mode: Tuple[int, ...] = (
+        cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
+    )
+    num_pts = len(enc)
+    n_classes = len(target_mode)
+    target_idx = np.array(target_mode, dtype=int)
+    if offsets is None:
+        offsets_arr = np.array([0.0], dtype=np.float64)
+    else:
+        offsets_arr = np.asarray(offsets, dtype=np.float64).reshape(-1)
+        if offsets_arr.size == 0:
+            offsets_arr = np.array([0.0], dtype=np.float64)
+    n_offsets = len(offsets_arr)
+
+    if return_class_probs and n_classes > 1:
+        preds = np.zeros((num_pts, n_classes), dtype=float)
+    else:
+        preds = np.zeros(num_pts, dtype=float)
+
+    p1_hist = np.zeros((cfg.memory_depth, n_memristive), dtype=float)
+    p2_hist = np.zeros((cfg.memory_depth, n_memristive), dtype=float)
+    phases_work = phases_base.copy()
+
+    for i, enc_phi_base in enumerate(enc):
+        if i == 0:
+            mem_phis = np.full(n_memristive, np.pi / 4, dtype=float)
+        else:
+            m1m = p1_hist.mean(axis=0)
+            m2m = p2_hist.mean(axis=0)
+            arg = np.clip(m1m + weights * m2m, 1e-9, 1.0 - 1e-9)
+            mem_phis = np.arccos(np.sqrt(arg))
+
+        p1_acc = np.zeros(n_memristive, dtype=float)
+        p2_acc = np.zeros(n_memristive, dtype=float)
+        if return_class_probs and n_classes > 1:
+            target_acc = np.zeros(n_classes, dtype=float)
+        else:
+            target_acc = 0.0
+
+        for off in offsets_arr:
+            enc_phi = float(enc_phi_base + off)
+            phases_work[:] = phases_base
+            phases_work[list(memristive_indices)] = mem_phis
+
+            if cfg.encoding_phase_idx is None:
+                state_in = _encoded_input_state(enc_phi, cfg.encoding_mode, cfg.n_modes)
+            else:
+                state_in = _basis_input_state(cfg.encoding_mode, cfg.n_modes)
+                idx = int(cfg.encoding_phase_idx)
+                phases_work[idx] = (phases_work[idx] + enc_phi) % (2 * np.pi)
+
+            state_out = _propagate_state_vector(phases_work, state_in, cfg.n_modes)
+            probs = np.abs(state_out) ** 2
+
+            for j, (m1, m2) in enumerate(output_modes):
+                p1_acc[j] += float(probs[m1])
+                p2_acc[j] += float(probs[m2])
+
+            if return_class_probs and n_classes > 1:
+                target_acc += probs[target_idx]
+            else:
+                target_acc += float(probs[target_idx].mean())
+
+        slot = i % cfg.memory_depth
+        p1_hist[slot, :] = p1_acc / n_offsets
+        p2_hist[slot, :] = p2_acc / n_offsets
+        if return_class_probs and n_classes > 1:
+            preds[i, :] = target_acc / n_offsets
+        else:
+            preds[i] = float(target_acc / n_offsets)
 
     return preds
 

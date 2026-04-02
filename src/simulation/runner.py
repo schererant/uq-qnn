@@ -24,6 +24,7 @@ from ..config import SimConfig
 from ..logging_config import get_logger
 from ..numpy_backend import (
     _has_positive_noise,
+    run_fast_memristive_singles,
     run_vectorized_non_memristive,
     singles_class_probs_from_unitary,
     singles_prob_from_unitary,
@@ -134,7 +135,9 @@ def run_simulation_sequence_np(
             if cfg.working_detectors is not None
             else (0, 1, 5)
         )
-        working_cc_indices: Tuple[int, ...] = tuple(working_detectors_to_cc_indices(wd_tuple, cfg.n_modes))
+        working_cc_indices: Tuple[int, ...] = tuple(
+            working_detectors_to_cc_indices(wd_tuple, cfg.n_modes)
+        )
         cc_labels = get_cc_labels(cfg.n_modes)
         add_noise = _has_positive_noise(cfg.noise_std)
     else:
@@ -200,6 +203,28 @@ def run_simulation_sequence_np(
         )
         elapsed_np = time.perf_counter() - t_np
         sim_logger.log_circuits(elapsed_np, num_pts)
+        sim_logger.log(time.perf_counter() - start_time, cfg.n_samples)
+        return preds
+
+    # ----- NumPy backend: faster memristive singles path (discrete + swipe) -----
+    if cfg.backend == "numpy" and n_memristive > 0 and cfg.output_mode == "singles":
+        t_np = time.perf_counter()
+        cfg_vec = (
+            cfg if cfg.target_mode is not None else cfg.replace(target_mode=target_mode)
+        )
+        preds = run_fast_memristive_singles(
+            params=params,
+            encoded_phases=enc_base,
+            cfg=cfg_vec,
+            memristive_indices=memristive_indices,
+            output_modes=output_modes,
+            offsets=offsets if mode == "continuous" else None,
+            return_class_probs=return_class_probs,
+        )
+        elapsed_np = time.perf_counter() - t_np
+        sim_logger.log_circuits(
+            elapsed_np, num_pts * (n_swipe if mode == "continuous" else 1)
+        )
         sim_logger.log(time.perf_counter() - start_time, cfg.n_samples)
         return preds
 
