@@ -1,0 +1,56 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Simple Regression",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/simple_regression/2026-03-26_103811",
+  "timestamp_utc": "2026-03-26T10:38:21.389184+00:00",
+  "python": "3.13.5",
+  "git_commit": "52122c7",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": [
+      4
+    ],
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "encoding_phase_idx": null,
+    "output_mode": "singles",
+    "input_modes": null,
+    "working_detectors": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "lr": 0.05,
+    "epochs": 3,
+    "n_samples": 20,
+    "memory_depth": 2,
+    "n_photons": null,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "noise_std": null,
+    "seed": 42,
+    "sim_backend": "numpy",
+    "n_data": 20,
+    "sigma_noise": 0.005,
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05
+  },
+  "metrics": {
+    "final_loss": 0.036995425132681926,
+    "test_mse": 0.051108382398581134,
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/simple_regression/2026-03-26_103811/regression_with_uncertainty.png"
+  ],
+  "simulation": {
+    "call_count": 183,
+    "total_time": 0.0347418769961223,
+    "samples_counter": {
+      "20": 183
+    },
+    "circuit_call_count": 3477,
+    "circuit_total_time": 0.03357817168580368,
+    "avg_time_per_sequence": 0.00018984632238318197,
+    "avg_time_per_circuit": 9.657225103768675e-06
+  }
+}

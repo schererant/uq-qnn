@@ -1,0 +1,136 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Smooth Step Multi Memristor Comparison",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/smooth_step_multi_memristor_comparison/2026-04-01_230245",
+  "timestamp_utc": "2026-04-01T21:04:45.213022+00:00",
+  "python": "3.13.5",
+  "git_commit": "31d31c4",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": [
+      5
+    ],
+    "encoding_phase_idx": null,
+    "output_mode": "singles",
+    "input_modes": null,
+    "working_detectors": null,
+    "n_photons": null,
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.04,
+    "epochs": 180,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null
+  },
+  "hardware": null,
+  "metrics": {
+    "function": "step_function_data",
+    "labels": {
+      "standard": "Standard",
+      "single_6": "1 memristor: phase 6 @ MZI(1, 2)",
+      "single_8": "1 memristor: phase 8 @ MZI(3, 4)",
+      "double_6_8": "2 memristors: phase 6 @ MZI(1, 2) + phase 8 @ MZI(3, 4)"
+    },
+    "by_config": {
+      "standard": {
+        "rmse": 0.07179823750559433,
+        "mae": 0.06150094059755603,
+        "r2": 0.8376816721069144,
+        "coverage_95": 0.368,
+        "mean_std": 0.018701759049093495,
+        "nll": 3.790278521895834,
+        "calibration_rho": -0.5603815055260221
+      },
+      "single_6": {
+        "rmse": 0.07574471064622415,
+        "mae": 0.06494397694056732,
+        "r2": 0.8193472341161521,
+        "coverage_95": 0.048,
+        "mean_std": 0.01121478047696551,
+        "nll": 14.558655043464753,
+        "calibration_rho": 0.6223532094128377
+      },
+      "single_8": {
+        "rmse": 0.07122468483670161,
+        "mae": 0.06183313210891881,
+        "r2": 0.840264639632693,
+        "coverage_95": 0.278,
+        "mean_std": 0.018135778070876542,
+        "nll": 3.765802168490608,
+        "calibration_rho": 0.11845295381181524
+      },
+      "double_6_8": {
+        "rmse": 0.0763663513491859,
+        "mae": 0.06550831819932307,
+        "r2": 0.816369813200762,
+        "coverage_95": 0.052,
+        "mean_std": 0.01185119349258044,
+        "nll": 12.594819676303567,
+        "calibration_rho": 0.598821211284845
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_multi_memristor_comparison/2026-04-01_230245/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_multi_memristor_comparison/2026-04-01_230245/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_multi_memristor_comparison/2026-04-01_230245/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_multi_memristor_comparison/2026-04-01_230245/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 45420,
+    "total_time": 117.47638895537239,
+    "samples_counter": {
+      "300": 45360,
+      "259": 4,
+      "328": 4,
+      "257": 1,
+      "327": 1,
+      "329": 1,
+      "254": 1,
+      "291": 1,
+      "287": 1,
+      "303": 3,
+      "275": 1,
+      "268": 1,
+      "319": 1,
+      "267": 1,
+      "305": 5,
+      "302": 1,
+      "307": 2,
+      "318": 2,
+      "260": 2,
+      "253": 2,
+      "262": 2,
+      "269": 2,
+      "333": 2,
+      "298": 2,
+      "309": 2,
+      "338": 2,
+      "330": 1,
+      "280": 1,
+      "349": 1,
+      "308": 2,
+      "278": 1,
+      "281": 1,
+      "304": 1,
+      "252": 1,
+      "258": 1,
+      "289": 1,
+      "350": 1,
+      "345": 1
+    },
+    "circuit_call_count": 3477360,
+    "circuit_total_time": 116.91405946656596,
+    "avg_time_per_sequence": 0.0025864462561728837,
+    "avg_time_per_circuit": 3.362150006515459e-05
+  }
+}
