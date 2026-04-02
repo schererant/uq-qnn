@@ -1,0 +1,82 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Memristive Backend Benchmark",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/memristive_backend_benchmark/2026-04-01_215523",
+  "timestamp_utc": "2026-04-01T19:55:26.090440+00:00",
+  "python": "3.13.5",
+  "git_commit": "31d31c4",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": [
+      5
+    ],
+    "memristive_phase_idx": [
+      6
+    ],
+    "memristive_output_modes": null,
+    "encoding_phase_idx": null,
+    "output_mode": "singles",
+    "input_modes": null,
+    "working_detectors": null,
+    "noise_std": null,
+    "n_samples": 300,
+    "memory_depth": 3,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "n_photons": null,
+    "sim_backend": "numpy",
+    "loss_type": "mse",
+    "n_classes": 1,
+    "lr": 0.01,
+    "epochs": 1,
+    "seed": 42
+  },
+  "hardware": null,
+  "metrics": {
+    "benchmark": {
+      "discrete": {
+        "n_points": 128.0,
+        "n_swipe": 0.0,
+        "fast_mean_ms": 5.5624218948651105,
+        "fast_std_ms": 0.11033124939245204,
+        "legacy_mean_ms": 22.993823149590753,
+        "legacy_std_ms": 0.3148507290132217,
+        "speedup": 4.1337790595886394
+      },
+      "swipe": {
+        "n_points": 96.0,
+        "n_swipe": 7.0,
+        "fast_mean_ms": 23.315138804415863,
+        "fast_std_ms": 0.22665191451710837,
+        "legacy_mean_ms": 109.18315983144566,
+        "legacy_std_ms": 1.099483191080039,
+        "speedup": 4.682929865755999
+      },
+      "swipe_inline": {
+        "n_points": 96.0,
+        "n_swipe": 7.0,
+        "fast_mean_ms": 22.74418748371924,
+        "fast_std_ms": 0.2459537271530479,
+        "legacy_mean_ms": 100.72226368356496,
+        "legacy_std_ms": 1.032072509441933,
+        "speedup": 4.428483706250841
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/memristive_backend_benchmark/2026-04-01_215523/memristive_backend_benchmark.png"
+  ],
+  "simulation": {
+    "call_count": 23,
+    "total_time": 0.37326112599112093,
+    "samples_counter": {
+      "300": 23
+    },
+    "circuit_call_count": 10560,
+    "circuit_total_time": 0.3722168349195272,
+    "avg_time_per_sequence": 0.016228744608309607,
+    "avg_time_per_circuit": 3.524780633707644e-05
+  }
+}
