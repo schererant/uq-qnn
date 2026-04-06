@@ -30,6 +30,7 @@ import sys
 from typing import Dict, Tuple
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -76,7 +77,7 @@ _COMMON: Dict = {
 SINGLES_CONFIG: Dict = {
     **_COMMON,
     "output_mode": "singles",
-    "target_mode": (5,),
+    "target_mode": (2, 4),
     "input_modes": None,
     "working_detectors": None,
 }
@@ -277,17 +278,24 @@ def plot_predictions_grid(
             r = results[func][mode]
             m = r["metrics"]
 
-            ax.scatter(X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train")
+            ax.scatter(
+                X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train"
+            )
             ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
             ax.plot(
-                X_test, r["mean_preds"],
-                color=MODE_COLORS[mode], lw=2.0, label="Prediction",
+                X_test,
+                r["mean_preds"],
+                color=MODE_COLORS[mode],
+                lw=2.0,
+                label="Prediction",
             )
             ax.fill_between(
                 X_test,
                 r["mean_preds"] - 1.96 * r["std_preds"],
                 r["mean_preds"] + 1.96 * r["std_preds"],
-                color=MODE_COLORS[mode], alpha=0.22, label="95 % CI",
+                color=MODE_COLORS[mode],
+                alpha=0.22,
+                label="95 % CI",
             )
             ax.set_title(
                 f"{FUNC_LABELS[func]}  ·  {mode}\n"
@@ -329,9 +337,7 @@ def plot_training_loss(results: Dict, functions: list, modes: list) -> plt.Figur
         ax.legend(fontsize=9)
         ax.grid(True, which="both", alpha=0.25)
 
-    fig.suptitle(
-        "Training Convergence: Singles vs Coincidence", fontsize=12
-    )
+    fig.suptitle("Training Convergence: Singles vs Coincidence", fontsize=12)
     fig.tight_layout()
     return fig
 
@@ -366,10 +372,19 @@ def plot_calibration(
 
         max_val = max(float(np.max(all_stds)), float(np.max(all_errs))) * 1.05
         ax.plot(
-            [0, max_val], [0, max_val], "k-", lw=1.0, alpha=0.5, label="σ = |err| (ideal)"
+            [0, max_val],
+            [0, max_val],
+            "k-",
+            lw=1.0,
+            alpha=0.5,
+            label="σ = |err| (ideal)",
         )
         ax.plot(
-            [0, max_val], [0, 1.96 * max_val], "k--", lw=0.8, alpha=0.35,
+            [0, max_val],
+            [0, 1.96 * max_val],
+            "k--",
+            lw=0.8,
+            alpha=0.35,
             label="1.96σ (95 % bound)",
         )
 
@@ -471,16 +486,23 @@ def plot_r2_heatmap(results: Dict, functions: list, modes: list) -> plt.Figure:
             val = matrix[i, j]
             txt_color = "white" if abs(val) > 0.65 else "black"
             ax.text(
-                j, i, f"{val:.3f}",
-                ha="center", va="center",
-                color=txt_color, fontsize=11, fontweight="bold",
+                j,
+                i,
+                f"{val:.3f}",
+                ha="center",
+                va="center",
+                color=txt_color,
+                fontsize=11,
+                fontweight="bold",
             )
 
     fig.tight_layout()
     return fig
 
 
-def plot_uncertainty_distribution(results: Dict, functions: list, modes: list) -> plt.Figure:
+def plot_uncertainty_distribution(
+    results: Dict, functions: list, modes: list
+) -> plt.Figure:
     """
     Violin plots of per-point predictive σ.
 
@@ -520,25 +542,33 @@ def plot_uncertainty_distribution(results: Dict, functions: list, modes: list) -
 def plot_metrics_table(results: Dict, functions: list, modes: list) -> plt.Figure:
     """Full numeric summary table for all (function, mode) pairs."""
     columns = [
-        "Function", "Mode",
-        "RMSE ↓", "MAE ↓", "R² ↑",
-        "Cov@95 %", "Mean σ", "NLL ↓", "Cal. ρ ↑",
+        "Function",
+        "Mode",
+        "RMSE ↓",
+        "MAE ↓",
+        "R² ↑",
+        "Cov@95 %",
+        "Mean σ",
+        "NLL ↓",
+        "Cal. ρ ↑",
     ]
     rows = []
     for func in functions:
         for mode in modes:
             m = results[func][mode]["metrics"]
-            rows.append([
-                FUNC_LABELS[func],
-                mode,
-                f"{m['rmse']:.4f}",
-                f"{m['mae']:.4f}",
-                f"{m['r2']:.3f}",
-                f"{m['coverage_95']:.3f}",
-                f"{m['mean_std']:.4f}",
-                f"{m['nll']:.3f}",
-                f"{m['calibration_rho']:.3f}",
-            ])
+            rows.append(
+                [
+                    FUNC_LABELS[func],
+                    mode,
+                    f"{m['rmse']:.4f}",
+                    f"{m['mae']:.4f}",
+                    f"{m['r2']:.3f}",
+                    f"{m['coverage_95']:.3f}",
+                    f"{m['mean_std']:.4f}",
+                    f"{m['nll']:.3f}",
+                    f"{m['calibration_rho']:.3f}",
+                ]
+            )
 
     fig, ax = plt.subplots(figsize=(15, 0.52 * len(rows) + 1.8))
     ax.axis("off")
@@ -559,7 +589,8 @@ def plot_metrics_table(results: Dict, functions: list, modes: list) -> plt.Figur
 
     ax.set_title(
         "Comprehensive Metrics Summary — Functions × Measurement Modes",
-        fontsize=11, pad=18,
+        fontsize=11,
+        pad=18,
     )
     fig.tight_layout()
     return fig
@@ -609,13 +640,31 @@ def main() -> None:
         logger.info("Generating figures…")
 
         figs = [
-            ("predictions_grid.png", plot_predictions_grid(results, data, FUNCTIONS, MEASUREMENT_MODES)),
-            ("training_loss.png", plot_training_loss(results, FUNCTIONS, MEASUREMENT_MODES)),
-            ("calibration.png", plot_calibration(results, data, FUNCTIONS, MEASUREMENT_MODES)),
-            ("metrics_comparison.png", plot_metrics_comparison(results, FUNCTIONS, MEASUREMENT_MODES)),
+            (
+                "predictions_grid.png",
+                plot_predictions_grid(results, data, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "training_loss.png",
+                plot_training_loss(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "calibration.png",
+                plot_calibration(results, data, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "metrics_comparison.png",
+                plot_metrics_comparison(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
             ("r2_heatmap.png", plot_r2_heatmap(results, FUNCTIONS, MEASUREMENT_MODES)),
-            ("uncertainty_distribution.png", plot_uncertainty_distribution(results, FUNCTIONS, MEASUREMENT_MODES)),
-            ("metrics_table.png", plot_metrics_table(results, FUNCTIONS, MEASUREMENT_MODES)),
+            (
+                "uncertainty_distribution.png",
+                plot_uncertainty_distribution(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "metrics_table.png",
+                plot_metrics_table(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
         ]
 
         for fname, fig in figs:

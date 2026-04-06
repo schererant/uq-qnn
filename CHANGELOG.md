@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-04-06 — Coincidence output-pair selection and comparison experiments
+
+### Added
+
+- **`src/coincidence.py`** — `mode_pair_to_cc_index(j, k, n_modes)` helper that maps an output mode pair `(j, k)` to its canonical CC channel index.
+- **`src/numpy_backend.py`**, **`src/simulation/runner.py`** — Coincidence regression can now read an arbitrary CC channel via `target_mode=(j, k)`. Previously the scalar output was always `working_cc_indices[0]` (i.e. the first CC pair formed by the working detectors). Now, when `target_mode` is a 2-tuple in coincidence mode, the specified CC pair is read after postselection while the full normalization context is preserved.
+- **`examples/output_mode_comparison.py`** — Experiment sweeping all singles output detectors (modes 0–N-1) for one regression function.
+- **`examples/coincidence_output_pair_comparison.py`** — Experiment sweeping all 15 output CC pairs via `target_mode=(j, k)` with fixed `input_modes=(1, 4)` and all detectors working.
+- **`examples/coincidence_input_pair_comparison.py`** — Experiment sweeping all 15 input-mode pairs with fixed detectors and readout channel.
+
 ## 2026-04-01 — Faster NumPy path for memristive singles runs
 
 ### Added

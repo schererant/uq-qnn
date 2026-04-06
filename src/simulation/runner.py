@@ -16,6 +16,7 @@ from ..circuits import (
 from ..coincidence import (
     apply_noise_to_outcomes,
     get_cc_labels,
+    mode_pair_to_cc_index,
     postselect_measurement,
     probs_to_coincidences,
     working_detectors_to_cc_indices,
@@ -147,6 +148,13 @@ def run_simulation_sequence_np(
         working_cc_indices: Tuple[int, ...] = ()
         cc_labels: list[str] = []
         add_noise = False
+
+    # Determine which CC index to read for coincidence regression
+    readout_cc_idx: int | None = None
+    if cfg.output_mode == "coincidence" and cfg.target_mode is not None and len(cfg.target_mode) == 2:
+        readout_cc_idx = mode_pair_to_cc_index(
+            cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
+        )
 
     state_m1_list: list[pcvl.BasicState] = []
     state_m2_list: list[pcvl.BasicState] = []
@@ -392,7 +400,10 @@ def run_simulation_sequence_np(
                 if return_class_probs and len(working_cc_indices) > 1:
                     preds[i, :] = out[working_cc_indices]
                 else:
-                    preds[i] = out[working_cc_indices[0]] if working_cc_indices else 0.0
+                    idx = readout_cc_idx if readout_cc_idx is not None else (
+                        working_cc_indices[0] if working_cc_indices else 0
+                    )
+                    preds[i] = out[idx]
             elif return_class_probs and n_classes > 1:
                 for c, target_state in enumerate(target_modes_list):
                     preds[i, c] = probs.get(target_state, 0.0)
@@ -475,9 +486,10 @@ def run_simulation_sequence_np(
                     if return_class_probs and len(working_cc_indices) > 1:
                         target_swipe[k, :] = out[working_cc_indices]
                     else:
-                        target_swipe[k] = (
-                            out[working_cc_indices[0]] if working_cc_indices else 0.0
+                        idx = readout_cc_idx if readout_cc_idx is not None else (
+                            working_cc_indices[0] if working_cc_indices else 0
                         )
+                        target_swipe[k] = out[idx]
                 elif return_class_probs and n_classes > 1:
                     for c, ts in enumerate(target_modes_list):
                         target_swipe[k, c] = probs.get(ts, 0.0)

@@ -46,9 +46,9 @@ logger = get_logger(__name__)
 
 _COMMON: Dict = {
     # Circuit
-    "n_modes": 6,
+    "n_modes": 12,
     "encoding_mode": 0,
-    "target_mode": (5,),
+    "target_mode": (3, 4, 0),
     "encoding_phase_idx": None,
     "output_mode": "singles",
     "input_modes": None,

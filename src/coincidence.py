@@ -36,6 +36,21 @@ def get_cc_labels(n_modes: int) -> List[str]:
     return [f"CC{j}{k}" for j, k in pairs]
 
 
+def mode_pair_to_cc_index(j: int, k: int, n_modes: int) -> int:
+    """Return the CC index for the mode pair (j, k) with j < k.
+
+    E.g. for 6 modes: (0,1) → 0, (0,2) → 1, ..., (4,5) → 14.
+    """
+    a, b = (j, k) if j < k else (k, j)
+    pairs = get_cc_mode_pairs(n_modes)
+    pair_to_idx = {p: i for i, p in enumerate(pairs)}
+    if (a, b) not in pair_to_idx:
+        raise ValueError(
+            f"mode pair ({a}, {b}) is not a valid CC pair for {n_modes} modes"
+        )
+    return pair_to_idx[(a, b)]
+
+
 def working_detectors_to_cc_indices(
     working_detectors: Sequence[int],
     n_modes: int,

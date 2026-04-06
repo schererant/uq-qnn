@@ -1,38 +1,44 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Regression example using coincidence (2-photon) measurements."""
+"""Coincidence regression with the validated configuration."""
 
-import sys
 import os
-import numpy as np
+import sys
+from typing import Dict
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from src.config import SimConfig
 from src.data import get_data
 from src.experiment import Experiment
 from src.logging_config import get_logger
+from src.simulation import run_simulation_sequence_np
+from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-# ===================== EXPERIMENT CONFIG =====================
+INPUT_MODES = (0, 3)
+TARGET_CC_PAIR = (0, 1)
+ENCODING_MODE = 0
+
 CONFIG = {
-    # Circuit
     "n_modes": 6,
-    "encoding_mode": 0,
-    "target_mode": None,
+    "encoding_mode": ENCODING_MODE,
+    "target_mode": TARGET_CC_PAIR,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
     "encoding_phase_idx": None,
-    # Task — coincidence mode
     "output_mode": "coincidence",
-    "input_modes": (1, 4),
+    "input_modes": INPUT_MODES,
     "working_detectors": tuple(range(6)),
     "loss_type": "mse",
     "n_classes": 1,
-    # Training
     "lr": 0.05,
-    "epochs": 100,
+    "epochs": 150,
     "n_samples": 1000,
     "memory_depth": 2,
     "n_photons": None,
@@ -40,95 +46,215 @@ CONFIG = {
     "swipe_span": 0.0,
     "noise_std": None,
     "seed": 42,
-    # Backend
     "sim_backend": "numpy",
-    # Data
     "n_data": 100,
     "sigma_noise": 0.005,
-    # Uncertainty
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
 }
-# =============================================================
 
 
-def main():
+def _sim_cfg() -> SimConfig:
+    return SimConfig.from_experiment_config(CONFIG)
+
+
+def _run_uncertainty(
+    theta: np.ndarray,
+    enc_test: np.ndarray,
+    sim_cfg: SimConfig,
+    *,
+    n_passes: int,
+    noise_std: float,
+    seed: int,
+) -> Dict[str, np.ndarray]:
+    rng = np.random.default_rng(seed)
+    all_preds = np.zeros((len(enc_test), n_passes), dtype=float)
+    for idx in range(n_passes):
+        perturbed = theta + rng.normal(0.0, noise_std, size=len(theta))
+        all_preds[:, idx] = run_simulation_sequence_np(perturbed, enc_test, sim_cfg)
+    return {
+        "mean": np.mean(all_preds, axis=1),
+        "std": np.std(all_preds, axis=1),
+        "all_preds": all_preds,
+    }
+
+
+def _compute_metrics(
+    y_test: np.ndarray,
+    mean_preds: np.ndarray,
+    std_preds: np.ndarray,
+) -> Dict[str, float]:
+    residuals = mean_preds - y_test
+    mse = float(np.mean(residuals**2))
+    rmse = float(np.sqrt(mse))
+    mae = float(np.mean(np.abs(residuals)))
+    ss_res = float(np.sum(residuals**2))
+    ss_tot = float(np.sum((y_test - np.mean(y_test)) ** 2))
+    r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else float("nan")
+    lo = mean_preds - 1.96 * std_preds
+    hi = mean_preds + 1.96 * std_preds
+    coverage_95 = float(np.mean((y_test >= lo) & (y_test <= hi)))
+    sigma = np.clip(std_preds, 1e-6, None)
+    nll = float(np.mean(0.5 * (residuals / sigma) ** 2 + np.log(sigma)))
+    cal_rho, _ = stats.spearmanr(std_preds, np.abs(residuals))
+    return {
+        "mse": mse,
+        "rmse": rmse,
+        "mae": mae,
+        "r2": r2,
+        "coverage_95": coverage_95,
+        "mean_std": float(np.mean(std_preds)),
+        "nll": nll,
+        "calibration_rho": float(cal_rho),
+    }
+
+
+def _plot_training_loss(history: np.ndarray) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.plot(history, color="tab:blue", lw=2)
+    ax.set_yscale("log")
+    ax.set(
+        xlabel="Epoch",
+        ylabel="Loss",
+        title=(
+            "Training Loss: input_modes=%s, CC%s%s, encoding_mode=%d"
+            % (INPUT_MODES, TARGET_CC_PAIR[0], TARGET_CC_PAIR[1], ENCODING_MODE)
+        ),
+    )
+    ax.grid(True)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_summary(
+    history: np.ndarray,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    mean_preds: np.ndarray,
+    std_preds: np.ndarray,
+    metrics: Dict[str, float],
+) -> plt.Figure:
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+
+    axes[0, 0].plot(history, color="tab:blue")
+    axes[0, 0].set_yscale("log")
+    axes[0, 0].set(xlabel="Epoch", ylabel="Loss", title="Training Loss")
+    axes[0, 0].grid(True)
+
+    axes[0, 1].scatter(X_train, y_train, s=20, alpha=0.7, label="Training data")
+    axes[0, 1].plot(X_test, y_test, "k--", label="Ground truth")
+    axes[0, 1].plot(X_test, mean_preds, color="tab:red", lw=2, label="Mean prediction")
+    axes[0, 1].fill_between(
+        X_test,
+        mean_preds - 1.96 * std_preds,
+        mean_preds + 1.96 * std_preds,
+        color="tab:red",
+        alpha=0.25,
+        label="95% CI",
+    )
+    axes[0, 1].set(
+        xlabel="x",
+        ylabel="y",
+        title=(
+            "Validated coincidence regression\n"
+            f"input_modes={INPUT_MODES}, target_mode={TARGET_CC_PAIR}, encoding_mode={ENCODING_MODE}"
+        ),
+    )
+    axes[0, 1].legend()
+    axes[0, 1].grid(True)
+
+    axes[1, 0].scatter(X_test, std_preds, c=np.abs(mean_preds - y_test), cmap="viridis")
+    axes[1, 0].set(xlabel="x", ylabel="Std dev", title="Uncertainty vs. Input")
+    axes[1, 0].grid(True)
+
+    axes[1, 1].scatter(std_preds, np.abs(mean_preds - y_test), alpha=0.7)
+    max_std = float(np.max(std_preds)) if len(std_preds) else 0.0
+    axes[1, 1].plot([0.0, max_std], [0.0, 2.0 * max_std], "k--", label="y=2x")
+    axes[1, 1].set(
+        xlabel="Uncertainty (std)",
+        ylabel="Absolute error",
+        title=(
+            "Calibration: RMSE=%.4f, R2=%.4f, coverage95=%.3f"
+            % (metrics["rmse"], metrics["r2"], metrics["coverage_95"])
+        ),
+    )
+    axes[1, 1].legend()
+    axes[1, 1].grid(True)
+
+    fig.tight_layout()
+    return fig
+
+
+def main() -> None:
     with Experiment("Coincidence Regression", config=CONFIG) as exp:
-        np.random.seed(CONFIG["seed"])
-
+        np.random.seed(int(CONFIG["seed"]))
         X_train, y_train, X_test, y_test = get_data(
             CONFIG["n_data"], CONFIG["sigma_noise"], "quartic_data"
         )
+        enc_train = 2 * np.arccos(np.clip(X_train, 0.0, 1.0))
+        enc_test = 2 * np.arccos(np.clip(X_test, 0.0, 1.0))
+        sim_cfg = _sim_cfg()
 
-        theta, history = exp.train(X_train, y_train)
-        exp.save_metrics({"final_loss": history[-1]})
+        logger.info(
+            "Training coincidence regression with input_modes=%s, target_mode=%s, encoding_mode=%d",
+            INPUT_MODES,
+            TARGET_CC_PAIR,
+            ENCODING_MODE,
+        )
 
-        enc_test = 2 * np.arccos(X_test)
-        unc = exp.run_uncertainty_analysis(
+        theta, history = train_pytorch_generic(
+            enc_train,
+            y_train,
+            sim_cfg=sim_cfg,
+            lr=float(CONFIG["lr"]),
+            epochs=int(CONFIG["epochs"]),
+            seed=int(CONFIG["seed"]),
+        )
+
+        unc = _run_uncertainty(
             theta,
             enc_test,
-            n_passes=CONFIG["unc_n_passes"],
-            noise_std=CONFIG["unc_noise_std"],
+            sim_cfg,
+            n_passes=int(CONFIG["unc_n_passes"]),
+            noise_std=float(CONFIG["unc_noise_std"]),
+            seed=int(CONFIG["seed"]),
         )
-        mean_preds = unc["mean"]
-        std_preds = unc["std"]
+        metrics = _compute_metrics(y_test, unc["mean"], unc["std"])
+        final_loss = float(history[-1])
 
-        mse = np.mean((mean_preds - y_test) ** 2)
-        logger.info("Test MSE: %.6f", mse)
-        exp.save_metrics({"test_mse": mse})
-
-        # ── plots ──
-        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-
-        axes[0, 0].plot(history)
-        axes[0, 0].set_yscale("log")
-        axes[0, 0].set(
-            xlabel="Epoch", ylabel="Loss", title="Training Loss (coincidence)"
+        exp.save_metrics(
+            {
+                "target_cc_pair": TARGET_CC_PAIR,
+                "input_modes": INPUT_MODES,
+                "encoding_mode": ENCODING_MODE,
+                "final_loss": final_loss,
+                **metrics,
+            }
         )
-        axes[0, 0].grid(True)
+        exp.savefig(_plot_training_loss(np.asarray(history)), "training_loss.png")
+        exp.savefig(
+            _plot_summary(
+                np.asarray(history),
+                X_train,
+                y_train,
+                X_test,
+                y_test,
+                unc["mean"],
+                unc["std"],
+                metrics,
+            ),
+            "coincidence_regression_with_uncertainty.png",
+        )
 
-        axes[0, 1].scatter(X_train, y_train, s=20, label="Training data", alpha=0.7)
-        axes[0, 1].plot(X_test, y_test, "k--", label="Ground truth")
-        axes[0, 1].plot(X_test, mean_preds, "r-", label="Mean prediction")
-        axes[0, 1].fill_between(
-            X_test,
-            mean_preds - 2 * std_preds,
-            mean_preds + 2 * std_preds,
-            color="r",
-            alpha=0.3,
-            label="95% CI",
+        logger.info(
+            "Validated coincidence regression: final_loss=%.6f mse=%.6f rmse=%.4f r2=%.4f",
+            final_loss,
+            metrics["mse"],
+            metrics["rmse"],
+            metrics["r2"],
         )
-        axes[0, 1].set(
-            xlabel="x", ylabel="y", title="Regression with Uncertainty (coincidence)"
-        )
-        axes[0, 1].legend()
-        axes[0, 1].grid(True)
-
-        sc = axes[1, 0].scatter(
-            X_test, std_preds, c=np.abs(mean_preds - y_test), cmap="viridis"
-        )
-        fig.colorbar(sc, ax=axes[1, 0], label="Absolute error")
-        axes[1, 0].set(xlabel="x", ylabel="Std dev", title="Uncertainty vs. Input")
-        axes[1, 0].grid(True)
-
-        axes[1, 1].scatter(std_preds, np.abs(mean_preds - y_test), alpha=0.7)
-        axes[1, 1].plot(
-            [0, np.max(std_preds)],
-            [0, 2 * np.max(std_preds)],
-            "k--",
-            label="y=2x (well calibrated)",
-        )
-        axes[1, 1].set(
-            xlabel="Uncertainty (std)",
-            ylabel="Absolute error",
-            title="Calibration: Error vs. Uncertainty",
-        )
-        axes[1, 1].legend()
-        axes[1, 1].grid(True)
-
-        fig.tight_layout()
-        exp.savefig(fig, "coincidence_regression_with_uncertainty.png")
-        # plt.show()
 
 
 if __name__ == "__main__":
