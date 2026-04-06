@@ -18,6 +18,7 @@ from .coincidence import (
     apply_noise_to_outcomes,
     get_cc_labels,
     get_cc_mode_pairs,
+    mode_pair_to_cc_index,
     postselect_measurement,
     working_detectors_to_cc_indices,
 )
@@ -200,6 +201,7 @@ def _process_coincidence_rows(
     noise_std: Optional[Union[float, Sequence[float]]],
     return_class_probs: bool,
     preds: np.ndarray,
+    readout_cc_idx: Optional[int] = None,
 ) -> None:
     n_data = coinc.shape[0]
     for i in range(n_data):
@@ -214,7 +216,10 @@ def _process_coincidence_rows(
         if return_class_probs and len(working_cc_indices) > 1:
             preds[i, :] = out[list(working_cc_indices)]
         else:
-            preds[i] = out[working_cc_indices[0]] if working_cc_indices else 0.0
+            idx = readout_cc_idx if readout_cc_idx is not None else (
+                working_cc_indices[0] if working_cc_indices else 0
+            )
+            preds[i] = out[idx]
 
 
 def run_vectorized_non_memristive(
@@ -278,6 +283,11 @@ def run_vectorized_non_memristive(
 
     if cfg.output_mode == "coincidence":
         coinc = _coincidence_raw_batch(u_batch, in_modes, cfg.n_modes)
+        readout_cc_idx: Optional[int] = None
+        if cfg.target_mode is not None and len(cfg.target_mode) == 2:
+            readout_cc_idx = mode_pair_to_cc_index(
+                cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
+            )
         _process_coincidence_rows(
             coinc,
             working_cc_indices,
@@ -286,6 +296,7 @@ def run_vectorized_non_memristive(
             cfg.noise_std,
             return_class_probs,
             preds,
+            readout_cc_idx=readout_cc_idx,
         )
     elif return_class_probs and n_classes > 1:
         preds[:, :] = _singles_probabilities_batch(

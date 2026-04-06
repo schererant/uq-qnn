@@ -1,0 +1,181 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Matched Readout Benchmark",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/matched_readout_benchmark/2026-04-06_184307",
+  "timestamp_utc": "2026-04-06T16:43:59.529769+00:00",
+  "python": "3.13.5",
+  "git_commit": "cc40b90",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "encoding_phase_idx": null,
+    "n_photons": null,
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "memory_depth": 1,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.05,
+    "epochs": 150,
+    "output_mode": "singles",
+    "target_mode": [
+      0
+    ],
+    "input_modes": null,
+    "working_detectors": null
+  },
+  "hardware": null,
+  "metrics": {
+    "function": "sinusoid_data",
+    "n_modes": 6,
+    "cases": {
+      "singles_m0": {
+        "rmse": 0.028985903340873292,
+        "mae": 0.025542984645940806,
+        "r2": 0.9391101227386554,
+        "coverage_95": 0.958,
+        "mean_std": 0.02474697562580729,
+        "nll": -2.996280108212869,
+        "calibration_rho": -0.2516099024396098
+      },
+      "singles_m1": {
+        "rmse": 0.02835764723668959,
+        "mae": 0.025107312019084838,
+        "r2": 0.9417210376358416,
+        "coverage_95": 0.946,
+        "mean_std": 0.02206617662799979,
+        "nll": -2.9759619061693505,
+        "calibration_rho": -0.45767722270889083
+      },
+      "singles_m2": {
+        "rmse": 0.027048845061374727,
+        "mae": 0.023734300949134538,
+        "r2": 0.9469764413543131,
+        "coverage_95": 0.93,
+        "mean_std": 0.018718307816574256,
+        "nll": -2.961960968581225,
+        "calibration_rho": 0.0888881955527822
+      },
+      "singles_m3": {
+        "rmse": 0.030549373321269252,
+        "mae": 0.026806090644580408,
+        "r2": 0.932364293515346,
+        "coverage_95": 0.752,
+        "mean_std": 0.02134110897903542,
+        "nll": -2.7057263541135708,
+        "calibration_rho": -0.2631335965343861
+      },
+      "singles_m4": {
+        "rmse": 0.02741760321851316,
+        "mae": 0.02421996125490793,
+        "r2": 0.9455208411380451,
+        "coverage_95": 0.904,
+        "mean_std": 0.019573527424212176,
+        "nll": -2.6811625046617964,
+        "calibration_rho": -0.25082298729194913
+      },
+      "singles_m5": {
+        "rmse": 0.028046046460425456,
+        "mae": 0.024725112860951505,
+        "r2": 0.942994767981739,
+        "coverage_95": 0.82,
+        "mean_std": 0.01965025131814041,
+        "nll": -2.7241607435976802,
+        "calibration_rho": -0.2559278077112308
+      },
+      "coinc_cc24": {
+        "rmse": 0.02173920744675834,
+        "mae": 0.018030504754479256,
+        "r2": 0.9657501374443475,
+        "coverage_95": 1.0,
+        "mean_std": 0.024869030448011534,
+        "nll": -3.3512121581918346,
+        "calibration_rho": 0.6247712670850682
+      },
+      "coinc_cc34": {
+        "rmse": 0.02271604188628215,
+        "mae": 0.019039597685327543,
+        "r2": 0.9626030020119302,
+        "coverage_95": 1.0,
+        "mean_std": 0.029341514455417786,
+        "nll": -3.2118750604378836,
+        "calibration_rho": -0.39654542618170474
+      },
+      "coinc_cc35": {
+        "rmse": 0.023064028469883483,
+        "mae": 0.01996427361061365,
+        "r2": 0.9614484583128471,
+        "coverage_95": 0.938,
+        "mean_std": 0.018453772680314586,
+        "nll": -3.104771598912705,
+        "calibration_rho": -0.38506512426049705
+      }
+    },
+    "best_by_family": {
+      "singles": {
+        "label": "singles_m2",
+        "metrics": {
+          "rmse": 0.027048845061374727,
+          "mae": 0.023734300949134538,
+          "r2": 0.9469764413543131,
+          "coverage_95": 0.93,
+          "mean_std": 0.018718307816574256,
+          "nll": -2.961960968581225,
+          "calibration_rho": 0.0888881955527822
+        }
+      },
+      "coincidence": {
+        "label": "coinc_cc24",
+        "metrics": {
+          "rmse": 0.02173920744675834,
+          "mae": 0.018030504754479256,
+          "r2": 0.9657501374443475,
+          "coverage_95": 1.0,
+          "mean_std": 0.024869030448011534,
+          "nll": -3.3512121581918346,
+          "calibration_rho": 0.6247712670850682
+        }
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/matched_readout_benchmark/2026-04-06_184307/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/matched_readout_benchmark/2026-04-06_184307/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/matched_readout_benchmark/2026-04-06_184307/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/matched_readout_benchmark/2026-04-06_184307/best_family_summary.png",
+    "/Users/anani/Code/uq-qnn/reports/matched_readout_benchmark/2026-04-06_184307/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 109485,
+    "total_time": 47.76459384860573,
+    "samples_counter": {
+      "300": 109350,
+      "259": 9,
+      "328": 9,
+      "257": 9,
+      "327": 9,
+      "329": 9,
+      "254": 9,
+      "291": 9,
+      "287": 9,
+      "303": 9,
+      "275": 9,
+      "268": 9,
+      "319": 9,
+      "267": 9,
+      "305": 9,
+      "302": 9
+    },
+    "circuit_call_count": 8378100,
+    "circuit_total_time": 46.55392088115332,
+    "avg_time_per_sequence": 0.00043626609899626186,
+    "avg_time_per_circuit": 5.556620341265122e-06
+  }
+}

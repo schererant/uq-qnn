@@ -1,0 +1,164 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Function and Memristor Comparison",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845",
+  "timestamp_utc": "2026-04-05T23:01:30.665455+00:00",
+  "python": "3.13.5",
+  "git_commit": "cc40b90",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": [
+      4
+    ],
+    "encoding_phase_idx": null,
+    "output_mode": "singles",
+    "input_modes": null,
+    "working_detectors": null,
+    "n_photons": null,
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.04,
+    "epochs": 180,
+    "memory_depth": 1,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null
+  },
+  "hardware": null,
+  "metrics": {
+    "by_function_and_architecture": {
+      "quartic_data": {
+        "standard": {
+          "rmse": 0.02619640645986998,
+          "mae": 0.016997438652082687,
+          "r2": 0.978710102913086,
+          "coverage_95": 0.482,
+          "mean_std": 0.006709434501680098,
+          "nll": -1.735420386499131,
+          "calibration_rho": 0.7690973803895215
+        },
+        "memristor": {
+          "rmse": 0.02766870518013976,
+          "mae": 0.018424405264158082,
+          "r2": 0.9762497714499947,
+          "coverage_95": 0.868,
+          "mean_std": 0.011867301992183733,
+          "nll": -3.416290990805401,
+          "calibration_rho": 0.7635968463873856
+        }
+      },
+      "sinusoid_data": {
+        "standard": {
+          "rmse": 0.026996828399670384,
+          "mae": 0.02370903090665065,
+          "r2": 0.9471801806634415,
+          "coverage_95": 0.906,
+          "mean_std": 0.02131805676522195,
+          "nll": -2.827322686804681,
+          "calibration_rho": -0.32063629054516213
+        },
+        "memristor": {
+          "rmse": 0.020903226552491338,
+          "mae": 0.017606534994903732,
+          "r2": 0.968333645127074,
+          "coverage_95": 0.978,
+          "mean_std": 0.015517966273799689,
+          "nll": -3.417182193852905,
+          "calibration_rho": 0.3337938151752607
+        }
+      },
+      "multi_modal_data": {
+        "standard": {
+          "rmse": 0.12573989659144566,
+          "mae": 0.10728617755120427,
+          "r2": 0.27949743046027276,
+          "coverage_95": 0.214,
+          "mean_std": 0.02583249944293335,
+          "nll": 7.434954187703995,
+          "calibration_rho": 0.5294680378721515
+        },
+        "memristor": {
+          "rmse": 0.12402645778905211,
+          "mae": 0.10527624448893942,
+          "r2": 0.2990000015135347,
+          "coverage_95": 0.168,
+          "mean_std": 0.019562201889431165,
+          "nll": 17.151560271943318,
+          "calibration_rho": -0.17864106656426626
+        }
+      },
+      "step_function_data": {
+        "standard": {
+          "rmse": 0.07174026785138082,
+          "mae": 0.06212330672026826,
+          "r2": 0.8379436768316244,
+          "coverage_95": 0.198,
+          "mean_std": 0.014376370604982387,
+          "nll": 8.533668146997194,
+          "calibration_rho": -0.19261737846951388
+        },
+        "memristor": {
+          "rmse": 0.06484773604554878,
+          "mae": 0.05431414523371867,
+          "r2": 0.8675873031909711,
+          "coverage_95": 0.272,
+          "mean_std": 0.016884522238530566,
+          "nll": 1.812813758016195,
+          "calibration_rho": 0.5268552914211656
+        }
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/calibration.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/r2_heatmap.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/uncertainty_distribution.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_memristor_comparison/2026-04-06_005845/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 89400,
+    "total_time": 161.18725757400534,
+    "samples_counter": {
+      "300": 89280,
+      "259": 8,
+      "328": 8,
+      "257": 4,
+      "327": 4,
+      "329": 4,
+      "254": 4,
+      "291": 4,
+      "287": 4,
+      "303": 8,
+      "275": 4,
+      "268": 4,
+      "319": 4,
+      "267": 4,
+      "305": 12,
+      "302": 4,
+      "307": 4,
+      "318": 4,
+      "260": 4,
+      "253": 4,
+      "262": 4,
+      "269": 4,
+      "333": 4,
+      "298": 4,
+      "309": 4,
+      "338": 4
+    },
+    "circuit_call_count": 6845280,
+    "circuit_total_time": 160.61575689499796,
+    "avg_time_per_sequence": 0.0018029894583222075,
+    "avg_time_per_circuit": 2.3463723455431767e-05
+  }
+}

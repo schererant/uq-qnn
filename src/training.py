@@ -34,6 +34,14 @@ def _init_theta(
     return np.concatenate([phases, weights])
 
 
+def _resolve_n_photons(sim_cfg: SimConfig, n_phase_params: int) -> Tuple[int, ...]:
+    if sim_cfg.n_photons is not None:
+        return tuple(int(n) for n in sim_cfg.n_photons)
+
+    default_photons = 2 if sim_cfg.output_mode == "coincidence" else 1
+    return tuple([default_photons] * n_phase_params)
+
+
 def train_pytorch_generic(
     enc_np: np.ndarray,
     y_np: np.ndarray,
@@ -96,9 +104,7 @@ def train_pytorch_generic(
     )
     phase_idx = tuple(i for i in range(expected_phases) if i not in memristive_indices)
 
-    n_photons = sim_cfg_work.n_photons
-    if n_photons is None:
-        n_photons = tuple([1] * len(phase_idx))
+    n_photons = _resolve_n_photons(sim_cfg_work, len(phase_idx))
 
     model = PhotonicModel(
         init_theta.tolist(),

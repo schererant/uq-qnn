@@ -1,0 +1,255 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Coincidence Input Pair Comparison",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858",
+  "timestamp_utc": "2026-04-06T16:42:00.011853+00:00",
+  "python": "3.13.5",
+  "git_commit": "cc40b90",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": [
+      0,
+      1
+    ],
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "encoding_phase_idx": null,
+    "output_mode": "coincidence",
+    "working_detectors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "n_photons": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "memory_depth": 1,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.05,
+    "epochs": 150,
+    "input_modes": [
+      0,
+      1
+    ]
+  },
+  "hardware": null,
+  "metrics": {
+    "readout_cc_pair": [
+      0,
+      1
+    ],
+    "by_input_pair": {
+      "in_0_1": {
+        "rmse": 0.03993398838375724,
+        "mae": 0.032283350680161915,
+        "r2": 0.8844268916312633,
+        "coverage_95": 1.0,
+        "mean_std": 0.06386480788483608,
+        "nll": -2.5872993132690363,
+        "calibration_rho": 0.17624969699878798
+      },
+      "in_0_2": {
+        "rmse": 0.025885026182191188,
+        "mae": 0.02125887331976428,
+        "r2": 0.9514411227637035,
+        "coverage_95": 1.0,
+        "mean_std": 0.04409211749952665,
+        "nll": -2.9447744993502063,
+        "calibration_rho": -0.324500882003528
+      },
+      "in_0_3": {
+        "rmse": 0.014420946160587693,
+        "mae": 0.012512509352560772,
+        "r2": 0.9849284148939528,
+        "coverage_95": 1.0,
+        "mean_std": 0.039020118249771314,
+        "nll": -3.197142658800368,
+        "calibration_rho": 0.2599771039084156
+      },
+      "in_0_4": {
+        "rmse": 0.02318298549767407,
+        "mae": 0.02057375494037275,
+        "r2": 0.9610497592445416,
+        "coverage_95": 1.0,
+        "mean_std": 0.02301520907049319,
+        "nll": -3.2791683856468863,
+        "calibration_rho": 0.019109260437041746
+      },
+      "in_0_5": {
+        "rmse": 0.01814741677416605,
+        "mae": 0.01426488795214959,
+        "r2": 0.9761328234277405,
+        "coverage_95": 1.0,
+        "mean_std": 0.03278990937439426,
+        "nll": -3.37769255418447,
+        "calibration_rho": 0.3735457501830007
+      },
+      "in_1_2": {
+        "rmse": 0.02269848952281111,
+        "mae": 0.019283896975687168,
+        "r2": 0.9626607719444746,
+        "coverage_95": 1.0,
+        "mean_std": 0.029409010518438073,
+        "nll": -3.2618711799666316,
+        "calibration_rho": 0.523626990507962
+      },
+      "in_1_3": {
+        "rmse": 0.017810490780594258,
+        "mae": 0.014366540485305957,
+        "r2": 0.9770108352196982,
+        "coverage_95": 0.996,
+        "mean_std": 0.025457070108101786,
+        "nll": -3.454695455733527,
+        "calibration_rho": 0.2935200220800883
+      },
+      "in_1_4": {
+        "rmse": 0.02673807873653945,
+        "mae": 0.02372841074043662,
+        "r2": 0.9481878260366436,
+        "coverage_95": 0.984,
+        "mean_std": 0.0282230087543866,
+        "nll": -3.098987620845268,
+        "calibration_rho": -0.0606313465253861
+      },
+      "in_1_5": {
+        "rmse": 0.02073203148135938,
+        "mae": 0.01775239935271427,
+        "r2": 0.9688502088895559,
+        "coverage_95": 0.992,
+        "mean_std": 0.027808128560352665,
+        "nll": -3.2618897762663255,
+        "calibration_rho": -0.38243548174192693
+      },
+      "in_2_3": {
+        "rmse": 0.11908677851736443,
+        "mae": 0.10574211689760514,
+        "r2": -0.027776098041782493,
+        "coverage_95": 0.284,
+        "mean_std": 0.04066958931534968,
+        "nll": 1.084765234566964,
+        "calibration_rho": NaN
+      },
+      "in_2_4": {
+        "rmse": 0.11816153079623204,
+        "mae": 0.10378012405227642,
+        "r2": -0.011867475789851811,
+        "coverage_95": 0.126,
+        "mean_std": 0.01851900333614016,
+        "nll": 16.366787137352524,
+        "calibration_rho": NaN
+      },
+      "in_2_5": {
+        "rmse": 0.11891880339218133,
+        "mae": 0.10542819162441171,
+        "r2": -0.024878730867990972,
+        "coverage_95": 0.144,
+        "mean_std": 0.021495437989691214,
+        "nll": 11.463152033960396,
+        "calibration_rho": NaN
+      },
+      "in_3_4": {
+        "rmse": 0.11827626768995375,
+        "mae": 0.10406517765738921,
+        "r2": -0.013833511556146538,
+        "coverage_95": 0.1,
+        "mean_std": 0.014518681487368708,
+        "nll": 28.9503160694937,
+        "calibration_rho": NaN
+      },
+      "in_3_5": {
+        "rmse": 0.11837090089037787,
+        "mae": 0.10428803472601876,
+        "r2": -0.01545650311035951,
+        "coverage_95": 0.124,
+        "mean_std": 0.01825931253679765,
+        "nll": 17.010065343905783,
+        "calibration_rho": NaN
+      },
+      "in_4_5": {
+        "rmse": 0.11772230312732275,
+        "mae": 0.10242487838791613,
+        "r2": -0.004358870280623206,
+        "coverage_95": 0.214,
+        "mean_std": 0.0300992127993771,
+        "nll": 4.145260622710655,
+        "calibration_rho": NaN
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/calibration.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/r2_bar.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/uncertainty_distribution.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_input_pair_comparison/2026-04-06_183858/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 272475,
+    "total_time": 173.53734441277265,
+    "samples_counter": {
+      "300": 272250,
+      "259": 15,
+      "328": 15,
+      "257": 15,
+      "327": 15,
+      "329": 15,
+      "254": 15,
+      "291": 15,
+      "287": 15,
+      "303": 15,
+      "275": 15,
+      "268": 15,
+      "319": 15,
+      "267": 15,
+      "305": 15,
+      "302": 15
+    },
+    "circuit_call_count": 20803500,
+    "circuit_total_time": 168.7193243923466,
+    "avg_time_per_sequence": 0.0006368927219479682,
+    "avg_time_per_circuit": 8.110141293164448e-06
+  }
+}
