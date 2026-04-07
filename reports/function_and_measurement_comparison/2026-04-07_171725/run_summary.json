@@ -1,0 +1,155 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Function and Measurement Comparison",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725",
+  "timestamp_utc": "2026-04-07T15:18:51.513478+00:00",
+  "python": "3.13.5",
+  "git_commit": "408c1fa",
+  "config": {
+    "n_modes": 6,
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "encoding_phase_idx": 5,
+    "memory_depth": 1,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.05,
+    "epochs": 150,
+    "input_state": [
+      0
+    ],
+    "photon_distinguishability": null,
+    "output_mode": "singles",
+    "target_mode": [
+      2
+    ],
+    "working_detectors": null
+  },
+  "hardware": null,
+  "metrics": {
+    "by_function_and_mode": {
+      "quartic_data": {
+        "singles": {
+          "rmse": 0.17954281302226793,
+          "mae": 0.14616198710547798,
+          "r2": -6.026547332593779e-05,
+          "coverage_95": 0.064,
+          "mean_std": 0.012489998552897027,
+          "nll": 98.93643098633528,
+          "calibration_rho": NaN
+        },
+        "coincidence": {
+          "rmse": 0.1797992127160848,
+          "mae": 0.14960800338777283,
+          "r2": -0.0029186169821067143,
+          "coverage_95": 0.148,
+          "mean_std": 0.02922564044424375,
+          "nll": 15.391489952207047,
+          "calibration_rho": NaN
+        }
+      },
+      "sinusoid_data": {
+        "singles": {
+          "rmse": 0.11774859069940356,
+          "mae": 0.1025260978250304,
+          "r2": -0.004807470134978287,
+          "coverage_95": 0.16,
+          "mean_std": 0.022853659890471285,
+          "nll": 9.494381237471455,
+          "calibration_rho": NaN
+        },
+        "coincidence": {
+          "rmse": 0.11748325773470457,
+          "mae": 0.10098185936791586,
+          "r2": -0.0002841351632634215,
+          "coverage_95": 0.116,
+          "mean_std": 0.01643495183604645,
+          "nll": 21.441313188017286,
+          "calibration_rho": NaN
+        }
+      },
+      "multi_modal_data": {
+        "singles": {
+          "rmse": 0.14891726593528304,
+          "mae": 0.12139318253912153,
+          "r2": -0.010600350573669592,
+          "coverage_95": 0.22,
+          "mean_std": 0.02269408955917706,
+          "nll": 17.743880960489285,
+          "calibration_rho": NaN
+        },
+        "coincidence": {
+          "rmse": 0.14833074691763307,
+          "mae": 0.12260624492988396,
+          "r2": -0.0026554147264670203,
+          "coverage_95": 0.17,
+          "mean_std": 0.016370131259466902,
+          "nll": 36.93911026356291,
+          "calibration_rho": NaN
+        }
+      },
+      "step_function_data": {
+        "singles": {
+          "rmse": 0.17862137456628122,
+          "mae": 0.15789715726858822,
+          "r2": -0.00463163063370664,
+          "coverage_95": 0.064,
+          "mean_std": 0.024976601105399957,
+          "nll": 21.882507239094583,
+          "calibration_rho": NaN
+        },
+        "coincidence": {
+          "rmse": 0.17844849232244886,
+          "mae": 0.15680892707528002,
+          "r2": -0.0026878664039806655,
+          "coverage_95": 0.046,
+          "mean_std": 0.01818772882244381,
+          "nll": 44.12553732423234,
+          "calibration_rho": NaN
+        }
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/calibration.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/r2_heatmap.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/uncertainty_distribution.png",
+    "/Users/anani/Code/uq-qnn/reports/function_and_measurement_comparison/2026-04-07_171725/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 108120,
+    "total_time": 80.78392492108105,
+    "samples_counter": {
+      "300": 108000,
+      "259": 8,
+      "328": 8,
+      "257": 8,
+      "327": 8,
+      "329": 8,
+      "254": 8,
+      "291": 8,
+      "287": 8,
+      "303": 8,
+      "275": 8,
+      "268": 8,
+      "319": 8,
+      "267": 8,
+      "305": 8,
+      "302": 8
+    },
+    "circuit_call_count": 8268000,
+    "circuit_total_time": 80.54838947285316,
+    "avg_time_per_sequence": 0.0007471691169171388,
+    "avg_time_per_circuit": 9.742185470833715e-06
+  }
+}

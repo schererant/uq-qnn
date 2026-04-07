@@ -203,7 +203,8 @@ class MemristorLossPSR(torch.autograd.Function):
                 grads[p_idx] = np.real(np.dot(dL_df.flatten(), df_dθ))
 
         # Finite-difference for memristor weight parameters
-        weight_idxs = sorted(set(range(len(theta_np))) - set(ctx.phase_idx))
+        n_phases = cfg.n_modes * (cfg.n_modes - 1)
+        weight_idxs = range(n_phases, len(theta_np))
         for idx in weight_idxs:
             θ_p = theta_np.copy()
             θ_m = theta_np.copy()

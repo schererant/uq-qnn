@@ -36,12 +36,10 @@ from src.training import train_pytorch_generic
 logger = get_logger(__name__)
 
 N_MODES = 6
-FUNCTION = "sinusoid_data"
-FUNC_LABEL = r"$\sin(0.7\pi x)$"
 SINGLES_MODES: Tuple[int, ...] = (0, 1, 2, 3, 4, 5)
 COINCIDENCE_PAIRS: Tuple[Tuple[int, int], ...] = ((2, 4), (3, 4), (3, 5))
 
-COMMON_CFG: Dict[str, object] = {
+CONFIG: Dict[str, object] = {
     "n_modes": N_MODES,
     "encoding_phase_idx": 5,
     "memristive_phase_idx": None,
@@ -57,12 +55,20 @@ COMMON_CFG: Dict[str, object] = {
     "seed": 42,
     "lr": 0.05,
     "epochs": 150,
+    "n_data": 80,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_function": "sinusoid_data",
+    "func_label": r"$\sin(0.7\pi x)$",
+    "output_mode": "singles",
+    "input_state": (0,),
+    "photon_distinguishability": None,
+    "target_mode": (SINGLES_MODES[0],),
+    "working_detectors": None,
 }
 
-N_DATA = 80
-SIGMA_NOISE = 0.02
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
+FUNC_LABEL = CONFIG["func_label"]
 
 
 def _case_specs() -> List[Dict[str, object]]:
@@ -112,7 +118,7 @@ def _display_label(case: Dict[str, object]) -> str:
 
 def _sim_cfg(case: Dict[str, object]) -> SimConfig:
     cfg = {
-        **COMMON_CFG,
+        **CONFIG,
         "output_mode": case["family"],
         "input_state": case["input_state"],
         "photon_distinguishability": case["photon_distinguishability"],
@@ -191,9 +197,9 @@ def train_and_evaluate(
         enc_train,
         y_train,
         sim_cfg=sim_cfg,
-        lr=float(COMMON_CFG["lr"]),
-        epochs=int(COMMON_CFG["epochs"]),
-        seed=int(COMMON_CFG["seed"]),
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
 
     enc_test = 2 * np.arccos(np.clip(X_test, 0.0, 1.0))
@@ -201,9 +207,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sim_cfg,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=int(COMMON_CFG["seed"]),
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -273,7 +279,7 @@ def plot_predictions_grid(
         if idx == 0:
             ax.legend(fontsize=8)
 
-    for ax in axes_flat[len(CASES):]:
+    for ax in axes_flat[len(CASES) :]:
         ax.set_visible(False)
 
     fig.suptitle(
@@ -422,22 +428,17 @@ def plot_metrics_table(results: Dict[str, Dict[str, object]]) -> plt.Figure:
 
 
 def main() -> None:
-    base_config = {
-        **COMMON_CFG,
-        "output_mode": "singles",
-        "input_state": (0,),
-        "photon_distinguishability": None,
-        "target_mode": (SINGLES_MODES[0],),
-        "working_detectors": None,
-    }
+    with Experiment("Matched Readout Benchmark", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))
 
-    with Experiment("Matched Readout Benchmark", config=base_config) as exp:
-        np.random.seed(int(COMMON_CFG["seed"]))
-
-        X_train, y_train, X_test, y_test = get_data(N_DATA, SIGMA_NOISE, FUNCTION)
+        X_train, y_train, X_test, y_test = get_data(
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
+        )
         logger.info(
             "Data: %s  train=%d  test=%d  n_modes=%d",
-            FUNCTION,
+            CONFIG["data_function"],
             len(X_train),
             len(X_test),
             N_MODES,
@@ -453,7 +454,7 @@ def main() -> None:
         best_coinc = _best_case_label(results, "coincidence")
         exp.save_metrics(
             {
-                "function": FUNCTION,
+                "function": CONFIG["data_function"],
                 "n_modes": N_MODES,
                 "cases": {
                     str(case["label"]): results[str(case["label"])]["metrics"]

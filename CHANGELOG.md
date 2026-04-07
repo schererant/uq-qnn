@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-04-07 — Fix frozen encoding-slot handling and dead comparison slots
+
+### Why
+
+After freezing `encoding_phase_idx` for training, the optimization code still treated that phase like a memristor weight during post-step clamping and finite-difference fallback. That could silently force the encoding slot into the weight range `[0.01, 1.0]` even though it is a mesh phase and should remain on the circle.
+
+At the experiment level, `examples/function_comparison.py` used `encoding_phase_idx=5` for both singles and coincidence. For the chosen input/readout pairs, that slot was effectively dead, so the forward pass became input-independent, predictions collapsed to a constant, and calibration reporting emitted `ConstantInputWarning` / `NaN`.
+
+### Changed
+
+- **`src/training.py`** — Post-step parameter handling now clamps only appended memristive weights and wraps all mesh phases modulo `2π`, including the frozen encoding slot.
+- **`src/autograd.py`** — Finite-difference fallback now applies only to true memristive weight parameters, not to the frozen encoding phase.
+- **`examples/function_comparison.py`** — Split the shared encoding slot into per-mode choices: singles now uses a live slot for its `(input_state=(0,), target_mode=(2,))` setup, and coincidence now reuses the validated coincidence slot from `examples/coincidence_regression.py`.
+- **`examples/function_comparison.py`** — Calibration correlation now short-circuits constant-input cases instead of letting `scipy.stats.spearmanr` warn during reporting.
+- **`tests/test_training.py`** — Added a regression test that verifies the frozen encoding slot is not clamped like a weight.
+
+### Behaviour
+
+- `examples/function_comparison.py` no longer collapses to constant predictions for every function/mode pair.
+- Calibration metrics are now informative for the repaired runs; constant-input cases remain explicitly reported as `NaN` without a warning.
+
 ## 2026-04-07 — Allow `n_samples=0` on NumPy backend
 
 ### Why

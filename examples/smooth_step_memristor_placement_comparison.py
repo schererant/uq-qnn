@@ -7,6 +7,7 @@ import sys
 from typing import Dict, Tuple
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,13 +25,12 @@ from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-_BASE_CONFIG: Dict = {
+CONFIG: Dict = {
     "n_modes": 6,
     "input_state": (0,),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
     "target_mode": (5,),
-    "encoding_phase_idx": None,
     "output_mode": "singles",
     "working_detectors": None,
     "n_samples": 300,
@@ -44,14 +44,17 @@ _BASE_CONFIG: Dict = {
     "memory_depth": 2,
     "n_swipe": 0,
     "swipe_span": 0.0,
+    "memristive_phase_idx": None,
+    "memristive_output_modes": None,
+    "n_data": 80,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_function": "step_function_data",
+    "func_label": "Smooth step",
 }
 
-N_DATA = 80
-SIGMA_NOISE = 0.02
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
-FUNCTION_NAME = "step_function_data"
-FUNCTION_LABEL = "Smooth step"
+FUNCTION_LABEL = CONFIG["func_label"]
 
 PLACEMENTS = {
     "standard": None,
@@ -76,7 +79,7 @@ def _placement_label(name: str) -> str:
     phase_idx = PLACEMENTS[name]
     if phase_idx is None:
         return "Standard"
-    modes = get_mzi_modes_for_phase(phase_idx, _BASE_CONFIG["n_modes"])
+    modes = get_mzi_modes_for_phase(phase_idx, CONFIG["n_modes"])
     return f"Phase {phase_idx} · MZI{modes}"
 
 
@@ -86,10 +89,10 @@ PLACEMENT_LABELS = {name: _placement_label(name) for name in PLACEMENTS}
 def _sim_cfg(placement: str) -> SimConfig:
     phase_idx = PLACEMENTS[placement]
     cfg = {
-        **_BASE_CONFIG,
+        **CONFIG,
         "memristive_phase_idx": None if phase_idx is None else (phase_idx,),
         "memristive_output_modes": None,
-        "memory_depth": 1 if phase_idx is None else _BASE_CONFIG["memory_depth"],
+        "memory_depth": 1 if phase_idx is None else int(CONFIG["memory_depth"]),
     }
     return SimConfig.from_experiment_config(cfg)
 
@@ -163,16 +166,18 @@ def train_and_evaluate(
     y_test: np.ndarray,
 ) -> Dict[str, object]:
     sc = _sim_cfg(placement)
-    logger.info("▶ Training placement=%-8s  label=%s", placement, PLACEMENT_LABELS[placement])
+    logger.info(
+        "▶ Training placement=%-8s  label=%s", placement, PLACEMENT_LABELS[placement]
+    )
 
     enc_train = 2 * np.arccos(np.clip(X_train, 0, 1))
     theta, history = train_pytorch_generic(
         enc_train,
         y_train,
         sim_cfg=sc,
-        lr=_BASE_CONFIG["lr"],
-        epochs=_BASE_CONFIG["epochs"],
-        seed=_BASE_CONFIG["seed"],
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
 
     enc_test = 2 * np.arccos(np.clip(X_test, 0, 1))
@@ -180,9 +185,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sc,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=_BASE_CONFIG["seed"],
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -201,7 +206,9 @@ def train_and_evaluate(
     }
 
 
-def plot_predictions_grid(results: Dict[str, Dict[str, object]], data: Tuple[np.ndarray, ...]) -> plt.Figure:
+def plot_predictions_grid(
+    results: Dict[str, Dict[str, object]], data: Tuple[np.ndarray, ...]
+) -> plt.Figure:
     X_train, y_train, X_test, y_test = data
     names = list(PLACEMENTS)
     fig, axes = plt.subplots(2, 3, figsize=(16, 9), sharex=True, sharey=True)
@@ -211,7 +218,13 @@ def plot_predictions_grid(results: Dict[str, Dict[str, object]], data: Tuple[np.
         m = r["metrics"]
         ax.scatter(X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train")
         ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
-        ax.plot(X_test, r["mean_preds"], color=PLACEMENT_COLORS[name], lw=2.0, label="Prediction")
+        ax.plot(
+            X_test,
+            r["mean_preds"],
+            color=PLACEMENT_COLORS[name],
+            lw=2.0,
+            label="Prediction",
+        )
         ax.fill_between(
             X_test,
             r["mean_preds"] - 1.96 * r["std_preds"],
@@ -271,7 +284,9 @@ def plot_metrics(results: Dict[str, Dict[str, object]]) -> plt.Figure:
         vals = [results[name]["metrics"][key] for name in names]
         ax.bar(x, vals, color=[PLACEMENT_COLORS[name] for name in names], alpha=0.85)
         ax.set_xticks(x)
-        ax.set_xticklabels([PLACEMENT_LABELS[name] for name in names], rotation=30, ha="right")
+        ax.set_xticklabels(
+            [PLACEMENT_LABELS[name] for name in names], rotation=30, ha="right"
+        )
         ax.set_title(title)
         ax.grid(True, axis="y", alpha=0.25)
 
@@ -281,20 +296,31 @@ def plot_metrics(results: Dict[str, Dict[str, object]]) -> plt.Figure:
 
 
 def plot_metrics_table(results: Dict[str, Dict[str, object]]) -> plt.Figure:
-    columns = ["Placement", "RMSE", "MAE", "R2", "Cov@95 %", "Mean sigma", "NLL", "Cal. rho"]
+    columns = [
+        "Placement",
+        "RMSE",
+        "MAE",
+        "R2",
+        "Cov@95 %",
+        "Mean sigma",
+        "NLL",
+        "Cal. rho",
+    ]
     rows = []
     for name in PLACEMENTS:
         m = results[name]["metrics"]
-        rows.append([
-            PLACEMENT_LABELS[name],
-            f"{m['rmse']:.4f}",
-            f"{m['mae']:.4f}",
-            f"{m['r2']:.3f}",
-            f"{m['coverage_95']:.3f}",
-            f"{m['mean_std']:.4f}",
-            f"{m['nll']:.3f}",
-            f"{m['calibration_rho']:.3f}",
-        ])
+        rows.append(
+            [
+                PLACEMENT_LABELS[name],
+                f"{m['rmse']:.4f}",
+                f"{m['mae']:.4f}",
+                f"{m['r2']:.3f}",
+                f"{m['coverage_95']:.3f}",
+                f"{m['mean_std']:.4f}",
+                f"{m['nll']:.3f}",
+                f"{m['calibration_rho']:.3f}",
+            ]
+        )
 
     fig, ax = plt.subplots(figsize=(14, 0.55 * len(rows) + 1.5))
     ax.axis("off")
@@ -308,15 +334,21 @@ def plot_metrics_table(results: Dict[str, Dict[str, object]]) -> plt.Figure:
         for c_idx in range(len(columns)):
             tbl[(r_idx + 1, c_idx)].set_facecolor(color)
 
-    ax.set_title("Smooth-step fitting summary by memristor placement", fontsize=11, pad=16)
+    ax.set_title(
+        "Smooth-step fitting summary by memristor placement", fontsize=11, pad=16
+    )
     fig.tight_layout()
     return fig
 
 
 def main() -> None:
-    with Experiment("Smooth Step Memristor Placement Comparison", config={**_BASE_CONFIG, "memristive_phase_idx": None, "memristive_output_modes": None}) as exp:
-        np.random.seed(_BASE_CONFIG["seed"])
-        data = get_data(N_DATA, SIGMA_NOISE, FUNCTION_NAME)
+    with Experiment("Smooth Step Memristor Placement Comparison", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))
+        data = get_data(
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
+        )
         X_train, y_train, X_test, y_test = data
 
         results: Dict[str, Dict[str, object]] = {}
@@ -326,11 +358,13 @@ def main() -> None:
             results[placement] = result
             metrics_out[placement] = result["metrics"]
 
-        exp.save_metrics({
-            "function": FUNCTION_NAME,
-            "placement_labels": PLACEMENT_LABELS,
-            "by_placement": metrics_out,
-        })
+        exp.save_metrics(
+            {
+                "function": CONFIG["data_function"],
+                "placement_labels": PLACEMENT_LABELS,
+                "by_placement": metrics_out,
+            }
+        )
 
         figs = [
             ("predictions_grid.png", plot_predictions_grid(results, data)),
@@ -344,7 +378,9 @@ def main() -> None:
             logger.info("saved %s", fname)
 
         best_name = min(PLACEMENTS, key=lambda name: results[name]["metrics"]["rmse"])
-        logger.info("Best placement by RMSE: %s (%s)", best_name, PLACEMENT_LABELS[best_name])
+        logger.info(
+            "Best placement by RMSE: %s (%s)", best_name, PLACEMENT_LABELS[best_name]
+        )
         logger.info("Experiment complete. Report: %s", exp.run_dir)
 
 
