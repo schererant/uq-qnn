@@ -51,9 +51,9 @@ logger = get_logger(__name__)
 # ════════════════════════════════════════════════════════════════════════════
 
 N_MODES = 12
-OUTPUT_MODES: List[int] = list(range(N_MODES))  # 0, 1, 2, 3, 4, 5
+OUTPUT_MODES: List[int] = list(range(N_MODES))
 
-_COMMON: Dict = {
+CONFIG: Dict = {
     "n_modes": N_MODES,
     "input_state": (0,),
     "encoding_phase_idx": 10,
@@ -73,18 +73,19 @@ _COMMON: Dict = {
     "seed": 42,
     "lr": 0.05,
     "epochs": 150,
+    "n_data": 80,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_function": "sinusoid_data",
+    "func_label": r"$\sin(0.7\pi x)$",
+    "output_modes": OUTPUT_MODES,
+    "target_mode": (OUTPUT_MODES[0],),
 }
 
-# The single function under investigation
-FUNCTION = "sinusoid_data"
-FUNC_LABEL = r"$\sin(0.7\pi x)$"
+FUNC_LABEL = CONFIG["func_label"]
 
-N_DATA = 80
-SIGMA_NOISE = 0.02
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
-
-# Distinct colour for each of the 6 output modes
+# Distinct colour for each output mode
 _CMAP = cm.get_cmap("tab10", N_MODES)
 MODE_COLORS: Dict[int, str] = {m: _CMAP(m) for m in OUTPUT_MODES}
 
@@ -99,7 +100,7 @@ def _mode_label(m: int) -> str:
 
 
 def _sim_cfg(target_mode: int) -> SimConfig:
-    cfg = {**_COMMON, "target_mode": (target_mode,)}
+    cfg = {**CONFIG, "target_mode": (target_mode,)}
     return SimConfig.from_experiment_config(cfg)
 
 
@@ -178,9 +179,9 @@ def train_and_evaluate(
         enc_train,
         y_train,
         sim_cfg=sc,
-        lr=_COMMON["lr"],
-        epochs=_COMMON["epochs"],
-        seed=_COMMON["seed"],
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
     logger.info("  final loss: %.6f", history[-1])
 
@@ -189,9 +190,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sc,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=_COMMON["seed"],
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -504,17 +505,24 @@ def plot_metrics_table(results: Dict, modes: List[int]) -> plt.Figure:
 
 
 def main() -> None:
-    base_cfg = {**_COMMON, "target_mode": (OUTPUT_MODES[0],)}
-
     with Experiment(
         "Output Mode Comparison",
-        config=base_cfg,
+        config=CONFIG,
     ) as exp:
-        np.random.seed(_COMMON["seed"])
+        np.random.seed(int(CONFIG["seed"]))
 
         # ── Load data ─────────────────────────────────────────────────────
-        X_train, y_train, X_test, y_test = get_data(N_DATA, SIGMA_NOISE, FUNCTION)
-        logger.info("Data: %s  train=%d  test=%d", FUNCTION, len(X_train), len(X_test))
+        X_train, y_train, X_test, y_test = get_data(
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
+        )
+        logger.info(
+            "Data: %s  train=%d  test=%d",
+            CONFIG["data_function"],
+            len(X_train),
+            len(X_test),
+        )
 
         # ── Train all 6 output modes ───────────────────────────────────────
         results: Dict[int, Dict] = {}

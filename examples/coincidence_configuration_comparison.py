@@ -4,7 +4,7 @@
 
 import os
 import sys
-from typing import Dict, Tuple
+from typing import Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,7 +42,7 @@ INPUT_STATE = CASES["validated_cc01"]["input_state"]
 TARGET_CC_PAIR = CASES["validated_cc01"]["target_mode"]
 ENCODING_PHASE_IDX = CASES["validated_cc01"]["encoding_phase_idx"]
 
-COMMON_CFG = {
+CONFIG: Dict = {
     "n_modes": 6,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
@@ -59,19 +59,26 @@ COMMON_CFG = {
     "noise_std": None,
     "seed": 42,
     "sim_backend": "numpy",
-}
-
-DATA_CFG = {
     "n_data": 100,
     "sigma_noise": 0.005,
-    "function": "quartic_data",
+    "data_function": "quartic_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
+    "input_state": INPUT_STATE,
+    "encoding_phase_idx": ENCODING_PHASE_IDX,
+    "photon_distinguishability": "indistinguishable",
+    "target_mode": TARGET_CC_PAIR,
+    "cases": CASES,
 }
 
 
 def _sim_cfg(case: Dict[str, object]) -> SimConfig:
-    return SimConfig.from_experiment_config({**COMMON_CFG, **case})
+    base = {k: v for k, v in CONFIG.items() if k != "cases"}
+    merged = dict(base)
+    for k, v in case.items():
+        if k != "notes":
+            merged[k] = v
+    return SimConfig.from_experiment_config(merged)
 
 
 def _run_uncertainty(
@@ -144,7 +151,9 @@ def _plot_predictions(
     for ax, (name, result) in zip(axes, results.items()):
         ax.scatter(X_train, y_train, s=18, alpha=0.55, color="dimgray", label="Train")
         ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
-        ax.plot(X_test, result["mean_preds"], color="tab:red", lw=2.0, label="Prediction")
+        ax.plot(
+            X_test, result["mean_preds"], color="tab:red", lw=2.0, label="Prediction"
+        )
         ax.fill_between(
             X_test,
             result["mean_preds"] - 1.96 * result["std_preds"],
@@ -183,19 +192,12 @@ def _plot_metric_bars(results: Dict[str, Dict[str, object]]) -> plt.Figure:
 
 
 def main() -> None:
-    experiment_config = {
-        **COMMON_CFG,
-        **DATA_CFG,
-        "input_state": INPUT_STATE,
-        "encoding_phase_idx": ENCODING_PHASE_IDX,
-        "photon_distinguishability": "indistinguishable",
-        "target_mode": TARGET_CC_PAIR,
-        "cases": CASES,
-    }
-    with Experiment("Coincidence Configuration Comparison", config=experiment_config) as exp:
-        np.random.seed(int(COMMON_CFG["seed"]))
+    with Experiment("Coincidence Configuration Comparison", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))
         X_train, y_train, X_test, y_test = get_data(
-            DATA_CFG["n_data"], DATA_CFG["sigma_noise"], DATA_CFG["function"]
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
         )
         enc_train = 2 * np.arccos(np.clip(X_train, 0.0, 1.0))
         enc_test = 2 * np.arccos(np.clip(X_test, 0.0, 1.0))
@@ -208,17 +210,17 @@ def main() -> None:
                 enc_train,
                 y_train,
                 sim_cfg=sim_cfg,
-                lr=float(COMMON_CFG["lr"]),
-                epochs=int(COMMON_CFG["epochs"]),
-                seed=int(COMMON_CFG["seed"]),
+                lr=float(CONFIG["lr"]),
+                epochs=int(CONFIG["epochs"]),
+                seed=int(CONFIG["seed"]),
             )
             unc = _run_uncertainty(
                 theta,
                 enc_test,
                 sim_cfg,
-                n_passes=int(DATA_CFG["unc_n_passes"]),
-                noise_std=float(DATA_CFG["unc_noise_std"]),
-                seed=int(COMMON_CFG["seed"]),
+                n_passes=int(CONFIG["unc_n_passes"]),
+                noise_std=float(CONFIG["unc_noise_std"]),
+                seed=int(CONFIG["seed"]),
             )
             metrics = _compute_metrics(y_test, unc["mean"], unc["std"])
             results[name] = {

@@ -7,6 +7,7 @@ import sys
 from typing import Dict, Tuple
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,13 +25,12 @@ from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-_BASE_CONFIG: Dict = {
+CONFIG: Dict = {
     "n_modes": 6,
     "input_state": (0,),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
     "target_mode": (5,),
-    "encoding_phase_idx": None,
     "output_mode": "singles",
     "working_detectors": None,
     "n_samples": 300,
@@ -44,14 +44,17 @@ _BASE_CONFIG: Dict = {
     "memory_depth": 2,
     "n_swipe": 0,
     "swipe_span": 0.0,
+    "memristive_phase_idx": None,
+    "memristive_output_modes": None,
+    "n_data": 80,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_function": "step_function_data",
+    "func_label": "Smooth step",
 }
 
-N_DATA = 80
-SIGMA_NOISE = 0.02
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
-FUNCTION_NAME = "step_function_data"
-FUNCTION_LABEL = "Smooth step"
+FUNCTION_LABEL = CONFIG["func_label"]
 
 CONFIGS = {
     "standard": None,
@@ -69,7 +72,7 @@ COLORS = {
 
 
 def _phase_label(phase_idx: int) -> str:
-    return f"phase {phase_idx} @ MZI{get_mzi_modes_for_phase(phase_idx, _BASE_CONFIG['n_modes'])}"
+    return f"phase {phase_idx} @ MZI{get_mzi_modes_for_phase(phase_idx, CONFIG['n_modes'])}"
 
 
 def _config_label(name: str) -> str:
@@ -88,10 +91,10 @@ LABELS = {name: _config_label(name) for name in CONFIGS}
 def _sim_cfg(name: str) -> SimConfig:
     memristive = CONFIGS[name]
     cfg = {
-        **_BASE_CONFIG,
+        **CONFIG,
         "memristive_phase_idx": memristive,
         "memristive_output_modes": None,
-        "memory_depth": 1 if memristive is None else _BASE_CONFIG["memory_depth"],
+        "memory_depth": 1 if memristive is None else int(CONFIG["memory_depth"]),
     }
     return SimConfig.from_experiment_config(cfg)
 
@@ -168,9 +171,9 @@ def train_and_evaluate(
         enc_train,
         y_train,
         sim_cfg=sim_cfg,
-        lr=_BASE_CONFIG["lr"],
-        epochs=_BASE_CONFIG["epochs"],
-        seed=_BASE_CONFIG["seed"],
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
 
     enc_test = 2 * np.arccos(np.clip(X_test, 0, 1))
@@ -178,9 +181,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sim_cfg,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=_BASE_CONFIG["seed"],
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -199,7 +202,9 @@ def train_and_evaluate(
     }
 
 
-def plot_predictions(results: Dict[str, Dict[str, object]], data: Tuple[np.ndarray, ...]) -> plt.Figure:
+def plot_predictions(
+    results: Dict[str, Dict[str, object]], data: Tuple[np.ndarray, ...]
+) -> plt.Figure:
     X_train, y_train, X_test, y_test = data
     names = list(CONFIGS)
     fig, axes = plt.subplots(2, 2, figsize=(14, 9), sharex=True, sharey=True)
@@ -218,7 +223,9 @@ def plot_predictions(results: Dict[str, Dict[str, object]], data: Tuple[np.ndarr
             alpha=0.22,
             label="95 % CI",
         )
-        ax.set_title(f"{LABELS[name]}\nRMSE={m['rmse']:.4f}   R2={m['r2']:.3f}", fontsize=10)
+        ax.set_title(
+            f"{LABELS[name]}\nRMSE={m['rmse']:.4f}   R2={m['r2']:.3f}", fontsize=10
+        )
         ax.grid(True, alpha=0.25)
 
     axes[0, 0].legend(fontsize=8)
@@ -226,7 +233,9 @@ def plot_predictions(results: Dict[str, Dict[str, object]], data: Tuple[np.ndarr
         ax.set_xlabel("x")
     for ax in axes[:, 0]:
         ax.set_ylabel("y")
-    fig.suptitle(f"{FUNCTION_LABEL} fitting: single vs multiple memristors", fontsize=14)
+    fig.suptitle(
+        f"{FUNCTION_LABEL} fitting: single vs multiple memristors", fontsize=14
+    )
     fig.tight_layout()
     return fig
 
@@ -234,7 +243,9 @@ def plot_predictions(results: Dict[str, Dict[str, object]], data: Tuple[np.ndarr
 def plot_training_loss(results: Dict[str, Dict[str, object]]) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(10, 5))
     for name in CONFIGS:
-        ax.plot(results[name]["history"], color=COLORS[name], lw=1.7, label=LABELS[name])
+        ax.plot(
+            results[name]["history"], color=COLORS[name], lw=1.7, label=LABELS[name]
+        )
     ax.set_yscale("log")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("MSE Loss")
@@ -264,26 +275,39 @@ def plot_metrics(results: Dict[str, Dict[str, object]]) -> plt.Figure:
         ax.set_title(title)
         ax.grid(True, axis="y", alpha=0.25)
 
-    fig.suptitle(f"{FUNCTION_LABEL} metrics: single vs multiple memristors", fontsize=13)
+    fig.suptitle(
+        f"{FUNCTION_LABEL} metrics: single vs multiple memristors", fontsize=13
+    )
     fig.tight_layout()
     return fig
 
 
 def plot_metrics_table(results: Dict[str, Dict[str, object]]) -> plt.Figure:
-    columns = ["Config", "RMSE", "MAE", "R2", "Cov@95 %", "Mean sigma", "NLL", "Cal. rho"]
+    columns = [
+        "Config",
+        "RMSE",
+        "MAE",
+        "R2",
+        "Cov@95 %",
+        "Mean sigma",
+        "NLL",
+        "Cal. rho",
+    ]
     rows = []
     for name in CONFIGS:
         m = results[name]["metrics"]
-        rows.append([
-            LABELS[name],
-            f"{m['rmse']:.4f}",
-            f"{m['mae']:.4f}",
-            f"{m['r2']:.3f}",
-            f"{m['coverage_95']:.3f}",
-            f"{m['mean_std']:.4f}",
-            f"{m['nll']:.3f}",
-            f"{m['calibration_rho']:.3f}",
-        ])
+        rows.append(
+            [
+                LABELS[name],
+                f"{m['rmse']:.4f}",
+                f"{m['mae']:.4f}",
+                f"{m['r2']:.3f}",
+                f"{m['coverage_95']:.3f}",
+                f"{m['mean_std']:.4f}",
+                f"{m['nll']:.3f}",
+                f"{m['calibration_rho']:.3f}",
+            ]
+        )
 
     fig, ax = plt.subplots(figsize=(14, 0.58 * len(rows) + 1.4))
     ax.axis("off")
@@ -297,16 +321,21 @@ def plot_metrics_table(results: Dict[str, Dict[str, object]]) -> plt.Figure:
         for c_idx in range(len(columns)):
             tbl[(r_idx + 1, c_idx)].set_facecolor(color)
 
-    ax.set_title("Smooth-step summary: multiple memristor configurations", fontsize=11, pad=16)
+    ax.set_title(
+        "Smooth-step summary: multiple memristor configurations", fontsize=11, pad=16
+    )
     fig.tight_layout()
     return fig
 
 
 def main() -> None:
-    exp_cfg = {**_BASE_CONFIG, "memristive_phase_idx": None, "memristive_output_modes": None}
-    with Experiment("Smooth Step Multi Memristor Comparison", config=exp_cfg) as exp:
-        np.random.seed(_BASE_CONFIG["seed"])
-        data = get_data(N_DATA, SIGMA_NOISE, FUNCTION_NAME)
+    with Experiment("Smooth Step Multi Memristor Comparison", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))
+        data = get_data(
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
+        )
         X_train, y_train, X_test, y_test = data
 
         results: Dict[str, Dict[str, object]] = {}
@@ -316,11 +345,13 @@ def main() -> None:
             results[name] = result
             metrics_out[name] = result["metrics"]
 
-        exp.save_metrics({
-            "function": FUNCTION_NAME,
-            "labels": LABELS,
-            "by_config": metrics_out,
-        })
+        exp.save_metrics(
+            {
+                "function": CONFIG["data_function"],
+                "labels": LABELS,
+                "by_config": metrics_out,
+            }
+        )
 
         figs = [
             ("predictions_grid.png", plot_predictions(results, data)),

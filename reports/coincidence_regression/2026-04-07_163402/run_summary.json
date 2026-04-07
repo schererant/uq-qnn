@@ -1,0 +1,85 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Coincidence Regression",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/coincidence_regression/2026-04-07_163402",
+  "timestamp_utc": "2026-04-07T14:34:58.375706+00:00",
+  "python": "3.13.5",
+  "git_commit": "408c1fa",
+  "config": {
+    "n_modes": 6,
+    "input_state": [
+      0,
+      3
+    ],
+    "encoding_phase_idx": 7,
+    "photon_distinguishability": "indistinguishable",
+    "target_mode": [
+      0,
+      1
+    ],
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "output_mode": "coincidence",
+    "working_detectors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "loss_type": "mse",
+    "n_classes": 1,
+    "lr": 0.05,
+    "epochs": 50,
+    "n_samples": 0,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "noise_std": null,
+    "seed": 42,
+    "sim_backend": "numpy",
+    "n_data": 1000,
+    "sigma_noise": 0.005,
+    "data_function": "sinusoid_data",
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05
+  },
+  "hardware": null,
+  "metrics": {
+    "target_cc_pair": [
+      0,
+      1
+    ],
+    "input_state": [
+      0,
+      3
+    ],
+    "encoding_phase_idx": 7,
+    "final_loss": 0.0008230858599609611,
+    "mse": 0.001506187721554251,
+    "rmse": 0.038809634390886125,
+    "mae": 0.03403991226399915,
+    "r2": 0.8908432686916662,
+    "coverage_95": 0.694,
+    "mean_std": 0.02227855094758169,
+    "nll": -0.6963721333683067,
+    "calibration_rho": -0.07785928743714975,
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/coincidence_regression/2026-04-07_163402/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_regression/2026-04-07_163402/coincidence_regression_with_uncertainty.png"
+  ],
+  "simulation": {
+    "call_count": 5960,
+    "total_time": 54.07453506675665,
+    "samples_counter": {
+      "0": 5960
+    },
+    "circuit_call_count": 5657500,
+    "circuit_total_time": 53.99950375233311,
+    "avg_time_per_sequence": 0.00907290856824776,
+    "avg_time_per_circuit": 9.544764251406648e-06
+  }
+}

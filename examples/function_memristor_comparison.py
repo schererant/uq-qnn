@@ -44,17 +44,16 @@ logger = get_logger(__name__)
 # CONFIGURATION
 # ===========================================================================
 
-_COMMON: Dict = {
-    # Circuit
+CONFIG: Dict = {
     "n_modes": 12,
     "input_state": (0,),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
-    "target_mode": (3, 4, 0),
-    "encoding_phase_idx": None,
+    "target_mode": (4,),
+    "memristive_phase_idx": None,
+    "memristive_output_modes": None,
     "output_mode": "singles",
     "working_detectors": None,
-    # Training
     "n_samples": 300,
     "noise_std": None,
     "loss_type": "mse",
@@ -63,53 +62,41 @@ _COMMON: Dict = {
     "seed": 42,
     "lr": 0.04,
     "epochs": 180,
-    # Sweep / memory defaults
     "memory_depth": 1,
     "n_swipe": 0,
     "swipe_span": 0.0,
+    "n_data": 80,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_functions": [
+        "quartic_data",
+        "sinusoid_data",
+        "multi_modal_data",
+        "step_function_data",
+    ],
+    "func_labels": {
+        "quartic_data": r"$x^4$",
+        "sinusoid_data": r"$\sin(0.7\pi x)$",
+        "multi_modal_data": "Multi-modal Gaussians",
+        "step_function_data": "Smooth step",
+    },
+    "architectures": ["standard", "memristor"],
+    "arch_labels": {"standard": "Standard", "memristor": "Memristor"},
+    "arch_colors": {"standard": "#1f77b4", "memristor": "#d62728"},
 }
 
-STANDARD_CONFIG: Dict = {
-    **_COMMON,
-    "memristive_phase_idx": None,
-    "memristive_output_modes": None,
-}
-
-MEMRISTOR_CONFIG: Dict = {
-    **_COMMON,
+_MEMRISTOR_OVERRIDES: Dict = {
     "memristive_phase_idx": (6,),
     "memristive_output_modes": None,
     "memory_depth": 2,
 }
 
-N_DATA = 80
-SIGMA_NOISE = 0.02
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
-
-FUNCTIONS = [
-    "quartic_data",
-    "sinusoid_data",
-    "multi_modal_data",
-    "step_function_data",
-]
-
-FUNC_LABELS = {
-    "quartic_data": r"$x^4$",
-    "sinusoid_data": r"$\sin(0.7\pi x)$",
-    "multi_modal_data": "Multi-modal Gaussians",
-    "step_function_data": "Smooth step",
-}
-
-ARCHITECTURES = ["standard", "memristor"]
-ARCH_LABELS = {
-    "standard": "Standard",
-    "memristor": "Memristor",
-}
-ARCH_COLORS = {
-    "standard": "#1f77b4",
-    "memristor": "#d62728",
-}
+FUNCTIONS = CONFIG["data_functions"]
+FUNC_LABELS = CONFIG["func_labels"]
+ARCHITECTURES = CONFIG["architectures"]
+ARCH_LABELS = CONFIG["arch_labels"]
+ARCH_COLORS = CONFIG["arch_colors"]
 
 
 # ===========================================================================
@@ -118,8 +105,10 @@ ARCH_COLORS = {
 
 
 def _sim_cfg(architecture: str) -> SimConfig:
-    cfg = STANDARD_CONFIG if architecture == "standard" else MEMRISTOR_CONFIG
-    return SimConfig.from_experiment_config(cfg)
+    d = dict(CONFIG)
+    if architecture == "memristor":
+        d.update(_MEMRISTOR_OVERRIDES)
+    return SimConfig.from_experiment_config(d)
 
 
 def _run_uncertainty(
@@ -204,9 +193,9 @@ def train_and_evaluate(
         enc_train,
         y_train,
         sim_cfg=sc,
-        lr=_COMMON["lr"],
-        epochs=_COMMON["epochs"],
-        seed=_COMMON["seed"],
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
     logger.info("  final loss: %.6f", history[-1])
 
@@ -215,9 +204,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sc,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=_COMMON["seed"],
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -555,13 +544,17 @@ def plot_metrics_table(
 def main() -> None:
     with Experiment(
         "Function and Memristor Comparison",
-        config=STANDARD_CONFIG,
+        config=CONFIG,
     ) as exp:
-        np.random.seed(_COMMON["seed"])
+        np.random.seed(int(CONFIG["seed"]))
 
         data: Dict[str, Tuple] = {}
         for func_name in FUNCTIONS:
-            data[func_name] = get_data(N_DATA, SIGMA_NOISE, func_name)
+            data[func_name] = get_data(
+                int(CONFIG["n_data"]),
+                float(CONFIG["sigma_noise"]),
+                func_name,
+            )
             logger.info(
                 "Data loaded: %-22s  train=%d  test=%d",
                 func_name,

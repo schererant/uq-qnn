@@ -123,11 +123,11 @@ def train_pytorch_generic(
         loss.backward()
         optim.step()
         with torch.no_grad():
-            # Clamp weight params to [0.01, 1]; phases to [0, 2π)
-            weight_idxs = set(range(len(model.theta))) - set(phase_idx)
+            # Only appended memristor weights are clamped; all mesh phases stay on the circle.
+            weight_idxs = range(expected_phases, len(model.theta))
             for idx in weight_idxs:
                 model.theta.data[idx].clamp_(0.01, 1.0)
-            for idx in phase_idx:
+            for idx in range(expected_phases):
                 model.theta.data[idx].remainder_(2 * np.pi)
 
         hist.append(loss.item())

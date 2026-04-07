@@ -71,7 +71,7 @@ INPUT_PAIRS: List[Tuple[int, int]] = get_cc_mode_pairs(N_MODES)
 WORKING_DETECTORS = tuple(range(N_MODES))
 READOUT_CC_PAIR = (0, 1)
 
-_COMMON: Dict = {
+CONFIG: Dict = {
     "n_modes": N_MODES,
     "target_mode": READOUT_CC_PAIR,
     "memristive_phase_idx": None,
@@ -91,15 +91,16 @@ _COMMON: Dict = {
     "seed": 42,
     "lr": 0.05,
     "epochs": 150,
+    "n_data": 80,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_function": "sinusoid_data",
+    "func_label": r"$\sin(0.7\pi x)$",
+    "input_state": INPUT_PAIRS[0],
 }
 
-FUNCTION = "sinusoid_data"
-FUNC_LABEL = r"$\sin(0.7\pi x)$"
-
-N_DATA = 80
-SIGMA_NOISE = 0.02
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
+FUNC_LABEL = CONFIG["func_label"]
 
 _CMAP = matplotlib.colormaps["tab20"].resampled(len(INPUT_PAIRS))
 PAIR_COLORS: Dict[Tuple[int, int], object] = {
@@ -121,7 +122,7 @@ def _readout_label() -> str:
 
 
 def _sim_cfg(input_pair: Tuple[int, int]) -> SimConfig:
-    cfg = {**_COMMON, "input_state": input_pair}
+    cfg = {**CONFIG, "input_state": input_pair}
     sim_cfg = SimConfig.from_experiment_config(cfg)
 
     assert sim_cfg.working_detectors is not None
@@ -217,9 +218,9 @@ def train_and_evaluate(
         enc_train,
         y_train,
         sim_cfg=sc,
-        lr=_COMMON["lr"],
-        epochs=_COMMON["epochs"],
-        seed=_COMMON["seed"],
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
     logger.info("  final loss: %.6f", history[-1])
     enc_test = 2 * np.arccos(np.clip(X_test, 0, 1))
@@ -227,9 +228,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sc,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=_COMMON["seed"],
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -274,9 +275,7 @@ def plot_predictions_grid(
         met = r["metrics"]
         color = PAIR_COLORS[pair]
 
-        ax.scatter(
-            X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train"
-        )
+        ax.scatter(X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train")
         ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
         ax.plot(X_test, r["mean_preds"], color=color, lw=2.0, label="Prediction")
         ax.fill_between(
@@ -298,7 +297,7 @@ def plot_predictions_grid(
         if idx == 0:
             ax.legend(fontsize=8)
 
-    for ax in axes_flat[len(pairs):]:
+    for ax in axes_flat[len(pairs) :]:
         ax.set_visible(False)
 
     fig.suptitle(
@@ -311,9 +310,7 @@ def plot_predictions_grid(
     return fig
 
 
-def plot_training_loss(
-    results: Dict, pairs: List[Tuple[int, int]]
-) -> plt.Figure:
+def plot_training_loss(results: Dict, pairs: List[Tuple[int, int]]) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(11, 5))
     for pair in pairs:
         j, k = pair
@@ -379,8 +376,7 @@ def plot_calibration(
 
     rho, _ = stats.spearmanr(all_stds, all_errs)
     ax.set_title(
-        f"Uncertainty Calibration — {FUNC_LABEL}\n"
-        f"Spearman ρ (all pairs) = {rho:.3f}",
+        f"Uncertainty Calibration — {FUNC_LABEL}\nSpearman ρ (all pairs) = {rho:.3f}",
         fontsize=10,
     )
     ax.set_xlabel("Predictive uncertainty σ")
@@ -393,9 +389,7 @@ def plot_calibration(
     return fig
 
 
-def plot_metrics_comparison(
-    results: Dict, pairs: List[Tuple[int, int]]
-) -> plt.Figure:
+def plot_metrics_comparison(results: Dict, pairs: List[Tuple[int, int]]) -> plt.Figure:
     metrics_spec = [
         ("rmse", "RMSE  (↓ better)"),
         ("r2", "R²  (↑ better)"),
@@ -406,9 +400,7 @@ def plot_metrics_comparison(
     colors = [PAIR_COLORS[p] for p in pairs]
     x = np.arange(len(pairs))
 
-    fig, axes = plt.subplots(
-        1, len(metrics_spec), figsize=(5 * len(metrics_spec), 5)
-    )
+    fig, axes = plt.subplots(1, len(metrics_spec), figsize=(5 * len(metrics_spec), 5))
     for ax, (key, title) in zip(axes, metrics_spec):
         vals = [results[p]["metrics"][key] for p in pairs]
         bars = ax.bar(
@@ -454,9 +446,7 @@ def plot_r2_bar(results: Dict, pairs: List[Tuple[int, int]]) -> plt.Figure:
         edgecolor="white",
     )
     ax.set_yticks(range(len(sorted_pairs)))
-    ax.set_yticklabels(
-        [_pair_label(j, k) for j, k in sorted_pairs], fontsize=10
-    )
+    ax.set_yticklabels([_pair_label(j, k) for j, k in sorted_pairs], fontsize=10)
     ax.axvline(0, color="black", lw=0.8, alpha=0.6)
     ax.set_xlabel("R²")
     ax.set_title(
@@ -501,17 +491,13 @@ def plot_uncertainty_distribution(
         fontsize=9,
     )
     ax.set_ylabel("Prediction σ")
-    ax.set_title(
-        f"Uncertainty Distribution by Input Pair — {FUNC_LABEL}", fontsize=10
-    )
+    ax.set_title(f"Uncertainty Distribution by Input Pair — {FUNC_LABEL}", fontsize=10)
     ax.grid(True, axis="y", alpha=0.25)
     fig.tight_layout()
     return fig
 
 
-def plot_metrics_table(
-    results: Dict, pairs: List[Tuple[int, int]]
-) -> plt.Figure:
+def plot_metrics_table(results: Dict, pairs: List[Tuple[int, int]]) -> plt.Figure:
     columns = [
         "Input pair",
         "RMSE ↓",
@@ -526,22 +512,22 @@ def plot_metrics_table(
     for pair in pairs:
         j, k = pair
         met = results[pair]["metrics"]
-        rows.append([
-            _pair_label(j, k),
-            f"{met['rmse']:.4f}",
-            f"{met['mae']:.4f}",
-            f"{met['r2']:.3f}",
-            f"{met['coverage_95']:.3f}",
-            f"{met['mean_std']:.4f}",
-            f"{met['nll']:.3f}",
-            f"{met['calibration_rho']:.3f}",
-        ])
+        rows.append(
+            [
+                _pair_label(j, k),
+                f"{met['rmse']:.4f}",
+                f"{met['mae']:.4f}",
+                f"{met['r2']:.3f}",
+                f"{met['coverage_95']:.3f}",
+                f"{met['mean_std']:.4f}",
+                f"{met['nll']:.3f}",
+                f"{met['calibration_rho']:.3f}",
+            ]
+        )
 
     fig, ax = plt.subplots(figsize=(14, 0.55 * len(rows) + 1.8))
     ax.axis("off")
-    tbl = ax.table(
-        cellText=rows, colLabels=columns, cellLoc="center", loc="center"
-    )
+    tbl = ax.table(cellText=rows, colLabels=columns, cellLoc="center", loc="center")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
     tbl.scale(1.0, 1.7)
@@ -565,14 +551,19 @@ def plot_metrics_table(
 
 
 def main() -> None:
-    base_cfg = {**_COMMON, "input_state": INPUT_PAIRS[0]}
+    with Experiment("Coincidence Input Pair Comparison", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))
 
-    with Experiment("Coincidence Input Pair Comparison", config=base_cfg) as exp:
-        np.random.seed(_COMMON["seed"])
-
-        X_train, y_train, X_test, y_test = get_data(N_DATA, SIGMA_NOISE, FUNCTION)
+        X_train, y_train, X_test, y_test = get_data(
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
+        )
         logger.info(
-            "Data: %s  train=%d  test=%d", FUNCTION, len(X_train), len(X_test)
+            "Data: %s  train=%d  test=%d",
+            CONFIG["data_function"],
+            len(X_train),
+            len(X_test),
         )
         logger.info(
             "Sweeping %d input_modes pairs, all %d detectors working, readout=%s",

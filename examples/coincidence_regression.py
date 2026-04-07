@@ -38,7 +38,7 @@ CONFIG = {
     "loss_type": "mse",
     "n_classes": 1,
     "lr": 0.05,
-    "epochs": 150,
+    "epochs": 300,
     "n_samples": 0, 
     "memory_depth": 2,
     "n_swipe": 0,
@@ -48,7 +48,7 @@ CONFIG = {
     "sim_backend": "numpy",
     "n_data": 1000,
     "sigma_noise": 0.005,
-    "data_function": "sinusoid_data",
+    "data_function": "step_function_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
 }

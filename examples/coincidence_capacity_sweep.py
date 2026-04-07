@@ -26,7 +26,7 @@ INPUT_STATE = (0, 3)
 TARGET_CC_PAIR = (0, 1)
 ENCODING_PHASE_IDX = 7
 
-COMMON_CFG = {
+CONFIG: Dict = {
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
     "encoding_phase_idx": ENCODING_PHASE_IDX,
@@ -44,25 +44,23 @@ COMMON_CFG = {
     "noise_std": None,
     "seed": 42,
     "sim_backend": "numpy",
-}
-
-DATA_CFG = {
     "n_data": 100,
     "sigma_noise": 0.005,
-    "function": "quartic_data",
+    "data_function": "quartic_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
+    "n_modes": N_MODES_LIST[0],
+    "target_mode": TARGET_CC_PAIR,
+    "working_detectors": tuple(range(N_MODES_LIST[0])),
+    "n_modes_list": list(N_MODES_LIST),
 }
 
 
 def _sim_cfg(n_modes: int) -> SimConfig:
-    cfg = {
-        **COMMON_CFG,
-        "n_modes": n_modes,
-        "target_mode": TARGET_CC_PAIR,
-        "working_detectors": tuple(range(n_modes)),
-    }
-    return SimConfig.from_experiment_config(cfg)
+    base = {k: v for k, v in CONFIG.items() if k != "n_modes_list"}
+    base["n_modes"] = n_modes
+    base["working_detectors"] = tuple(range(n_modes))
+    return SimConfig.from_experiment_config(base)
 
 
 def _run_uncertainty(
@@ -122,14 +120,18 @@ def _plot_predictions(
     X_test: np.ndarray,
     y_test: np.ndarray,
 ) -> plt.Figure:
-    fig, axes = plt.subplots(1, len(N_MODES_LIST), figsize=(5 * len(N_MODES_LIST), 4.5), sharey=True)
+    fig, axes = plt.subplots(
+        1, len(N_MODES_LIST), figsize=(5 * len(N_MODES_LIST), 4.5), sharey=True
+    )
     axes_arr = np.atleast_1d(axes)
     for ax, n_modes in zip(axes_arr, N_MODES_LIST):
         result = results[n_modes]
         metrics = result["metrics"]
         ax.scatter(X_train, y_train, s=18, alpha=0.55, color="dimgray", label="Train")
         ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
-        ax.plot(X_test, result["mean_preds"], color="tab:blue", lw=2.0, label="Prediction")
+        ax.plot(
+            X_test, result["mean_preds"], color="tab:blue", lw=2.0, label="Prediction"
+        )
         ax.fill_between(
             X_test,
             result["mean_preds"] - 1.96 * result["std_preds"],
@@ -138,7 +140,9 @@ def _plot_predictions(
             alpha=0.2,
             label="95% CI",
         )
-        ax.set_title(f"n_modes={n_modes}\nRMSE={metrics['rmse']:.4f}, R2={metrics['r2']:.4f}")
+        ax.set_title(
+            f"n_modes={n_modes}\nRMSE={metrics['rmse']:.4f}, R2={metrics['r2']:.4f}"
+        )
         ax.set(xlabel="x", ylabel="y")
         ax.grid(True)
     axes_arr[0].legend(loc="best")
@@ -170,18 +174,12 @@ def _plot_capacity_metrics(results: Dict[int, Dict[str, object]]) -> plt.Figure:
 
 
 def main() -> None:
-    experiment_config = {
-        **COMMON_CFG,
-        **DATA_CFG,
-        "n_modes": N_MODES_LIST[0],
-        "target_mode": TARGET_CC_PAIR,
-        "working_detectors": tuple(range(N_MODES_LIST[0])),
-        "n_modes_list": N_MODES_LIST,
-    }
-    with Experiment("Coincidence Capacity Sweep", config=experiment_config) as exp:
-        np.random.seed(int(COMMON_CFG["seed"]))
+    with Experiment("Coincidence Capacity Sweep", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))
         X_train, y_train, X_test, y_test = get_data(
-            DATA_CFG["n_data"], DATA_CFG["sigma_noise"], DATA_CFG["function"]
+            int(CONFIG["n_data"]),
+            float(CONFIG["sigma_noise"]),
+            str(CONFIG["data_function"]),
         )
         enc_train = 2 * np.arccos(np.clip(X_train, 0.0, 1.0))
         enc_test = 2 * np.arccos(np.clip(X_test, 0.0, 1.0))
@@ -199,17 +197,17 @@ def main() -> None:
                 enc_train,
                 y_train,
                 sim_cfg=sim_cfg,
-                lr=float(COMMON_CFG["lr"]),
-                epochs=int(COMMON_CFG["epochs"]),
-                seed=int(COMMON_CFG["seed"]),
+                lr=float(CONFIG["lr"]),
+                epochs=int(CONFIG["epochs"]),
+                seed=int(CONFIG["seed"]),
             )
             unc = _run_uncertainty(
                 theta,
                 enc_test,
                 sim_cfg,
-                n_passes=int(DATA_CFG["unc_n_passes"]),
-                noise_std=float(DATA_CFG["unc_noise_std"]),
-                seed=int(COMMON_CFG["seed"]),
+                n_passes=int(CONFIG["unc_n_passes"]),
+                noise_std=float(CONFIG["unc_noise_std"]),
+                seed=int(CONFIG["seed"]),
             )
             metrics = _compute_metrics(y_test, unc["mean"], unc["std"])
             results[n_modes] = {
@@ -228,7 +226,9 @@ def main() -> None:
                 metrics["r2"],
             )
 
-        winner = min(results, key=lambda n_modes: float(results[n_modes]["metrics"]["mse"]))
+        winner = min(
+            results, key=lambda n_modes: float(results[n_modes]["metrics"]["mse"])
+        )
         exp.save_metrics(
             {
                 "by_n_modes": {

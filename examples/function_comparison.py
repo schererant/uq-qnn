@@ -47,17 +47,20 @@ from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-# ════════════════════════════════════════════════════════════════════════════
-# CONFIGURATION
-# ════════════════════════════════════════════════════════════════════════════
+SINGLES_ENCODING_PHASE_IDX = 26
+COINCIDENCE_ENCODING_PHASE_IDX = 7
+SINGLES_INPUT_STATE = (0,)
+COINCIDENCE_INPUT_STATE = (0, 3)
+SINGLES_TARGET_MODE = (2,)
+COINCIDENCE_TARGET_MODE = (0, 1)
 
-_COMMON: Dict = {
-    # Circuit
+# Single source of truth (cf. examples/coincidence_regression.py).  Experiment and
+# SimConfig use the singles branch fields; coincidence training swaps in
+# _COINCIDENCE_OVERRIDES inside _sim_cfg().
+CONFIG: Dict = {
     "n_modes": 6,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": 5,
-    # Training
     "memory_depth": 1,
     "n_swipe": 0,
     "swipe_span": 0.0,
@@ -69,53 +72,46 @@ _COMMON: Dict = {
     "seed": 42,
     "lr": 0.05,
     "epochs": 150,
-}
-
-# Singles: read one output detector (last mode)
-SINGLES_CONFIG: Dict = {
-    **_COMMON,
-    "input_state": (0,),
+    "n_data": 500,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_functions": [
+        "quartic_data",
+        "sinusoid_data",
+        "multi_modal_data",
+        "step_function_data",
+    ],
+    "measurement_modes": ["singles", "coincidence"],
+    "mode_colors": {"singles": "#1f77b4", "coincidence": "#ff7f0e"},
+    "func_labels": {
+        "quartic_data": r"$x^4$",
+        "sinusoid_data": r"$\sin(0.7\pi x)$",
+        "multi_modal_data": "Multi-modal Gaussians",
+        "step_function_data": "Smooth step",
+    },
+    # Primary circuit (singles): logged by Experiment / validate_sim_config
+    "encoding_phase_idx": SINGLES_ENCODING_PHASE_IDX,
+    "input_state": SINGLES_INPUT_STATE,
     "photon_distinguishability": None,
     "output_mode": "singles",
-    "target_mode": (2,),
+    "target_mode": SINGLES_TARGET_MODE,
     "working_detectors": None,
 }
 
-# Coincidence: inject photons at the validated modes and read CC01 explicitly
-COINCIDENCE_CONFIG: Dict = {
-    **_COMMON,
-    "input_state": (0, 3),
+_COINCIDENCE_OVERRIDES: Dict = {
+    "encoding_phase_idx": COINCIDENCE_ENCODING_PHASE_IDX,
+    "input_state": COINCIDENCE_INPUT_STATE,
     "photon_distinguishability": "indistinguishable",
     "output_mode": "coincidence",
-    "target_mode": (0, 1),
+    "target_mode": COINCIDENCE_TARGET_MODE,
     "working_detectors": tuple(range(6)),
 }
 
-# Data
-N_DATA = 80
-SIGMA_NOISE = 0.02
-
-# Uncertainty quantification
-UNC_N_PASSES = 15
-UNC_NOISE_STD = 0.05
-
-# Functions and labels
-FUNCTIONS = [
-    "quartic_data",
-    "sinusoid_data",
-    "multi_modal_data",
-    "step_function_data",
-]
-
-FUNC_LABELS = {
-    "quartic_data": r"$x^4$",
-    "sinusoid_data": r"$\sin(0.7\pi x)$",
-    "multi_modal_data": "Multi-modal Gaussians",
-    "step_function_data": "Smooth step",
-}
-
-MEASUREMENT_MODES = ["singles", "coincidence"]
-MODE_COLORS = {"singles": "#1f77b4", "coincidence": "#ff7f0e"}
+FUNCTIONS = CONFIG["data_functions"]
+MEASUREMENT_MODES = CONFIG["measurement_modes"]
+FUNC_LABELS = CONFIG["func_labels"]
+MODE_COLORS = CONFIG["mode_colors"]
 
 # ════════════════════════════════════════════════════════════════════════════
 # HELPERS
@@ -123,8 +119,10 @@ MODE_COLORS = {"singles": "#1f77b4", "coincidence": "#ff7f0e"}
 
 
 def _sim_cfg(mode: str) -> SimConfig:
-    cfg = SINGLES_CONFIG if mode == "singles" else COINCIDENCE_CONFIG
-    return SimConfig.from_experiment_config(cfg)
+    d = dict(CONFIG)
+    if mode == "coincidence":
+        d.update(_COINCIDENCE_OVERRIDES)
+    return SimConfig.from_experiment_config(d)
 
 
 def _run_uncertainty(
@@ -192,7 +190,13 @@ def compute_metrics(
     sigma = np.clip(std_preds, 1e-6, None)
     nll = float(np.mean(0.5 * (residuals / sigma) ** 2 + np.log(sigma)))
 
-    cal_rho, _ = stats.spearmanr(std_preds, np.abs(residuals))
+    abs_residuals = np.abs(residuals)
+    if np.allclose(std_preds, std_preds[:1]) or np.allclose(
+        abs_residuals, abs_residuals[:1]
+    ):
+        cal_rho = float("nan")
+    else:
+        cal_rho, _ = stats.spearmanr(std_preds, abs_residuals)
 
     return {
         "rmse": rmse,
@@ -222,9 +226,9 @@ def train_and_evaluate(
         enc_train,
         y_train,
         sim_cfg=sc,
-        lr=_COMMON["lr"],
-        epochs=_COMMON["epochs"],
-        seed=_COMMON["seed"],
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
     logger.info("  final loss: %.6f", history[-1])
 
@@ -233,9 +237,9 @@ def train_and_evaluate(
         theta,
         enc_test,
         sc,
-        n_passes=UNC_N_PASSES,
-        noise_std=UNC_NOISE_STD,
-        seed=_COMMON["seed"],
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
     )
     metrics = compute_metrics(y_test, unc["mean"], unc["std"])
     logger.info(
@@ -604,14 +608,18 @@ def plot_metrics_table(results: Dict, functions: list, modes: list) -> plt.Figur
 def main() -> None:
     with Experiment(
         "Function and Measurement Comparison",
-        config=SINGLES_CONFIG,
+        config=CONFIG,
     ) as exp:
-        np.random.seed(_COMMON["seed"])
+        np.random.seed(int(CONFIG["seed"]))
 
         # ── Load data ─────────────────────────────────────────────────────
         data: Dict[str, Tuple] = {}
         for func_name in FUNCTIONS:
-            data[func_name] = get_data(N_DATA, SIGMA_NOISE, func_name)
+            data[func_name] = get_data(
+                int(CONFIG["n_data"]),
+                float(CONFIG["sigma_noise"]),
+                func_name,
+            )
             logger.info(
                 "Data loaded: %-22s  train=%d  test=%d",
                 func_name,
