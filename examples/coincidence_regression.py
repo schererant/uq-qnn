@@ -21,7 +21,8 @@ from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-INPUT_STATE = (0, 3)
+# Coincidence readout models a two-photon input across distinct modes.
+INPUT_STATE = (0, 1)
 TARGET_CC_PAIR = (0, 1)
 ENCODING_PHASE_IDX = 7
 
@@ -39,7 +40,7 @@ CONFIG = {
     "n_classes": 1,
     "lr": 0.05,
     "epochs": 300,
-    "n_samples": 0, 
+    "n_samples": 0,
     "memory_depth": 2,
     "n_swipe": 0,
     "swipe_span": 0.0,

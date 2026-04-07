@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-04-07 — Add full N-fold coincidence distributions to `PhotonicCircuit`
+
+### Why
+
+`PhotonicCircuit.coincidences()` only supported a 2-photon, collision-free vector API tied to an encoding phase. That was not sufficient for general multi-photon coincidence analysis (N > 2), PNR-vs-click detector modeling, or validating N-fold normalization behavior needed for Monte Carlo/UQ studies on fixed-noise unitary samples.
+
+### Added
+
+- **`src/circuit.py`** — N-fold coincidence path:
+  - `PhotonicCircuit.coincidences(input_state, detector_mode="click"|"pnr", unitary=...)` now returns a dict mapping output Fock states to probabilities.
+  - `detector_mode="click"` enumerates collision-free outputs only (post-selected subset).
+  - `detector_mode="pnr"` enumerates all number-conserving output occupations (full distribution).
+- **`src/circuit.py`** — Exact permanent evaluation via **Ryser's formula** (`_ryser_permanent`) for small-N submatrices.
+- **`src/circuit.py`** — `PhotonicCircuit.accidentals_rate(singles_rates, tau, N)` utility for expected N-fold accidental rate scaling with `tau^(N-1)`.
+- **`tests/test_photonic_circuit.py`** — New coverage for:
+  - HOM behavior on a 50/50 beamsplitter subspace (PNR bunching and click-mode dip),
+  - 3-photon PNR normalization on a random unitary,
+  - click-mode as a strict collision-free subset of PNR outcomes.
+
+### Changed
+
+- **`src/circuit.py`** — `coincidences()` remains backward-compatible with legacy calls:
+  - `coincidences(encoding_phase)` and `coincidences(encoding_phase=...)` still return the previous two-photon coincidence vector.
+- **`examples/coincidence_regression.py`** — Fixed coincidence config to use a valid two-photon input state (`input_state=(0, 1)`) for `output_mode="coincidence"` validation.
+
+### Behaviour
+
+- N-fold coincidence probabilities are now available directly from `PhotonicCircuit` without embedding Monte Carlo logic in the method itself (callers can perturb the unitary externally per sample).
+- PNR distributions are normalized (sum to ~1); click-mode distributions represent post-selected collision-free mass (sum generally < 1).
+
 ## 2026-04-07 — Fix frozen encoding-slot handling and dead comparison slots
 
 ### Why
