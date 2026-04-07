@@ -35,7 +35,6 @@ config = {
     "lr": 0.03,
     "epochs": 50,
     "phase_idx": (0, 1),
-    "n_photons": (1, 1),
     # Model initialization
     "init_theta": None,  # Will be set in trainer
     # Plotting
@@ -496,7 +495,6 @@ class MemristorLossPSR(torch.autograd.Function):
         y: Tensor,
         memory_depth: int,
         phase_idx: Sequence[int],
-        n_photons: Sequence[int],
         n_samples: int,
         n_swipe: int = 0,
         swipe_span: float = 0.0,
@@ -525,7 +523,8 @@ class MemristorLossPSR(torch.autograd.Function):
         ctx.save_for_backward(theta.detach(), enc_phases.detach(), y.detach())
         ctx.discrete = discrete
         ctx.phase_idx = list(phase_idx)
-        ctx.n_photons = list(n_photons)
+        # Standalone memristor script: singles readout → one photon per trainable phase gate.
+        ctx.n_photons = [1] * len(phase_idx)
         ctx.n_swipe = n_swipe
         ctx.swipe_span = swipe_span
         ctx.memory_depth = memory_depth
@@ -618,7 +617,6 @@ class MemristorLossPSR(torch.autograd.Function):
             None,
             None,
             None,
-            None,
         )
 
 
@@ -636,7 +634,6 @@ class PhotonicModel(torch.nn.Module):
         y_np (np.ndarray): Target values.
         memory_depth (int): Memory buffer depth.
         phase_idx (Sequence[int]): Indices of phase parameters.
-        n_photons (Sequence[int]): Number of photons for each phase.
     """
 
     def __init__(
@@ -646,17 +643,12 @@ class PhotonicModel(torch.nn.Module):
         y_np: np.ndarray,
         memory_depth: int,
         phase_idx: Sequence[int],
-        n_photons: Sequence[int],
     ) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
         self.register_buffer("enc", torch.from_numpy(enc_np).double())
         self.register_buffer("y", torch.from_numpy(y_np).double())
-        self.memory_depth, self.phase_idx, self.n_photons = (
-            memory_depth,
-            phase_idx,
-            n_photons,
-        )
+        self.memory_depth, self.phase_idx = memory_depth, phase_idx
 
     def forward(
         self, n_samples: int, n_swipe: int = 0, swipe_span: float = 0.0
@@ -676,7 +668,6 @@ class PhotonicModel(torch.nn.Module):
             self.y,
             self.memory_depth,
             self.phase_idx,
-            self.n_photons,
             n_samples,
             n_swipe,
             swipe_span,
@@ -713,7 +704,6 @@ def train_pytorch_generic(
     lr: float = 0.03,
     epochs: int = 150,
     phase_idx: Sequence[int] = (0, 1),
-    n_photons: Sequence[int] = (1, 1),
     seed: int = 42,
     n_samples: int,
     n_swipe: int = 0,
@@ -728,7 +718,6 @@ def train_pytorch_generic(
         lr (float): Learning rate.
         epochs (int): Number of training epochs.
         phase_idx (Sequence[int]): Indices of phase parameters.
-        n_photons (Sequence[int]): Number of photons for each phase.
         seed (int): Random seed for reproducibility.
         n_samples (int): Number of samples for the Sampler.
         n_swipe (int): Number of phase points per data point (0 for discrete).
@@ -738,7 +727,7 @@ def train_pytorch_generic(
     """
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(rng)
-    model = PhotonicModel(init_theta, enc_np, y_np, memory_depth, phase_idx, n_photons)
+    model = PhotonicModel(init_theta, enc_np, y_np, memory_depth, phase_idx)
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
     for _ in tqdm(range(epochs), desc="Training", ncols=100):
@@ -815,7 +804,6 @@ def gradient_check() -> None:
         torch.from_numpy(y).double(),
         mem_depth,
         (0, 1),
-        (1, 1),
         n_samples,
     )
     loss.backward()
@@ -875,7 +863,6 @@ def _run_training(
             lr=config["lr"],
             epochs=config["epochs"],
             phase_idx=config["phase_idx"],
-            n_photons=config["n_photons"],
             n_swipe=config["n_swipe"],
             swipe_span=config["swipe_span"],
             n_samples=n_samples,
@@ -888,7 +875,6 @@ def _run_training(
             lr=config["lr"],
             epochs=config["epochs"],
             phase_idx=config["phase_idx"],
-            n_photons=config["n_photons"],
             n_swipe=0,
             swipe_span=0.0,
             n_samples=n_samples,

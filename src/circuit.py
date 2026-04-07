@@ -1,14 +1,5 @@
 from __future__ import annotations
 
-"""
-Core photonic circuit abstraction for the UQ-QNN project.
-
-``PhotonicCircuit`` wraps the NumPy backend unitary construction and exposes a
-compact API for obtaining singles / coincidence probabilities from a set of
-mesh phases.  It purposely ignores training-specific concerns so callers can
-simulate circuits without touching ``SimConfig``.
-"""
-
 from dataclasses import dataclass
 from typing import Any, Optional, Sequence, Tuple, Union
 
@@ -17,7 +8,7 @@ import numpy as np
 from .config import CircuitConfig
 from .numpy_backend import (
     _coincidence_raw_batch,
-    _full_unitary_separate_encoding_batch,
+    _unitary_batch_internal_encoding,
     clements_unitary,
     coincidence_raw_vector,
     unitary_for_point,
@@ -32,21 +23,24 @@ class _VectorizedCache:
 
 
 class PhotonicCircuit:
-    """Simple API to evaluate a rectangular Clements mesh."""
+    """Clements mesh helper: singles / coincidences via the NumPy backend (internal encoding).
+
+    Training-agnostic wrapper around :class:`~src.config.CircuitConfig` and
+    unitary construction; does not depend on :class:`~src.config.SimConfig`.
+    """
 
     def __init__(
         self,
         *,
         n_modes: int,
         phases: np.ndarray,
-        encoding_mode: int = 0,
-        encoding_phase_idx: Optional[int] = None,
+        circuit_config: CircuitConfig,
     ):
-        self._cfg = CircuitConfig(
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            encoding_phase_idx=encoding_phase_idx,
-        )
+        self._cfg = circuit_config
+        if self._cfg.n_modes != n_modes:
+            raise ValueError(
+                f"circuit_config.n_modes={self._cfg.n_modes} != n_modes={n_modes}"
+            )
         self._cfg.validate()
         phases = np.asarray(phases, dtype=np.float64).ravel()
         expected = self._cfg.n_phases
@@ -88,7 +82,6 @@ class PhotonicCircuit:
             self._phases,
             float(encoding_phase),
             self.n_modes,
-            self.config.encoding_mode,
             self.config.encoding_phase_idx,
         )
 
@@ -100,7 +93,9 @@ class PhotonicCircuit:
     ) -> np.ndarray:
         """All singles probabilities for one encoding phase."""
 
-        mode = self.config.encoding_mode if input_mode is None else int(input_mode)
+        if len(self.config.input_state) != 1:
+            raise ValueError("singles() requires single-photon input_state in config")
+        mode = self.config.singles_input_mode if input_mode is None else int(input_mode)
         u = self.unitary(encoding_phase)
         return np.abs(u[:, mode]) ** 2
 
@@ -111,60 +106,46 @@ class PhotonicCircuit:
         input_mode: Optional[int] = None,
     ) -> np.ndarray:
         enc = np.asarray(encoding_phases, dtype=np.float64).ravel()
-        mode = self.config.encoding_mode if input_mode is None else int(input_mode)
-        if self.config.encoding_phase_idx is None:
-            u_clem = self._mesh_unitary()
-            u_batch = _full_unitary_separate_encoding_batch(
-                u_clem,
-                enc,
-                self.config.encoding_mode,
-                self.n_modes,
-            )
-            return np.abs(u_batch[:, :, mode]) ** 2
-        probs = np.empty((len(enc), self.n_modes), dtype=float)
-        for i, phi in enumerate(enc):
-            probs[i] = self.singles(phi, input_mode=input_mode)
-        return probs
+        if len(self.config.input_state) != 1:
+            raise ValueError("singles_batch() requires single-photon input_state in config")
+        mode = self.config.singles_input_mode if input_mode is None else int(input_mode)
+        u_batch = _unitary_batch_internal_encoding(
+            self._phases,
+            enc,
+            self.n_modes,
+            self.config.encoding_phase_idx,
+        )
+        return np.abs(u_batch[:, :, mode]) ** 2
 
     def coincidences(
         self,
         encoding_phase: float,
-        *,
-        input_modes: Tuple[int, int] = (0, 1),
     ) -> np.ndarray:
+        if len(self.config.input_state) != 2:
+            raise ValueError(
+                "coincidences() requires two-photon input_state in circuit_config"
+            )
         u = self.unitary(encoding_phase)
-        return coincidence_raw_vector(
-            u,
-            (int(input_modes[0]), int(input_modes[1])),
-            self.n_modes,
-        )
+        a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+        return coincidence_raw_vector(u, (a, b), self.n_modes)
 
     def coincidences_batch(
         self,
         encoding_phases: Sequence[float] | np.ndarray,
-        *,
-        input_modes: Tuple[int, int] = (0, 1),
     ) -> np.ndarray:
+        if len(self.config.input_state) != 2:
+            raise ValueError(
+                "coincidences_batch() requires two-photon input_state in circuit_config"
+            )
         enc = np.asarray(encoding_phases, dtype=np.float64).ravel()
-        if self.config.encoding_phase_idx is None:
-            u_clem = self._mesh_unitary()
-            u_batch = _full_unitary_separate_encoding_batch(
-                u_clem,
-                enc,
-                self.config.encoding_mode,
-                self.n_modes,
-            )
-        else:
-            u_batch = np.empty(
-                (len(enc), self.n_modes, self.n_modes), dtype=np.complex128
-            )
-            for i, phi in enumerate(enc):
-                u_batch[i] = self.unitary(phi)
-        return _coincidence_raw_batch(
-            u_batch,
-            (int(input_modes[0]), int(input_modes[1])),
+        u_batch = _unitary_batch_internal_encoding(
+            self._phases,
+            enc,
             self.n_modes,
+            self.config.encoding_phase_idx,
         )
+        a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+        return _coincidence_raw_batch(u_batch, (a, b), self.n_modes)
 
     def target_probability(
         self,
@@ -187,8 +168,7 @@ class PhotonicCircuit:
         return PhotonicCircuit(
             n_modes=self.n_modes,
             phases=phases,
-            encoding_mode=self.config.encoding_mode,
-            encoding_phase_idx=self.config.encoding_phase_idx,
+            circuit_config=self._cfg,
         )
 
     @classmethod
@@ -196,17 +176,19 @@ class PhotonicCircuit:
         cls,
         n_modes: int,
         *,
+        circuit_config: CircuitConfig,
         seed: Optional[int] = None,
         **kwargs: Any,
     ) -> "PhotonicCircuit":
+        if kwargs:
+            raise TypeError(f"PhotonicCircuit.random got unexpected kwargs: {kwargs!r}")
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0.0, 2 * np.pi, size=n_modes * (n_modes - 1))
-        return cls(n_modes=n_modes, phases=phases, **kwargs)
+        return cls(n_modes=n_modes, phases=phases, circuit_config=circuit_config)
 
     def __repr__(self) -> str:
-        enc = (
-            f"encoding_phase_idx={self.config.encoding_phase_idx}"
-            if self.config.encoding_phase_idx is not None
-            else f"encoding_mode={self.config.encoding_mode}"
+        return (
+            f"PhotonicCircuit(n_modes={self.n_modes}, "
+            f"input_state={self.config.input_state!r}, "
+            f"encoding_phase_idx={self.config.encoding_phase_idx})"
         )
-        return f"PhotonicCircuit(n_modes={self.n_modes}, {enc})"

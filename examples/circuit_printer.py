@@ -120,7 +120,7 @@ def create_clements_with_memristive(n_modes=3, memristive_phase_idx=None):
     enc_phi = np.pi / 4
 
     basic = clements_circuit(phases, n_modes)
-    full = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=0)
+    full = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_phase_idx=0)
 
     # Input state: single photon in mode 0
     input_modes = [0] * n_modes
@@ -158,7 +158,7 @@ def create_clements_circuit(n_modes=6):
     # Create basic Clements circuit
     basic_clements = clements_circuit(phases, n_modes)
 
-    full_clements = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=0)
+    full_clements = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_phase_idx=0)
 
     # Input state: |100000>
     input_modes = [0] * n_modes
@@ -194,17 +194,16 @@ def main():
         create_clements_with_memristive(n_modes=3)
 
         # 2. Create and print 6-mode Clements circuit
-        clements_circuit_6 = create_clements_circuit(n_modes=6)
+        create_clements_circuit(n_modes=6)
 
         # 3. Create and print 3-mode Clements circuit for comparison
-        clements_circuit_3 = create_clements_circuit(n_modes=3)
+        create_clements_circuit(n_modes=3)
 
         print("\nCircuit printing complete.")
 
         write_summary(
             report_dir,
             summary={"note": "Console output contains the detailed circuit printouts."},
-            simulation_stats=sim_logger.stats_dict(),
         )
 
 

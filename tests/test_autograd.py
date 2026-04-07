@@ -13,28 +13,24 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
     n_modes = 3
     n_phases = n_modes * (n_modes - 1)
     memristive_phase_idx = (2, 5)
-    phase_idx = tuple(
-        i
-        for i in range(n_phases)
-        if i
-        not in normalize_memristive_phase_idx(memristive_phase_idx, n_modes, n_phases)
-    )
+    enc_slot = 0
+    mem = normalize_memristive_phase_idx(memristive_phase_idx, n_modes, n_phases)
+    phase_idx = tuple(i for i in range(n_phases) if i not in mem and i != enc_slot)
     cfg = SimConfig(
         n_modes=n_modes,
-        encoding_mode=0,
+        input_state=(0,),
+        encoding_phase_idx=enc_slot,
+        photon_distinguishability=None,
         target_mode=(2,),
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=None,
-        encoding_phase_idx=None,
         output_mode="singles",
-        input_modes=None,
         working_detectors=None,
         noise_std=None,
         n_samples=60,
         memory_depth=2,
         n_swipe=0,
         swipe_span=0.0,
-        n_photons=tuple([1] * len(phase_idx)),
         backend="numpy",
         loss_type="mse",
         n_classes=1,
@@ -50,7 +46,6 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
         torch.from_numpy(enc),
         torch.from_numpy(y),
         phase_idx,
-        cfg.n_photons,
         cfg,
     )
     loss.backward()

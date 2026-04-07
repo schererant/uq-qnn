@@ -26,10 +26,8 @@ from .circuit import PhotonicCircuit
 from .circuit_visualization import display_circuit_annotated, save_circuit_annotated
 from .circuits import (
     build_circuit,
-    build_parametric_circuit,
     clements_circuit,
     encoding_circuit,
-    encoding_circuit_parametric,
     get_mzi_modes_for_phase,
     memristor_circuit,
 )
@@ -43,7 +41,7 @@ from .coincidence import (
     probs_to_singles,
     working_detectors_to_cc_indices,
 )
-from .config import CircuitConfig, SimConfig
+from .config import CircuitConfig, SimConfig, validate_sim_config
 from .data import (
     get_data,
     load_measurement_pickle,
@@ -109,11 +107,9 @@ __all__ = [
     "sinusoid_data",
     # Circuits
     "encoding_circuit",
-    "encoding_circuit_parametric",
     "memristor_circuit",
     "clements_circuit",
     "build_circuit",
-    "build_parametric_circuit",
     "get_mzi_modes_for_phase",
     # Simulation
     "run_simulation_sequence_np",
@@ -127,6 +123,7 @@ __all__ = [
     "train_pytorch",
     "train_pytorch_generic",
     "gradient_check",
+    "validate_sim_config",
     # Config / Experiment
     "Experiment",
     "SimConfig",

@@ -76,20 +76,19 @@ def run_experiment(
         mom = tuple(tuple(p) for p in mom)
     sim_cfg = SimConfig(
         n_modes=N_MODES,
-        encoding_mode=0,
+        input_state=(0,),
+        encoding_phase_idx=ENCODING_PHASE_IDX,
+        photon_distinguishability=None,
         target_mode=(N_MODES - 1,),
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=mom,
-        encoding_phase_idx=ENCODING_PHASE_IDX,
         output_mode="singles",
-        input_modes=None,
         working_detectors=None,
         noise_std=None,
         n_samples=n_samples,
         memory_depth=memory_depth,
         n_swipe=0,
         swipe_span=0.0,
-        n_photons=None,
         backend=SIM_BACKEND,
         loss_type="mse",
         n_classes=1,
@@ -133,11 +132,11 @@ def main():
         save_circuit_annotated(
             str(report_dir / "quartic_circuit_annotated.png"),
             n_modes=N_MODES,
-            encoding_mode=0,
+            input_state=(0,),
+            encoding_phase_idx=ENCODING_PHASE_IDX,
             target_mode=(N_MODES - 1,),
             memristive_phase_idx=MEMRISTIVE_PHASE_IDX,
             memristive_output_modes=MEMRISTIVE_OUTPUT_MODES,
-            encoding_phase_idx=ENCODING_PHASE_IDX,
         )
 
         logger.info("Generating quartic data (y = x^4)…")

@@ -26,14 +26,15 @@ logger = get_logger(__name__)
 BASE_CONFIG = {
     # Circuit
     "n_modes": 6,
-    "encoding_mode": 0,
+    "input_state": (0,),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
     "target_mode": (4,),
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
     "encoding_phase_idx": None,
     # Measurement
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
     "noise_std": None,
     # Simulation
@@ -41,7 +42,6 @@ BASE_CONFIG = {
     "memory_depth": 2,
     "n_swipe": 0,
     "swipe_span": 0.0,
-    "n_photons": None,
     "sim_backend": "numpy",
     # Task
     "loss_type": "mse",

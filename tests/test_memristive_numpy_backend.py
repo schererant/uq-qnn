@@ -36,7 +36,7 @@ def _reference_memristive_singles(
         n_indices=len(memristive_indices),
         memory_depth=cfg.memory_depth,
         output_modes=output_modes,
-        encoding_mode=cfg.encoding_mode,
+        singles_input_mode=cfg.singles_input_mode,
     )
 
     if cfg.n_swipe > 0:
@@ -72,19 +72,22 @@ def _reference_memristive_singles(
                     phases_loc,
                     float(enc_phi + off),
                     cfg.n_modes,
-                    cfg.encoding_mode,
                     cfg.encoding_phase_idx,
                 )
                 for j, (m1, m2) in enumerate(output_modes):
-                    p1_swipe[k, j] = float(np.abs(u[m1, cfg.encoding_mode]) ** 2)
-                    p2_swipe[k, j] = float(np.abs(u[m2, cfg.encoding_mode]) ** 2)
+                    p1_swipe[k, j] = float(
+                        np.abs(u[m1, cfg.singles_input_mode]) ** 2
+                    )
+                    p2_swipe[k, j] = float(
+                        np.abs(u[m2, cfg.singles_input_mode]) ** 2
+                    )
                 if return_class_probs and len(target_mode) > 1:
                     target_swipe[k, :] = singles_class_probs_from_unitary(
-                        u, cfg.encoding_mode, target_mode
+                        u, cfg.singles_input_mode, target_mode
                     )
                 else:
                     target_swipe[k] = singles_prob_from_unitary(
-                        u, cfg.encoding_mode, target_mode
+                        u, cfg.singles_input_mode, target_mode
                     )
 
             mem_state.update_from_prob_arrays(
@@ -104,16 +107,17 @@ def _reference_memristive_singles(
                 phases_loc,
                 float(enc_phi),
                 cfg.n_modes,
-                cfg.encoding_mode,
                 cfg.encoding_phase_idx,
             )
             mem_state.update_from_unitary(i, u)
             if return_class_probs and len(target_mode) > 1:
                 preds[i, :] = singles_class_probs_from_unitary(
-                    u, cfg.encoding_mode, target_mode
+                    u, cfg.singles_input_mode, target_mode
                 )
             else:
-                preds[i] = singles_prob_from_unitary(u, cfg.encoding_mode, target_mode)
+                preds[i] = singles_prob_from_unitary(
+                    u, cfg.singles_input_mode, target_mode
+                )
 
     return preds
 
@@ -121,20 +125,19 @@ def _reference_memristive_singles(
 def _cfg(**overrides: object) -> SimConfig:
     base = dict(
         n_modes=6,
-        encoding_mode=0,
+        input_state=(0,),
+        encoding_phase_idx=0,
+        photon_distinguishability=None,
         target_mode=(5,),
         memristive_phase_idx=(6,),
         memristive_output_modes=None,
-        encoding_phase_idx=None,
         output_mode="singles",
-        input_modes=None,
         working_detectors=None,
         noise_std=None,
         n_samples=200,
         memory_depth=2,
         n_swipe=0,
         swipe_span=0.0,
-        n_photons=None,
         backend="numpy",
         loss_type="mse",
         n_classes=1,
