@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import time
-from typing import Tuple
+from typing import Any
 
 import numpy as np
-import perceval as pcvl
-from perceval.algorithm import Sampler  # type: ignore[attr-defined]
 
-from ..circuits import (
-    build_circuit,
+from ..clements_geometry import (
     normalize_memristive_output_modes,
     normalize_memristive_phase_idx,
 )
@@ -36,7 +33,7 @@ from .memristive import MemristiveState
 logger = get_logger(__name__)
 
 
-def run_simulation_sequence_np(
+def run_simulation_sequence(
     params: np.ndarray,
     encoded_phases: np.ndarray,
     cfg: SimConfig,
@@ -44,19 +41,24 @@ def run_simulation_sequence_np(
     return_class_probs: bool = False,
 ) -> np.ndarray:
     """
-    Runs a sequence of photonic-circuit simulations. Architecture is always Clements (3x3, 6x6, etc.).
+    Run a batch of photonic forward passes (Clements mesh).
 
-    Structural parameters are read from ``cfg``; ``params`` and ``encoded_phases`` vary per solve.
+    Uses NumPy arrays for parameters and outputs. The simulation engine is
+    selected by ``cfg.backend`` (``\"numpy\"`` or ``\"perceval\"``).
+
+    Structural parameters are read from ``cfg``; ``params`` and ``encoded_phases``
+    vary per solve.
 
     Args:
-        params: Phase parameters. If no memristive phases: [phase_0, ..., phase_{n-1}].
-            If memristive: [phase_0, ..., phase_{n-1}, w_0, ..., w_{k-1}] for k memristive phases.
+        params: Phase parameters. If no memristive phases: ``[phase_0, ..., phase_{n-1}]``.
+            If memristive: phases plus ``[w_0, ..., w_{k-1}]`` for ``k`` memristive weights.
         encoded_phases: Phase values (radians) for each data point.
         cfg: :class:`SimConfig` with modes, backend, sampling counts, etc.
-        return_class_probs: If True and multiple targets, returns (n_data, n_classes).
+        return_class_probs: If True and multiple targets, returns ``(n_data, n_classes)``.
 
     Returns:
-        Predicted probability per input point, or class probabilities if return_class_probs.
+        Predicted probability per input point, or class probabilities if
+        ``return_class_probs``.
     """
     start_time = time.perf_counter()
     n_swipe = cfg.n_swipe
@@ -88,7 +90,6 @@ def run_simulation_sequence_np(
         output_modes = ()
         mem_state = None
 
-    # Continuous mode only when memristive is active
     if n_swipe > 0 and n_memristive == 0:
         logger.warning(
             "Continuous mode requires memristive phases — switching to discrete."
@@ -110,75 +111,17 @@ def run_simulation_sequence_np(
 
     target_mode = cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
 
-    # Input state: singles (1 photon) or coincidence (2 photons)
-    if cfg.output_mode == "coincidence":
-        if n_memristive > 0:
-            raise ValueError("Coincidence mode does not support memristive phases yet")
-        in_modes = (int(cfg.input_state[0]), int(cfg.input_state[1]))
-        inp = [0] * cfg.n_modes
-        for m in in_modes:
-            inp[m] += 1
-        input_state = pcvl.BasicState(inp)
-        assert cfg.working_detectors is not None
-        wd_tuple = tuple(cfg.working_detectors)
-        working_cc_indices: Tuple[int, ...] = tuple(
-            working_detectors_to_cc_indices(wd_tuple, cfg.n_modes)
-        )
-        cc_labels = get_cc_labels(cfg.n_modes)
-        add_noise = _has_positive_noise(cfg.noise_std)
-    else:
-        inp = [0] * cfg.n_modes
-        inp[cfg.singles_input_mode] = 1
-        input_state = pcvl.BasicState(inp)
-        working_cc_indices = ()
-        cc_labels = []
-        add_noise = False
-
-    readout_cc_idx: int | None = None
-    if cfg.output_mode == "coincidence" and cfg.loss_type == "mse":
-        assert cfg.target_mode is not None and len(cfg.target_mode) == 2
-        readout_cc_idx = mode_pair_to_cc_index(
-            cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
-        )
-
-    state_m1_list: list[pcvl.BasicState] = []
-    state_m2_list: list[pcvl.BasicState] = []
-    if mem_state:
-        for j in range(n_memristive):
-            m1, m2 = output_modes[j]
-            s1, s2 = [0] * cfg.n_modes, [0] * cfg.n_modes
-            s1[m1], s2[m2] = 1, 1
-            state_m1_list.append(pcvl.BasicState(s1))
-            state_m2_list.append(pcvl.BasicState(s2))
-
-    # Build target states list for multi-class / probability extraction
-    target_modes_list = []
-    for m in target_mode:
-        tm = [0] * cfg.n_modes
-        tm[m] = 1
-        target_modes_list.append(pcvl.BasicState(tm))
+    if cfg.output_mode == "coincidence" and n_memristive > 0:
+        raise ValueError("Coincidence mode does not support memristive phases yet")
 
     num_pts = len(encoded_phases)
 
-    # Determine if we need multi-class output
-    if cfg.output_mode == "coincidence" and working_cc_indices:
-        n_classes = len(working_cc_indices)
-    else:
-        n_classes = len(target_mode) if target_mode is not None else 1
-    if return_class_probs and n_classes > 1:
-        preds = np.zeros((num_pts, n_classes), dtype=float)
-    else:
-        preds = np.zeros(num_pts, dtype=float)
-
-    # Precompute base phases and offsets for continuous mode
     if mode == "continuous":
         enc_base = encoded_phases
-        # TODO: Use Iris data for that
         offsets = np.linspace(
             -cfg.swipe_span / 2, cfg.swipe_span / 2, n_swipe, dtype=encoded_phases.dtype
         )
     else:
-        # Initialize offsets as empty array for discrete mode to avoid reference errors
         offsets = np.array([])
         enc_base = encoded_phases
 
@@ -221,13 +164,18 @@ def run_simulation_sequence_np(
         sim_logger.log(time.perf_counter() - start_time, cfg.n_samples)
         return preds
 
-    # ----- NumPy backend: memristive and/or swipe (singles only) -----
+    # ----- NumPy backend: memristive singles (slow path; rare fallback) -----
     if cfg.backend == "numpy":
         if cfg.output_mode == "coincidence":
             raise ValueError(
                 "numpy backend does not support coincidence with memristive/swipe; "
                 "use backend='perceval'"
             )
+        n_classes = len(target_mode) if target_mode is not None else 1
+        if return_class_probs and n_classes > 1:
+            preds = np.zeros((num_pts, n_classes), dtype=float)
+        else:
+            preds = np.zeros(num_pts, dtype=float)
         for i in range(num_pts):
             mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
@@ -261,7 +209,6 @@ def run_simulation_sequence_np(
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
             else:
-                # swipe mode (memristive)
                 p1_swipe = np.empty((n_swipe, n_memristive), dtype=float)
                 p2_swipe = np.empty((n_swipe, n_memristive), dtype=float)
                 target_swipe = np.empty(
@@ -313,7 +260,66 @@ def run_simulation_sequence_np(
         sim_logger.log(elapsed, cfg.n_samples)
         return preds
 
-    # ----- Perceval backend (internal encoding only; circuit rebuilt per eval) -----
+    # ----- Perceval backend (lazy import) -----
+    from perceval.algorithm import Sampler  # type: ignore[attr-defined]
+
+    import perceval as pcvl
+
+    from ..circuits import build_circuit
+
+    if cfg.output_mode == "coincidence":
+        in_modes = (int(cfg.input_state[0]), int(cfg.input_state[1]))
+        inp = [0] * cfg.n_modes
+        for m in in_modes:
+            inp[m] += 1
+        input_state = pcvl.BasicState(inp)
+        assert cfg.working_detectors is not None
+        wd_tuple = tuple(cfg.working_detectors)
+        working_cc_indices = tuple(
+            working_detectors_to_cc_indices(wd_tuple, cfg.n_modes)
+        )
+        cc_labels = get_cc_labels(cfg.n_modes)
+        add_noise = _has_positive_noise(cfg.noise_std)
+    else:
+        inp = [0] * cfg.n_modes
+        inp[cfg.singles_input_mode] = 1
+        input_state = pcvl.BasicState(inp)
+        working_cc_indices = ()
+        cc_labels = []
+        add_noise = False
+
+    readout_cc_idx: int | None = None
+    if cfg.output_mode == "coincidence" and cfg.loss_type == "mse":
+        assert cfg.target_mode is not None and len(cfg.target_mode) == 2
+        readout_cc_idx = mode_pair_to_cc_index(
+            cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
+        )
+
+    state_m1_list: list[Any] = []
+    state_m2_list: list[Any] = []
+    if mem_state:
+        for j in range(n_memristive):
+            m1, m2 = output_modes[j]
+            s1, s2 = [0] * cfg.n_modes, [0] * cfg.n_modes
+            s1[m1], s2[m2] = 1, 1
+            state_m1_list.append(pcvl.BasicState(s1))
+            state_m2_list.append(pcvl.BasicState(s2))
+
+    target_modes_list = []
+    for m in target_mode:
+        tm = [0] * cfg.n_modes
+        tm[m] = 1
+        target_modes_list.append(pcvl.BasicState(tm))
+
+    if cfg.output_mode == "coincidence" and working_cc_indices:
+        n_classes = len(working_cc_indices)
+    else:
+        n_classes = len(target_mode) if target_mode is not None else 1
+    if return_class_probs and n_classes > 1:
+        preds = np.zeros((num_pts, n_classes), dtype=float)
+    else:
+        preds = np.zeros(num_pts, dtype=float)
+
     for i in range(num_pts):
         mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
@@ -372,7 +378,6 @@ def run_simulation_sequence_np(
                 preds[i] = target_prob
 
         else:
-            # swipe mode (only when memristive)
             p1_swipe = np.empty((n_swipe, n_memristive), dtype=float)
             p2_swipe = np.empty((n_swipe, n_memristive), dtype=float)
             target_swipe = np.empty(
@@ -450,10 +455,12 @@ def run_simulation_sequence_np(
                     p2_swipe.mean(axis=0),
                 )
 
-    # finalize
     elapsed = time.perf_counter() - start_time
     sim_logger.log(elapsed, cfg.n_samples)
     return preds
+
+
+run_simulation_sequence_np = run_simulation_sequence
 
 
 def uncertainty_forward_pass(job: tuple) -> np.ndarray:
@@ -464,7 +471,7 @@ def uncertainty_forward_pass(job: tuple) -> np.ndarray:
     """
     params, n_samples, encoded_phases, cfg_dict, return_class_probs = job
     sim_cfg = SimConfig.from_dict(cfg_dict).replace(n_samples=n_samples)
-    return run_simulation_sequence_np(
+    return run_simulation_sequence(
         params,
         encoded_phases,
         sim_cfg,

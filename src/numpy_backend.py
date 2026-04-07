@@ -13,7 +13,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from .circuits import clements_mzi_pairs
+from .clements_geometry import clements_mzi_pairs
 from .coincidence import (
     apply_noise_to_outcomes,
     get_cc_labels,

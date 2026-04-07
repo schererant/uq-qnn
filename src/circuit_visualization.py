@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
-import perceval as pcvl
 from PIL import Image
 
 from .circuits import (
@@ -69,6 +68,8 @@ def display_circuit_annotated(
     memristive_indices = normalize_memristive_phase_idx(
         memristive_phase_idx, n_modes, n_phases
     )
+
+    import perceval as pcvl
 
     # Build circuit and save to temp file
     circ = build_circuit(

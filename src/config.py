@@ -238,13 +238,18 @@ class SimConfig:
     """Immutable bundle of circuit / simulation / task parameters.
 
     Every field that previously appeared as a keyword argument in
-    ``run_simulation_sequence_np``, ``train_pytorch_generic``,
-    ``PhotonicModel``, and ``MemristorLossPSR`` is collected here.
+    ``run_simulation_sequence`` / ``run_simulation_sequence_np``,
+    ``train_pytorch_generic``, ``PhotonicModel``, and ``MemristorLossPSR`` is
+    collected here.
 
     The class is *frozen* so it can be safely shared across threads,
     stored on ``torch.autograd`` ctx objects, and serialised to JSON.
 
     **No field has a default value.**  All must be supplied explicitly.
+
+    Experiment ``CONFIG`` dicts use the key ``sim_backend`` for the simulation
+    engine; that value is stored on this object as the field ``backend``. Use
+    :attr:`sim_backend` when you want a name that matches the config file.
     """
 
     # ── circuit geometry ───────────────────────────────────────
@@ -271,6 +276,12 @@ class SimConfig:
     # ── loss / task ────────────────────────────────────────────
     loss_type: str  # "mse" | "cross_entropy"
     n_classes: int
+
+    @property
+    def sim_backend(self) -> str:
+        """Same as ``backend``; mirrors the ``sim_backend`` key in experiment configs."""
+
+        return self.backend
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-safe dict (for run_summary, uncertainty_forward_pass, etc.)."""
