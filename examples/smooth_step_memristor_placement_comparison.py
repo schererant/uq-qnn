@@ -26,13 +26,13 @@ logger = get_logger(__name__)
 
 _BASE_CONFIG: Dict = {
     "n_modes": 6,
-    "encoding_mode": 0,
+    "input_state": (0,),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
     "target_mode": (5,),
     "encoding_phase_idx": None,
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
-    "n_photons": None,
     "n_samples": 300,
     "noise_std": None,
     "loss_type": "mse",

@@ -43,11 +43,9 @@ COINCIDENCE_PAIRS: Tuple[Tuple[int, int], ...] = ((2, 4), (3, 4), (3, 5))
 
 COMMON_CFG: Dict[str, object] = {
     "n_modes": N_MODES,
-    "encoding_mode": 0,
+    "encoding_phase_idx": 5,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
-    "n_photons": None,
     "n_samples": 300,
     "noise_std": None,
     "loss_type": "mse",
@@ -74,8 +72,9 @@ def _case_specs() -> List[Dict[str, object]]:
             {
                 "label": f"singles_m{mode}",
                 "family": "singles",
+                "input_state": (0,),
+                "photon_distinguishability": None,
                 "target_mode": (mode,),
-                "input_modes": None,
                 "working_detectors": None,
             }
         )
@@ -84,8 +83,9 @@ def _case_specs() -> List[Dict[str, object]]:
             {
                 "label": f"coinc_cc{pair[0]}{pair[1]}",
                 "family": "coincidence",
+                "input_state": (1, 4),
+                "photon_distinguishability": "indistinguishable",
                 "target_mode": pair,
-                "input_modes": (1, 4),
                 "working_detectors": tuple(range(N_MODES)),
             }
         )
@@ -114,8 +114,9 @@ def _sim_cfg(case: Dict[str, object]) -> SimConfig:
     cfg = {
         **COMMON_CFG,
         "output_mode": case["family"],
+        "input_state": case["input_state"],
+        "photon_distinguishability": case["photon_distinguishability"],
         "target_mode": case["target_mode"],
-        "input_modes": case["input_modes"],
         "working_detectors": case["working_detectors"],
     }
     return SimConfig.from_experiment_config(cfg)
@@ -424,8 +425,9 @@ def main() -> None:
     base_config = {
         **COMMON_CFG,
         "output_mode": "singles",
+        "input_state": (0,),
+        "photon_distinguishability": None,
         "target_mode": (SINGLES_MODES[0],),
-        "input_modes": None,
         "working_detectors": None,
     }
 

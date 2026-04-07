@@ -18,14 +18,15 @@ from src.experiment import Experiment
 CONFIG = {
     # Circuit — 3-mode Clements with one memristive phase
     "n_modes": 3,
-    "encoding_mode": 0,
+    "input_state": (0,),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
     "target_mode": (2,),
     "memristive_phase_idx": [2],
     "memristive_output_modes": None,
     "encoding_phase_idx": None,
     # Task
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
     "loss_type": "mse",
     "n_classes": 1,
@@ -34,7 +35,6 @@ CONFIG = {
     "epochs": 30,
     "n_samples": 500,
     "memory_depth": 2,
-    "n_photons": None,
     "n_swipe": 0,
     "swipe_span": 0.0,
     "noise_std": None,

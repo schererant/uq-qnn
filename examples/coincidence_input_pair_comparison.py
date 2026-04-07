@@ -73,14 +73,13 @@ READOUT_CC_PAIR = (0, 1)
 
 _COMMON: Dict = {
     "n_modes": N_MODES,
-    "encoding_mode": 0,
     "target_mode": READOUT_CC_PAIR,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
+    "encoding_phase_idx": 5,
+    "photon_distinguishability": "indistinguishable",
     "output_mode": "coincidence",
     "working_detectors": WORKING_DETECTORS,
-    "n_photons": tuple([2] * (N_MODES * (N_MODES - 1))),
     "n_samples": 300,
     "noise_std": None,
     "loss_type": "mse",
@@ -122,11 +121,12 @@ def _readout_label() -> str:
 
 
 def _sim_cfg(input_pair: Tuple[int, int]) -> SimConfig:
-    cfg = {**_COMMON, "input_modes": input_pair}
+    cfg = {**_COMMON, "input_state": input_pair}
     sim_cfg = SimConfig.from_experiment_config(cfg)
 
+    assert sim_cfg.working_detectors is not None
     working_cc_indices = working_detectors_to_cc_indices(
-        sim_cfg.working_detectors or tuple(range(sim_cfg.n_modes)),
+        sim_cfg.working_detectors,
         sim_cfg.n_modes,
     )
     if len(working_cc_indices) <= 1:
@@ -565,7 +565,7 @@ def plot_metrics_table(
 
 
 def main() -> None:
-    base_cfg = {**_COMMON, "input_modes": INPUT_PAIRS[0]}
+    base_cfg = {**_COMMON, "input_state": INPUT_PAIRS[0]}
 
     with Experiment("Coincidence Input Pair Comparison", config=base_cfg) as exp:
         np.random.seed(_COMMON["seed"])

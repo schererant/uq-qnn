@@ -13,7 +13,7 @@ class MemristiveState:
     n_indices: int
     memory_depth: int
     output_modes: Tuple[Tuple[int, int], ...]
-    encoding_mode: int
+    singles_input_mode: int
 
     def __post_init__(self) -> None:
         if self.n_indices != len(self.output_modes):
@@ -56,7 +56,7 @@ class MemristiveState:
         if not self.active:
             return
         slot = self._slot(step)
-        enc_col = self.encoding_mode
+        enc_col = self.singles_input_mode
         for j, (m1, m2) in enumerate(self.output_modes):
             self._p1[slot, j] = float(np.abs(unitary[m1, enc_col]) ** 2)
             self._p2[slot, j] = float(np.abs(unitary[m2, enc_col]) ** 2)

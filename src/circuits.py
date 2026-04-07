@@ -182,35 +182,24 @@ def build_circuit(
     phases: np.ndarray,
     enc_phi: float,
     n_modes: int,
-    encoding_mode: int = 0,
-    encoding_phase_idx: Optional[int] = None,
+    encoding_phase_idx: int,
 ) -> pcvl.Circuit:
     """
-    Builds a full Clements circuit by combining encoding and main circuit.
+    Builds a full Clements circuit with **internal** data encoding.
 
-    Architecture is always Clements (3x3, 6x6, etc.). Phases array length must be
-    n_modes * (n_modes - 1).
+    ``enc_phi`` is added (mod 2π) to ``phases[encoding_phase_idx]`` inside the mesh,
+    then the mesh is built. There is no separate prepended encoding block.
 
     Args:
-        phases (np.ndarray): Array of phases for the Clements mesh.
-        enc_phi (float): Encoding phase.
-        n_modes (int): Number of modes (3 for 3x3, 6 for 6x6, etc.).
-        encoding_mode (int): Mode to apply encoding to (default: 0).
-        encoding_phase_idx (Optional[int]): If provided, enc_phi is folded into this
-            phase inside the Clements mesh instead of using a separate encoding block.
+        phases (np.ndarray): Clements mesh phases, length ``n_modes * (n_modes - 1)``.
+        enc_phi (float): Data-encoded phase contribution (radians).
+        n_modes (int): Number of modes.
+        encoding_phase_idx (int): Index into the flat phase vector receiving ``enc_phi``.
 
     Returns:
         pcvl.Circuit: The complete circuit.
-
-    Notes:
-        - When encoding_phase_idx is None (default), a separate 2‑mode encoding_circuit
-          is prepended on encoding_mode (legacy behavior).
-        - When encoding_phase_idx is provided, enc_phi is embedded directly into that
-          phase index inside the Clements mesh (hardware-style encoding).
     """
     enc_phi = float(enc_phi) % (2 * np.pi)
-    if encoding_mode < 0:
-        raise ValueError(f"Encoding mode must be non-negative, got {encoding_mode}")
     if n_modes < 2:
         raise ValueError(f"Requires at least 2 modes, got {n_modes}")
 
@@ -220,74 +209,18 @@ def build_circuit(
             f"Clements circuit requires {expected_phases} phases for {n_modes} modes, "
             f"got {len(phases)}"
         )
+    idx = int(encoding_phase_idx)
+    if idx < 0 or idx >= expected_phases:
+        raise ValueError(
+            f"encoding_phase_idx must be in [0, {expected_phases - 1}] for {n_modes} modes, "
+            f"got {idx}"
+        )
+
+    mesh_phases = np.array(phases, dtype=float).copy()
+    mesh_phases[idx] = (mesh_phases[idx] + enc_phi) % (2 * np.pi)
 
     c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
-
-    if encoding_phase_idx is None:
-        # Legacy behavior: explicit 2‑mode encoding block on encoding_mode
-        valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
-        c.add(valid_encoding_mode, encoding_circuit(enc_phi), merge=True)
-        mesh_phases = phases
-    else:
-        # Inline encoding: fold enc_phi into a chosen phase of the Clements mesh
-        if encoding_phase_idx < 0 or encoding_phase_idx >= expected_phases:
-            raise ValueError(
-                f"encoding_phase_idx must be in [0, {expected_phases - 1}] for {n_modes} modes, "
-                f"got {encoding_phase_idx}"
-            )
-        mesh_phases = np.array(phases, dtype=float).copy()
-        mesh_phases[encoding_phase_idx] = (
-            mesh_phases[encoding_phase_idx] + enc_phi
-        ) % (2 * np.pi)
-
     c.add(0, clements_circuit(mesh_phases, n_modes), merge=True)
-    return c
-
-
-def encoding_circuit_parametric(enc_param) -> pcvl.Circuit:
-    """
-    Same layout as encoding_circuit but with a Perceval Parameter for the phase shifter.
-    """
-    c = pcvl.Circuit(2, name="Encoding")
-    c.add((0, 1), pcvl.BS())
-    c.add((1,), pcvl.PS(phi=enc_param))
-    c.add((0, 1), pcvl.BS())
-    return c
-
-
-def build_parametric_circuit(
-    phases: np.ndarray,
-    enc_param,
-    n_modes: int,
-    encoding_mode: int,
-    encoding_phase_idx: Optional[int],
-) -> pcvl.Circuit:
-    """
-    Full Clements + encoding with a symbolic encoding phase (for reuse across data points).
-
-    Requires ``encoding_phase_idx is None`` (separate encoding block). For inline mesh
-    encoding, rebuild the circuit per evaluation.
-    """
-    if encoding_phase_idx is not None:
-        raise ValueError(
-            "build_parametric_circuit only supports separate encoding (encoding_phase_idx=None)"
-        )
-    if encoding_mode < 0:
-        raise ValueError(f"Encoding mode must be non-negative, got {encoding_mode}")
-    if n_modes < 2:
-        raise ValueError(f"Requires at least 2 modes, got {n_modes}")
-
-    expected_phases = n_modes * (n_modes - 1)
-    if len(phases) != expected_phases:
-        raise ValueError(
-            f"Clements circuit requires {expected_phases} phases for {n_modes} modes, "
-            f"got {len(phases)}"
-        )
-
-    c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
-    valid_encoding_mode = min(max(0, encoding_mode), n_modes - 2)
-    c.add(valid_encoding_mode, encoding_circuit_parametric(enc_param), merge=True)
-    c.add(0, clements_circuit(phases, n_modes), merge=True)
     return c
 
 

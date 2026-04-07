@@ -19,16 +19,16 @@ logger = get_logger(__name__)
 # ===================== EXPERIMENT CONFIG =====================
 CONFIG = {
     # Circuit
-    "n_modes": 12,  # waveguide modes; gives 6*(6-1)=30 phase parameters
-    "encoding_mode": 4,  # input mode that receives the data-encoded phase
+    "n_modes": 12,  # waveguide modes; 12*11 mesh phases
+    "input_state": (4,),  # single photon injected in this mode (before the mesh)
+    "encoding_phase_idx": 10,  # mesh phase index that receives the data-encoded contribution
+    "photon_distinguishability": None,  # None for single-photon; required for two-photon runs
     "target_mode": (4,),  # output mode(s) whose Born-rule probability is the prediction
     "memristive_phase_idx": None,  # phase index(es) with history-dependent feedback; None = pure Clements
     "memristive_output_modes": None,  # output mode pairs feeding back into memristive phases
-    "encoding_phase_idx": None,  # override which phase slot holds the encoding; None = auto
     # Task
     "output_mode": "singles",  # "singles" = 1-photon probabilities; "coincidence" = 2-photon
-    "input_modes": None,  # coincidence only: modes where the two photons enter
-    "working_detectors": None,  # coincidence only: functioning detector indices for postselection
+    "working_detectors": None,  # coincidence only: functioning detector indices; None for singles
     "loss_type": "mse",  # "mse" for regression, "cross_entropy" for classification
     "n_classes": 1,  # 1 for regression; must equal len(target_mode) for classification
     # Training
@@ -36,7 +36,6 @@ CONFIG = {
     "epochs": 100,  # full passes over the training set
     "n_samples": 20,  # photon samples per data point (higher = less shot noise, slower)
     "memory_depth": 2,  # memristor buffer length (past time steps); irrelevant here
-    "n_photons": None,  # photon count per phase for PSR shift computation; None = auto-infer
     "n_swipe": 0,  # phase points swept per sample in continuous-swipe mode; 0 = discrete
     "swipe_span": 0.0,  # total phase range (rad) swept around each encoded phase
     "noise_std": None,  # Gaussian noise on coincidence counts; None = noiseless

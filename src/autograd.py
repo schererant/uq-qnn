@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from .config import SimConfig
+from .config import SimConfig, psr_photon_counts_for_phases
 from .simulation import run_simulation_sequence_np
 
 
@@ -60,12 +60,12 @@ class MemristorLossPSR(torch.autograd.Function):
         enc_phases: Tensor,
         y: Tensor,
         phase_idx: Sequence[int],
-        n_photons: Sequence[int],
         sim_cfg: SimConfig,
     ) -> Tensor:
         theta_np = theta.detach().cpu().double().numpy()
         enc_np = enc_phases.detach().cpu().double().numpy()
         y_np = y.detach().cpu().double().numpy()
+        n_photons = psr_photon_counts_for_phases(sim_cfg, len(phase_idx))
 
         # Determine if we need multi-class output
         return_class_probs = (
@@ -262,7 +262,6 @@ class MemristorLossPSR(torch.autograd.Function):
 
         return (
             g_out * torch.from_numpy(grads).to(theta),
-            None,
             None,
             None,
             None,

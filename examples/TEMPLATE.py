@@ -43,7 +43,7 @@ training_loss.png       Log-scale convergence curve
 #
 # Measurement modes:
 #   "singles"     — single-photon Born-rule probabilities (fast, simple)
-#   "coincidence" — two-photon correlations (richer, needs input_modes)
+#   "coincidence" — two-photon correlations (input_state length 2, working_detectors, distinguishability)
 #
 # Hardware profiles (src/hardware.py):
 #   IDEAL            — no noise, numpy backend
@@ -79,18 +79,17 @@ logger = get_logger(__name__)
 CONFIG = {
     # ── Circuit geometry ──────────────────────────────────────────
     "n_modes": 6,              # Number of waveguide modes (circuit width)
-    "encoding_mode": 0,        # Which mode receives the input phase
-    "encoding_phase_idx": None,  # Specific phase index for encoding (None = default)
+    "input_state": (0,),       # Occupied input modes: one int for singles, two for coincidence
+    "encoding_phase_idx": 5,   # Mesh phase index that receives the encoded data phase
+    "photon_distinguishability": None,  # None for singles; "indistinguishable" for two-photon
     "target_mode": (5,),       # Output mode(s) to read — tuple of ints
     "memristive_phase_idx": None,       # Index/indices of memristive phases, or None
     "memristive_output_modes": None,    # Feedback mode pairs for memristor, or None
 
     # ── Measurement mode ──────────────────────────────────────────
     "output_mode": "singles",  # "singles" or "coincidence"
-    "input_modes": None,       # For coincidence: tuple of 2 input modes, e.g. (1, 4)
-    "working_detectors": None, # For coincidence: which detectors to read, e.g. tuple(range(6))
+    "working_detectors": None, # For coincidence: non-empty tuple of detector indices; None for singles
     "noise_std": None,         # Simulation-level noise std (None = no noise)
-    "n_photons": None,         # Photon number tuple, or None for default
 
     # ── Simulation ────────────────────────────────────────────────
     "n_samples": 300,          # Number of simulation samples

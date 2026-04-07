@@ -22,14 +22,16 @@ from src.training import train_pytorch_generic
 logger = get_logger(__name__)
 
 N_MODES_LIST: Tuple[int, ...] = (6, 8, 12)
-INPUT_MODES = (0, 3)
+INPUT_STATE = (0, 3)
 TARGET_CC_PAIR = (0, 1)
-ENCODING_MODE = 0
+ENCODING_PHASE_IDX = 7
 
 COMMON_CFG = {
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
+    "encoding_phase_idx": ENCODING_PHASE_IDX,
+    "input_state": INPUT_STATE,
+    "photon_distinguishability": "indistinguishable",
     "output_mode": "coincidence",
     "loss_type": "mse",
     "n_classes": 1,
@@ -37,7 +39,6 @@ COMMON_CFG = {
     "epochs": 150,
     "n_samples": 1000,
     "memory_depth": 2,
-    "n_photons": None,
     "n_swipe": 0,
     "swipe_span": 0.0,
     "noise_std": None,
@@ -58,9 +59,7 @@ def _sim_cfg(n_modes: int) -> SimConfig:
     cfg = {
         **COMMON_CFG,
         "n_modes": n_modes,
-        "encoding_mode": ENCODING_MODE,
         "target_mode": TARGET_CC_PAIR,
-        "input_modes": INPUT_MODES,
         "working_detectors": tuple(range(n_modes)),
     }
     return SimConfig.from_experiment_config(cfg)
@@ -175,9 +174,8 @@ def main() -> None:
         **COMMON_CFG,
         **DATA_CFG,
         "n_modes": N_MODES_LIST[0],
-        "encoding_mode": ENCODING_MODE,
         "target_mode": TARGET_CC_PAIR,
-        "input_modes": INPUT_MODES,
+        "working_detectors": tuple(range(N_MODES_LIST[0])),
         "n_modes_list": N_MODES_LIST,
     }
     with Experiment("Coincidence Capacity Sweep", config=experiment_config) as exp:
@@ -191,9 +189,9 @@ def main() -> None:
         results: Dict[int, Dict[str, object]] = {}
         for n_modes in N_MODES_LIST:
             logger.info(
-                "Training validated coincidence configuration with n_modes=%d, input_modes=%s, target_mode=%s",
+                "Training validated coincidence configuration with n_modes=%d, input_state=%s, target_mode=%s",
                 n_modes,
-                INPUT_MODES,
+                INPUT_STATE,
                 TARGET_CC_PAIR,
             )
             sim_cfg = _sim_cfg(n_modes)

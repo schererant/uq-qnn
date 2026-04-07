@@ -55,13 +55,12 @@ OUTPUT_MODES: List[int] = list(range(N_MODES))  # 0, 1, 2, 3, 4, 5
 
 _COMMON: Dict = {
     "n_modes": N_MODES,
-    "encoding_mode": 0,
+    "input_state": (0,),
+    "encoding_phase_idx": 10,
+    "photon_distinguishability": None,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
-    "n_photons": None,
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
     "n_samples": 300,
     "noise_std": None,

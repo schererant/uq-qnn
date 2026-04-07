@@ -57,7 +57,6 @@ def train_and_evaluate_circuit(
     """
     print(f"\n=== Training {label.upper()} (Clements {n_modes}x{n_modes}) ===")
     n_phases = n_modes * (n_modes - 1)
-    encoding_mode = 0
     target_mode = (n_modes - 1,)
     if memristive_phase_idx is not None:
         print(f"Memristive phases: {memristive_phase_idx}")
@@ -66,20 +65,19 @@ def train_and_evaluate_circuit(
 
     sim_cfg = SimConfig(
         n_modes=n_modes,
-        encoding_mode=encoding_mode,
+        input_state=(0,),
+        encoding_phase_idx=0,
+        photon_distinguishability=None,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=None,
-        encoding_phase_idx=None,
         output_mode="singles",
-        input_modes=None,
         working_detectors=None,
         noise_std=None,
         n_samples=n_samples,
         memory_depth=MEMORY_DEPTH,
         n_swipe=0,
         swipe_span=0.0,
-        n_photons=None,
         backend=SIM_BACKEND,
         loss_type="mse",
         n_classes=1,
@@ -135,7 +133,8 @@ def train_and_evaluate_circuit(
             "type": label,
             "n_modes": n_modes,
             "n_phases": n_phases,
-            "encoding_mode": encoding_mode,
+            "input_state": (0,),
+            "encoding_phase_idx": 0,
             "target_mode": target_mode,
         },
     }
@@ -400,7 +399,9 @@ def main():
                     "type": "standard",
                     "n_modes": 3,
                     "n_phases": 6,
-                    "encoding_mode": 0,
+                    "input_state": (0,),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
                     "target_mode": (2,),
                 },
             }

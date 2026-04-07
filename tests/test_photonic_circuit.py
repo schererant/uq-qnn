@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from src import PhotonicCircuit, SimConfig
+from src.circuit import PhotonicCircuit
+from src.config import CircuitConfig, SimConfig
 from src.simulation import run_simulation_sequence_np
 
 
@@ -12,15 +13,41 @@ def random_phases(n_modes: int, seed: int = 42) -> np.ndarray:
     return rng.uniform(0, 2 * np.pi, size=n_modes * (n_modes - 1))
 
 
+def singles_cfg(n_modes: int, *, enc_idx: int = 0) -> CircuitConfig:
+    return CircuitConfig(
+        n_modes=n_modes,
+        input_state=(0,),
+        encoding_phase_idx=enc_idx,
+        photon_distinguishability=None,
+        output_mode="singles",
+        working_detectors=None,
+    )
+
+
+def coincidence_cfg(n_modes: int) -> CircuitConfig:
+    return CircuitConfig(
+        n_modes=n_modes,
+        input_state=(0, 1),
+        encoding_phase_idx=0,
+        photon_distinguishability="indistinguishable",
+        output_mode="coincidence",
+        working_detectors=tuple(range(n_modes)),
+    )
+
+
 def test_construction_requires_exact_phase_count():
     phases = random_phases(6)
-    PhotonicCircuit(n_modes=6, phases=phases)  # no error
+    PhotonicCircuit(n_modes=6, phases=phases, circuit_config=singles_cfg(6))
     with pytest.raises(ValueError):
-        PhotonicCircuit(n_modes=6, phases=phases[:-1])
+        PhotonicCircuit(
+            n_modes=6, phases=phases[:-1], circuit_config=singles_cfg(6)
+        )
 
 
 def test_singles_shape_and_normalization():
-    circuit = PhotonicCircuit(n_modes=6, phases=random_phases(6, seed=1))
+    circuit = PhotonicCircuit(
+        n_modes=6, phases=random_phases(6, seed=1), circuit_config=singles_cfg(6)
+    )
     probs = circuit.singles(encoding_phase=0.3)
     assert probs.shape == (6,)
     np.testing.assert_allclose(probs.sum(), 1.0, atol=1e-10)
@@ -28,14 +55,18 @@ def test_singles_shape_and_normalization():
 
 
 def test_coincidences_shape():
-    circuit = PhotonicCircuit(n_modes=4, phases=random_phases(4, seed=2))
-    probs = circuit.coincidences(encoding_phase=1.0, input_modes=(0, 1))
+    circuit = PhotonicCircuit(
+        n_modes=4, phases=random_phases(4, seed=2), circuit_config=coincidence_cfg(4)
+    )
+    probs = circuit.coincidences(encoding_phase=1.0)
     assert probs.shape == (4 * 3 // 2,)
     assert np.all(probs >= 0)
 
 
 def test_singles_batch_matches_single_calls():
-    circuit = PhotonicCircuit(n_modes=5, phases=random_phases(5, seed=3))
+    circuit = PhotonicCircuit(
+        n_modes=5, phases=random_phases(5, seed=3), circuit_config=singles_cfg(5)
+    )
     enc = np.linspace(0.0, np.pi, 7)
     batch = circuit.singles_batch(enc)
     for i, phi in enumerate(enc):
@@ -43,13 +74,15 @@ def test_singles_batch_matches_single_calls():
 
 
 def test_coincidences_batch_matches_single_calls():
-    circuit = PhotonicCircuit(n_modes=5, phases=random_phases(5, seed=4))
+    circuit = PhotonicCircuit(
+        n_modes=5, phases=random_phases(5, seed=4), circuit_config=coincidence_cfg(5)
+    )
     enc = np.linspace(0.1, 0.9, 5)
-    batch = circuit.coincidences_batch(enc, input_modes=(0, 1))
+    batch = circuit.coincidences_batch(enc)
     for i, phi in enumerate(enc):
         np.testing.assert_allclose(
             batch[i],
-            circuit.coincidences(phi, input_modes=(0, 1)),
+            circuit.coincidences(phi),
             atol=1e-12,
         )
 
@@ -60,20 +93,19 @@ def test_consistency_with_run_simulation_sequence_np():
     encoded = np.linspace(0.2, 1.3, 8)
     cfg = SimConfig(
         n_modes=n_modes,
-        encoding_mode=0,
+        input_state=(0,),
+        encoding_phase_idx=0,
+        photon_distinguishability=None,
         target_mode=(n_modes - 1,),
         memristive_phase_idx=None,
         memristive_output_modes=None,
-        encoding_phase_idx=None,
         output_mode="singles",
-        input_modes=None,
         working_detectors=None,
         noise_std=None,
         n_samples=500,
         memory_depth=1,
         n_swipe=0,
         swipe_span=0.0,
-        n_photons=None,
         backend="numpy",
         loss_type="mse",
         n_classes=1,
@@ -88,8 +120,7 @@ def test_consistency_with_run_simulation_sequence_np():
     circuit = PhotonicCircuit(
         n_modes=n_modes,
         phases=phases,
-        encoding_mode=0,
-        encoding_phase_idx=None,
+        circuit_config=singles_cfg(n_modes, enc_idx=0),
     )
     assert cfg.target_mode is not None
     singles = circuit.singles_batch(encoded)[:, cfg.target_mode[0]]

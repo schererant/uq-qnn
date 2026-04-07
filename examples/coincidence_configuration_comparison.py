@@ -23,28 +23,29 @@ logger = get_logger(__name__)
 
 CASES = {
     "legacy_cc24": {
-        "input_modes": (1, 4),
         "target_mode": (2, 4),
-        "encoding_mode": 0,
+        "input_state": (1, 4),
+        "encoding_phase_idx": 7,
+        "photon_distinguishability": "indistinguishable",
         "notes": "Previous example-style configuration.",
     },
     "validated_cc01": {
-        "input_modes": (0, 3),
         "target_mode": (0, 1),
-        "encoding_mode": 0,
+        "input_state": (0, 3),
+        "encoding_phase_idx": 7,
+        "photon_distinguishability": "indistinguishable",
         "notes": "Best validated input/readout configuration from the input-pair sweep.",
     },
 }
 
-INPUT_MODES = CASES["validated_cc01"]["input_modes"]
+INPUT_STATE = CASES["validated_cc01"]["input_state"]
 TARGET_CC_PAIR = CASES["validated_cc01"]["target_mode"]
-ENCODING_MODE = CASES["validated_cc01"]["encoding_mode"]
+ENCODING_PHASE_IDX = CASES["validated_cc01"]["encoding_phase_idx"]
 
 COMMON_CFG = {
     "n_modes": 6,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     "output_mode": "coincidence",
     "working_detectors": tuple(range(6)),
     "loss_type": "mse",
@@ -53,7 +54,6 @@ COMMON_CFG = {
     "epochs": 150,
     "n_samples": 1000,
     "memory_depth": 2,
-    "n_photons": None,
     "n_swipe": 0,
     "swipe_span": 0.0,
     "noise_std": None,
@@ -126,9 +126,10 @@ def _compute_metrics(
 
 def _display(case_name: str, case: Dict[str, object]) -> str:
     target_mode = tuple(int(v) for v in case["target_mode"])
+    inp = tuple(int(v) for v in case["input_state"])  # type: ignore[arg-type]
     return (
-        f"{case_name}: input={tuple(case['input_modes'])}, "
-        f"CC{target_mode[0]}{target_mode[1]}, enc={int(case['encoding_mode'])}"
+        f"{case_name}: input_state={inp}, "
+        f"CC{target_mode[0]}{target_mode[1]}, encoding_phase_idx={int(case['encoding_phase_idx'])}"
     )
 
 
@@ -185,9 +186,10 @@ def main() -> None:
     experiment_config = {
         **COMMON_CFG,
         **DATA_CFG,
-        "encoding_mode": ENCODING_MODE,
+        "input_state": INPUT_STATE,
+        "encoding_phase_idx": ENCODING_PHASE_IDX,
+        "photon_distinguishability": "indistinguishable",
         "target_mode": TARGET_CC_PAIR,
-        "input_modes": INPUT_MODES,
         "cases": CASES,
     }
     with Experiment("Coincidence Configuration Comparison", config=experiment_config) as exp:
@@ -240,9 +242,9 @@ def main() -> None:
             {
                 "by_case": {
                     name: {
-                        "input_modes": tuple(case["input_modes"]),
                         "target_mode": tuple(case["target_mode"]),
-                        "encoding_mode": int(case["encoding_mode"]),
+                        "input_state": tuple(int(v) for v in case["input_state"]),  # type: ignore[arg-type]
+                        "encoding_phase_idx": int(case["encoding_phase_idx"]),
                         "final_loss": float(result["final_loss"]),
                         **result["metrics"],
                     }

@@ -89,7 +89,10 @@ def create_memristor_circuit():
     enc_phi = np.pi / 4
 
     mem_circuit = build_circuit(
-        phases=phases, enc_phi=enc_phi, n_modes=n_modes, encoding_mode=0
+        phases=phases,
+        enc_phi=enc_phi,
+        n_modes=n_modes,
+        encoding_phase_idx=0,
     )
 
     # Input state for memristor: |010>
@@ -116,7 +119,10 @@ def create_clements_circuit(n_modes=6):
     enc_phi = np.pi / 4  # Example encoding phase
 
     clements_circuit_obj = build_circuit(
-        phases=phases, enc_phi=enc_phi, n_modes=n_modes, encoding_mode=0
+        phases=phases,
+        enc_phi=enc_phi,
+        n_modes=n_modes,
+        encoding_phase_idx=0,
     )
 
     # Create input state with a single photon in the first mode
@@ -144,7 +150,6 @@ def train_and_evaluate(
     """Trains a Clements circuit on quartic data."""
     print(f"\n=== Training {label.upper()} Circuit on Quartic Function ===")
     n_phases = n_modes * (n_modes - 1)
-    encoding_mode = 0
     target_mode = (n_modes - 1,)
     if memristive_phase_idx:
         print(
@@ -158,20 +163,19 @@ def train_and_evaluate(
 
     sim_cfg = SimConfig(
         n_modes=n_modes,
-        encoding_mode=encoding_mode,
+        input_state=(0,),
+        encoding_phase_idx=0,
+        photon_distinguishability=None,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=None,
-        encoding_phase_idx=None,
         output_mode="singles",
-        input_modes=None,
         working_detectors=None,
         noise_std=None,
         n_samples=n_samples,
         memory_depth=MEMORY_DEPTH,
         n_swipe=0,
         swipe_span=0.0,
-        n_photons=None,
         backend=SIM_BACKEND,
         loss_type="mse",
         n_classes=1,
@@ -355,7 +359,6 @@ def main():
         # Configure parameters
         n_data = 80
         sigma_noise = 0.05
-        epochs = 15
 
         # Create and visualize memristor circuit
         mem_circuit, mem_input, mem_measurement = create_memristor_circuit()
@@ -423,7 +426,7 @@ def main():
             }
 
         # Plot and compare results
-        fig = plot_results(results, X_train, y_train, X_test, y_test, report_dir)
+        plot_results(results, X_train, y_train, X_test, y_test, report_dir)
         plt.show()
 
         sim_logger.report()

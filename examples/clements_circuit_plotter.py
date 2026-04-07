@@ -19,6 +19,7 @@ from reporting import begin_console_capture, write_run_summary
 
 import perceval as pcvl
 from src.circuits import clements_circuit, build_circuit
+from src.simulation import sim_logger
 
 
 def create_clements_circuit(n_modes=6):
@@ -39,8 +40,8 @@ def create_clements_circuit(n_modes=6):
     return circuit, phases
 
 
-def create_full_circuit(n_modes=6, encoding_mode=0):
-    """Creates a full circuit with encoding and Clements components."""
+def create_full_circuit(n_modes=6, encoding_phase_idx=0):
+    """Creates a full Clements circuit with internal encoding at ``encoding_phase_idx``."""
     # Calculate required number of phases for the Clements circuit
     n_phases = n_modes * (n_modes - 1)
 
@@ -51,7 +52,10 @@ def create_full_circuit(n_modes=6, encoding_mode=0):
 
     # Create the full circuit (Clements, no memristive phases)
     circuit = build_circuit(
-        phases=phases, enc_phi=enc_phi, n_modes=n_modes, encoding_mode=encoding_mode
+        phases=phases,
+        enc_phi=enc_phi,
+        n_modes=n_modes,
+        encoding_phase_idx=encoding_phase_idx,
     )
 
     return circuit, phases, enc_phi

@@ -2,8 +2,7 @@
 Simulation configuration dataclass for the UQ-QNN framework.
 
 ``SimConfig`` is the single object that flows through the entire
-simulation → training → autograd stack, replacing ~18 loose keyword
-arguments.
+simulation → training → autograd stack.
 
 IMPORTANT: No field has a default value.  Every parameter must be
 set explicitly by the caller.  This mirrors the project's "no hidden
@@ -14,26 +13,136 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, fields
 from dataclasses import replace as _dc_replace
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Literal, Optional, Tuple, Union
+
+PhotonDistinguishability = Literal["indistinguishable", "distinguishable"]
+
+
+def validate_sim_config(cfg: "SimConfig") -> None:
+    """Validate physics and readout semantics. Call before simulation/training."""
+
+    if cfg.n_modes < 2:
+        raise ValueError(f"n_modes must be >= 2, got {cfg.n_modes}")
+
+    n_phases = cfg.n_modes * (cfg.n_modes - 1)
+    enc_idx = int(cfg.encoding_phase_idx)
+    if enc_idx < 0 or enc_idx >= n_phases:
+        raise ValueError(
+            f"encoding_phase_idx must be in [0, {n_phases - 1}] for {cfg.n_modes} modes, "
+            f"got {enc_idx}"
+        )
+
+    st = tuple(int(x) for x in cfg.input_state)
+    if cfg.output_mode == "singles":
+        if len(st) != 1:
+            raise ValueError(
+                f"singles output_mode requires input_state of length 1, got {st!r}"
+            )
+    elif cfg.output_mode == "coincidence":
+        if len(st) != 2:
+            raise ValueError(
+                f"coincidence output_mode requires input_state of length 2, got {st!r}"
+            )
+        if st[0] == st[1]:
+            raise ValueError(
+                f"coincidence input_state must be two distinct modes (collision-free), got {st!r}"
+            )
+    else:
+        raise ValueError(
+            "output_mode must be either 'singles' or 'coincidence', "
+            f"got {cfg.output_mode!r}"
+        )
+
+    for m in st:
+        if m < 0 or m >= cfg.n_modes:
+            raise ValueError(
+                f"input_state modes must lie in [0, {cfg.n_modes - 1}], got {st!r}"
+            )
+
+    if len(st) == 1:
+        if cfg.photon_distinguishability is not None:
+            raise ValueError(
+                "photon_distinguishability must be None for single-photon input_state"
+            )
+    else:
+        if cfg.photon_distinguishability is None:
+            raise ValueError(
+                "photon_distinguishability is required for two-photon input_state "
+                "(use 'indistinguishable' or 'distinguishable')"
+            )
+        if cfg.photon_distinguishability not in (
+            "indistinguishable",
+            "distinguishable",
+        ):
+            raise ValueError(
+                "photon_distinguishability must be 'indistinguishable' or 'distinguishable', "
+                f"got {cfg.photon_distinguishability!r}"
+            )
+        if cfg.photon_distinguishability == "distinguishable":
+            raise NotImplementedError(
+                "Two-photon distinguishable simulation is not implemented "
+                f"(backend={cfg.backend!r}); use 'indistinguishable'."
+            )
+
+    if cfg.output_mode == "coincidence":
+        if cfg.working_detectors is None or len(cfg.working_detectors) == 0:
+            raise ValueError(
+                "coincidence output_mode requires a non-empty working_detectors tuple"
+            )
+        for wd in cfg.working_detectors:
+            if wd < 0 or wd >= cfg.n_modes:
+                raise ValueError(
+                    "working_detectors indices must lie within the circuit modes, "
+                    f"got {cfg.working_detectors!r}"
+                )
+
+    if cfg.output_mode not in ("singles", "coincidence"):
+        raise ValueError(
+            "output_mode must be either 'singles' or 'coincidence', "
+            f"got {cfg.output_mode!r}"
+        )
+
+    # Readout: scalar coincidence regression needs a pair of output modes -> CC index
+    if cfg.output_mode == "coincidence" and cfg.loss_type == "mse":
+        if cfg.target_mode is None or len(cfg.target_mode) != 2:
+            raise ValueError(
+                "coincidence regression (loss_type='mse') requires target_mode as a pair "
+                "(j, k) of output modes naming the coincidence channel"
+            )
+
+    if cfg.output_mode == "coincidence" and cfg.loss_type == "cross_entropy":
+        if cfg.n_classes > 1:
+            from .coincidence import working_detectors_to_cc_indices
+
+            n_cc = len(working_detectors_to_cc_indices(cfg.working_detectors, cfg.n_modes))
+            if cfg.n_classes != n_cc:
+                raise ValueError(
+                    f"coincidence cross-entropy with n_classes={cfg.n_classes} requires "
+                    f"n_classes to match the number of coincidence channels from "
+                    f"working_detectors ({n_cc})"
+                )
+
+
+def psr_photon_counts_for_phases(sim_cfg: "SimConfig", n_phase_params: int) -> Tuple[int, ...]:
+    """Per-trainable-phase photon count for PSR (training-only; not physical config)."""
+    n = 2 if sim_cfg.output_mode == "coincidence" else 1
+    return tuple(n for _ in range(n_phase_params))
 
 
 @dataclass(frozen=True)
 class CircuitConfig:
-    """Geometry + measurement description for a photonic circuit.
+    """Circuit geometry + input + encoding + measurement (same field set as SimConfig slice).
 
-    Unlike :class:`SimConfig`, ``CircuitConfig`` focuses purely on the
-    physics/measurement side of a circuit (number of modes, encoding
-    strategy, singles vs. coincidence readout).  It intentionally carries
-    sane defaults so that simple scripts can construct a circuit without
-    specifying every policy knob used by the training stack.
+    No optional defaults on physics fields: callers must set input_state,
+    encoding_phase_idx, and photon_distinguishability consistently.
     """
 
     n_modes: int
-    encoding_mode: int = 0
-    encoding_phase_idx: Optional[int] = None
-    output_mode: str = "singles"  # "singles" | "coincidence"
-    input_modes: Optional[Tuple[int, ...]] = None
-    working_detectors: Optional[Tuple[int, ...]] = None
+    input_state: Tuple[int, ...]
+    encoding_phase_idx: int
+    photon_distinguishability: Optional[str]
+    output_mode: str
+    working_detectors: Optional[Tuple[int, ...]]
 
     @property
     def n_phases(self) -> int:
@@ -47,44 +156,61 @@ class CircuitConfig:
 
         return self.n_modes * (self.n_modes - 1) // 2
 
-    def validate(self) -> None:
-        """Validate that the circuit description is internally consistent."""
+    @property
+    def singles_input_mode(self) -> int:
+        """Input mode index for single-photon paths."""
 
+        return int(self.input_state[0])
+
+    def validate(self) -> None:
+        """Validate circuit description (delegates to full SimConfig-compatible checks)."""
+
+        # Minimal checks without full SimConfig; mirror validate_sim_config logic for circuit fields
         if self.n_modes < 2:
             raise ValueError(f"n_modes must be >= 2, got {self.n_modes}")
-        if self.encoding_mode < 0 or self.encoding_mode >= self.n_modes:
+        n_phases = self.n_phases
+        idx = int(self.encoding_phase_idx)
+        if idx < 0 or idx >= n_phases:
             raise ValueError(
-                f"encoding_mode must be in [0, {self.n_modes - 1}], got {self.encoding_mode}"
+                f"encoding_phase_idx must be in [0, {n_phases - 1}], got {idx}"
             )
-        if self.encoding_phase_idx is not None:
-            n_phases = self.n_phases
-            idx = int(self.encoding_phase_idx)
-            if idx < 0 or idx >= n_phases:
-                raise ValueError(
-                    f"encoding_phase_idx must be in [0, {n_phases - 1}], got {idx}"
-                )
         if self.output_mode not in ("singles", "coincidence"):
             raise ValueError(
                 "output_mode must be either 'singles' or 'coincidence', "
                 f"got {self.output_mode!r}"
             )
+        st = self.input_state
+        if self.output_mode == "singles" and len(st) != 1:
+            raise ValueError(f"singles requires input_state length 1, got {st!r}")
         if self.output_mode == "coincidence":
-            if self.input_modes is not None and len(self.input_modes) != 2:
+            if len(st) != 2 or st[0] == st[1]:
                 raise ValueError(
-                    "Coincidence mode requires exactly two input_modes entries"
+                    f"coincidence requires two distinct modes in input_state, got {st!r}"
                 )
-            if self.input_modes is not None:
-                for m in self.input_modes:
-                    if m < 0 or m >= self.n_modes:
-                        raise ValueError(
-                            "input_modes indices must lie within the circuit modes"
-                        )
-            if self.working_detectors is not None:
-                for wd in self.working_detectors:
-                    if wd < 0 or wd >= self.n_modes:
-                        raise ValueError(
-                            "working_detectors indices must lie within the circuit modes"
-                        )
+            if (
+                self.working_detectors is None
+                or len(self.working_detectors) == 0
+            ):
+                raise ValueError("coincidence requires non-empty working_detectors")
+        for m in st:
+            if m < 0 or m >= self.n_modes:
+                raise ValueError(f"input_state out of range: {st!r}")
+        if len(st) == 1:
+            if self.photon_distinguishability is not None:
+                raise ValueError("photon_distinguishability must be None for singles")
+        else:
+            if self.photon_distinguishability not in (
+                "indistinguishable",
+                "distinguishable",
+            ):
+                raise ValueError(
+                    "two-photon input requires photon_distinguishability "
+                    "'indistinguishable' or 'distinguishable'"
+                )
+        if self.working_detectors is not None:
+            for wd in self.working_detectors:
+                if wd < 0 or wd >= self.n_modes:
+                    raise ValueError(f"working_detectors out of range: {self.working_detectors!r}")
 
     @classmethod
     def from_sim_config(cls, cfg: "SimConfig") -> "CircuitConfig":
@@ -92,10 +218,10 @@ class CircuitConfig:
 
         return cls(
             n_modes=cfg.n_modes,
-            encoding_mode=cfg.encoding_mode,
+            input_state=cfg.input_state,
             encoding_phase_idx=cfg.encoding_phase_idx,
+            photon_distinguishability=cfg.photon_distinguishability,
             output_mode=cfg.output_mode,
-            input_modes=cfg.input_modes,
             working_detectors=cfg.working_detectors,
         )
 
@@ -123,16 +249,16 @@ class SimConfig:
 
     # ── circuit geometry ───────────────────────────────────────
     n_modes: int
-    encoding_mode: int
+    input_state: Tuple[int, ...]
+    encoding_phase_idx: int
+    photon_distinguishability: Optional[str]
     target_mode: Optional[Tuple[int, ...]]
     memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]]
     memristive_output_modes: Optional[Tuple[Tuple[int, int], ...]]
-    encoding_phase_idx: Optional[int]
 
     # ── measurement mode ───────────────────────────────────────
     output_mode: str  # "singles" | "coincidence"
-    input_modes: Optional[Tuple[int, ...]]  # for coincidence
-    working_detectors: Optional[Tuple[int, ...]]  # for coincidence
+    working_detectors: Optional[Tuple[int, ...]]  # required for coincidence
     noise_std: Optional[Union[float, Tuple[float, ...]]]
 
     # ── simulation ─────────────────────────────────────────────
@@ -140,7 +266,6 @@ class SimConfig:
     memory_depth: int
     n_swipe: int
     swipe_span: float
-    n_photons: Optional[Tuple[int, ...]]
     backend: str  # "numpy" | "perceval"
 
     # ── loss / task ────────────────────────────────────────────
@@ -200,6 +325,12 @@ class SimConfig:
         else:
             tm = tuple(int(x) for x in tm_raw)
 
+        def as_int_tuple(key: str) -> Tuple[int, ...]:
+            v = cfg[key]
+            if isinstance(v, list):
+                return tuple(int(x) for x in v)
+            return tuple(int(x) for x in v)
+
         def as_int_tuple_opt(key: str) -> Optional[Tuple[int, ...]]:
             v = cfg.get(key)
             if v is None:
@@ -208,31 +339,25 @@ class SimConfig:
                 return tuple(int(x) for x in v)
             return tuple(int(x) for x in v)
 
-        np_raw = cfg.get("n_photons")
-        n_photons: Optional[Tuple[int, ...]]
-        if np_raw is None:
-            n_photons = None
-        elif isinstance(np_raw, list):
-            n_photons = tuple(int(x) for x in np_raw)
-        else:
-            n_photons = tuple(int(x) for x in np_raw)
+        dist = cfg.get("photon_distinguishability")
+        if dist is not None:
+            dist = str(dist)
 
         return cls(
             n_modes=int(cfg["n_modes"]),
-            encoding_mode=int(cfg["encoding_mode"]),
+            input_state=as_int_tuple("input_state"),
+            encoding_phase_idx=int(cfg["encoding_phase_idx"]),
+            photon_distinguishability=dist,
             target_mode=tm,
             memristive_phase_idx=cfg.get("memristive_phase_idx"),
             memristive_output_modes=mom,
-            encoding_phase_idx=cfg.get("encoding_phase_idx"),
             output_mode=str(cfg["output_mode"]),
-            input_modes=as_int_tuple_opt("input_modes"),
             working_detectors=as_int_tuple_opt("working_detectors"),
             noise_std=cfg.get("noise_std"),
             n_samples=int(cfg["n_samples"]),
             memory_depth=int(cfg["memory_depth"]),
             n_swipe=int(cfg["n_swipe"]),
             swipe_span=float(cfg["swipe_span"]),
-            n_photons=n_photons,
             backend=str(backend),
             loss_type=str(cfg["loss_type"]),
             n_classes=int(cfg["n_classes"]),
@@ -253,9 +378,15 @@ class SimConfig:
 
         return CircuitConfig(
             n_modes=self.n_modes,
-            encoding_mode=self.encoding_mode,
+            input_state=self.input_state,
             encoding_phase_idx=self.encoding_phase_idx,
+            photon_distinguishability=self.photon_distinguishability,
             output_mode=self.output_mode,
-            input_modes=self.input_modes,
             working_detectors=self.working_detectors,
         )
+
+    @property
+    def singles_input_mode(self) -> int:
+        """Input mode index for single-photon paths (first entry of input_state)."""
+
+        return int(self.input_state[0])

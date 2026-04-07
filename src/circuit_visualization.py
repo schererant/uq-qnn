@@ -29,13 +29,13 @@ logger = get_logger(__name__)
 
 def display_circuit_annotated(
     n_modes: int,
-    encoding_mode: int = 0,
+    input_state: Tuple[int, ...],
+    encoding_phase_idx: int,
     target_mode: Optional[Tuple[int, ...]] = None,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
     phases: Optional[np.ndarray] = None,
     enc_phi: float = np.pi / 4,
-    encoding_phase_idx: Optional[int] = None,
     path: Optional[str] = None,
     show: bool = True,
     skin=None,
@@ -46,14 +46,13 @@ def display_circuit_annotated(
 
     Args:
         n_modes: Number of modes (3 for 3x3, 6 for 6x6, etc.).
-        encoding_mode: Mode where the input photon is injected (encoding).
+        input_state: Occupied input modes (length 1 for singles, 2 for coincidence).
+        encoding_phase_idx: Mesh phase index that receives ``enc_phi`` (internal encoding).
         target_mode: Output mode(s) used for measurement. Default: (n_modes - 1,).
         memristive_phase_idx: Phase indices that are memristive (feedback-controlled).
         memristive_output_modes: For each memristive phase, (mode_p1, mode_p2) for feedback.
         phases: Phase values for the circuit. If None, uses π/4 for all.
-        enc_phi: Encoding phase value (radians).
-        encoding_phase_idx: If provided, enc_phi is embedded into this phase index
-            inside the Clements mesh instead of using a separate encoding_circuit.
+        enc_phi: Data encoding phase contribution (radians), added at encoding_phase_idx.
         path: If set, save the annotated figure to this file path.
         show: If True, display the figure (e.g. plt.show()).
         skin: Perceval skin (e.g. SymbSkin()). If None, uses default.
@@ -76,13 +75,13 @@ def display_circuit_annotated(
         phases,
         enc_phi,
         n_modes=n_modes,
-        encoding_mode=encoding_mode,
-        encoding_phase_idx=encoding_phase_idx,
+        encoding_phase_idx=int(encoding_phase_idx),
     )
     proc = pcvl.Processor("SLOS", circ)
-    input_modes = [0] * n_modes
-    input_modes[encoding_mode] = 1
-    proc.with_input(pcvl.BasicState(input_modes))
+    occ = [0] * n_modes
+    for m in input_state:
+        occ[int(m)] += 1
+    proc.with_input(pcvl.BasicState(occ))
 
     import tempfile
 
@@ -101,7 +100,7 @@ def display_circuit_annotated(
     lines = [
         "Circuit configuration",
         "─" * 40,
-        f"Input (encoding): mode {encoding_mode}",
+        f"Input state (modes): {tuple(input_state)}",
         f"Target output: modes {target_mode}",
         f"Encoding phase enc_φ: {enc_phi:.4f} rad ({np.degrees(enc_phi):.1f}°)",
         "",
@@ -171,7 +170,8 @@ def display_circuit_annotated(
 def save_circuit_annotated(
     path: str,
     n_modes: int,
-    encoding_mode: int = 0,
+    input_state: Tuple[int, ...],
+    encoding_phase_idx: int,
     target_mode: Optional[Tuple[int, ...]] = None,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
@@ -182,7 +182,8 @@ def save_circuit_annotated(
     """
     display_circuit_annotated(
         n_modes=n_modes,
-        encoding_mode=encoding_mode,
+        input_state=input_state,
+        encoding_phase_idx=encoding_phase_idx,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,

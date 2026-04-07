@@ -97,20 +97,20 @@ class TestCircuitArchitectures(unittest.TestCase):
         phases = np.ones(n_phases) * np.pi / 4
         enc_phi = np.pi / 6
 
-        circ = build_circuit(phases, enc_phi, n_modes=n_modes)
+        circ = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_phase_idx=0)
         self.assertEqual(circ.m, n_modes)
 
-        circ2 = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_mode=1)
+        circ2 = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_phase_idx=1)
         self.assertEqual(circ2.m, n_modes)
 
         n_modes = 5
         n_phases = n_modes * (n_modes - 1)
         phases = np.ones(n_phases) * np.pi / 4
-        circ3 = build_circuit(phases, enc_phi, n_modes=n_modes)
+        circ3 = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_phase_idx=0)
         self.assertEqual(circ3.m, n_modes)
 
         with self.assertRaises(ValueError):
-            build_circuit(phases, enc_phi, n_modes=1)
+            build_circuit(phases, enc_phi, n_modes=1, encoding_phase_idx=0)
 
     def test_get_mzi_modes_for_phase(self):
         """Test phase index to MZI mode mapping."""
@@ -138,20 +138,19 @@ class TestCircuitArchitectures(unittest.TestCase):
         enc = np.linspace(0, np.pi, 5)
         cfg = SimConfig(
             n_modes=n_modes,
-            encoding_mode=0,
+            input_state=(0,),
+            encoding_phase_idx=0,
+            photon_distinguishability=None,
             target_mode=(n_modes - 1,),
             memristive_phase_idx=memristive_phase_idx,
             memristive_output_modes=None,
-            encoding_phase_idx=None,
             output_mode="singles",
-            input_modes=None,
             working_detectors=None,
             noise_std=None,
             n_samples=100,
             memory_depth=2,
             n_swipe=0,
             swipe_span=0.0,
-            n_photons=None,
             backend="numpy",
             loss_type="mse",
             n_classes=1,
@@ -171,20 +170,19 @@ class TestCircuitArchitectures(unittest.TestCase):
         enc = np.linspace(0, np.pi, 5)
         cfg = SimConfig(
             n_modes=n_modes,
-            encoding_mode=0,
+            input_state=(0,),
+            encoding_phase_idx=0,
+            photon_distinguishability=None,
             target_mode=(n_modes - 1,),
             memristive_phase_idx=None,
             memristive_output_modes=None,
-            encoding_phase_idx=None,
             output_mode="singles",
-            input_modes=None,
             working_detectors=None,
             noise_std=None,
             n_samples=100,
             memory_depth=2,
             n_swipe=0,
             swipe_span=0.0,
-            n_photons=None,
             backend="numpy",
             loss_type="mse",
             n_classes=1,

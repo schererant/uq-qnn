@@ -54,11 +54,9 @@ logger = get_logger(__name__)
 _COMMON: Dict = {
     # Circuit
     "n_modes": 6,
-    "encoding_mode": 0,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
-    "n_photons": None,
+    "encoding_phase_idx": 5,
     # Training
     "memory_depth": 1,
     "n_swipe": 0,
@@ -76,18 +74,20 @@ _COMMON: Dict = {
 # Singles: read one output detector (last mode)
 SINGLES_CONFIG: Dict = {
     **_COMMON,
+    "input_state": (0,),
+    "photon_distinguishability": None,
     "output_mode": "singles",
-    "target_mode": (2, 4),
-    "input_modes": None,
+    "target_mode": (2,),
     "working_detectors": None,
 }
 
-# Coincidence: inject photons at modes 1 and 4, read all CC channels
+# Coincidence: inject photons at the validated modes and read CC01 explicitly
 COINCIDENCE_CONFIG: Dict = {
     **_COMMON,
+    "input_state": (0, 3),
+    "photon_distinguishability": "indistinguishable",
     "output_mode": "coincidence",
-    "target_mode": None,
-    "input_modes": (1, 4),
+    "target_mode": (0, 1),
     "working_detectors": tuple(range(6)),
 }
 

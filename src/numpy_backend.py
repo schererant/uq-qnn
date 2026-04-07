@@ -48,6 +48,24 @@ def _mzi_unitary(phi_int: float, phi_ext: float) -> np.ndarray:
     return p_ext @ bs @ p_int @ bs
 
 
+def _mzi_unitary_batch(phi_int: np.ndarray, phi_ext: np.ndarray) -> np.ndarray:
+    """Same as ``_mzi_unitary`` but vectorized. Shapes (n_data,) → (n_data, 2, 2)."""
+
+    phi_int = np.asarray(phi_int, dtype=np.float64) % (2 * np.pi)
+    phi_ext = np.asarray(phi_ext, dtype=np.float64) % (2 * np.pi)
+    bs = _bs_2x2()
+    n_data = int(phi_int.shape[0])
+    p_int = np.zeros((n_data, 2, 2), dtype=np.complex128)
+    p_int[:, 0, 0] = 1.0
+    p_int[:, 1, 1] = np.exp(1j * phi_int)
+    p_ext = np.zeros((n_data, 2, 2), dtype=np.complex128)
+    p_ext[:, 0, 0] = 1.0
+    p_ext[:, 1, 1] = np.exp(1j * phi_ext)
+    a = p_ext @ bs
+    a = np.matmul(a, p_int)
+    return np.matmul(a, bs)
+
+
 def _apply_mzi_to_state(
     state: np.ndarray,
     m1: int,
@@ -84,60 +102,28 @@ def clements_unitary(phases: np.ndarray, n_modes: int) -> np.ndarray:
     return u
 
 
-def _encoding_unitary_2x2_batch(enc_phases: np.ndarray) -> np.ndarray:
-    """Batch of 2x2 encoding blocks: BS — PS(enc) — BS. Shape (n_data, 2, 2)."""
-    phi = np.asarray(enc_phases, dtype=np.float64) % (2 * np.pi)
-    bs = _bs_2x2()
-    p = np.zeros(phi.shape + (2, 2), dtype=np.complex128)
-    p[..., 0, 0] = 1.0
-    p[..., 1, 1] = np.exp(1j * phi)
-    # einsum: bs @ P @ bs for each slice
-    return np.einsum("ij,...jk,kl->...il", bs, p, bs)
+def clements_unitary_batch(phases_batch: np.ndarray, n_modes: int) -> np.ndarray:
+    """Batched Clements meshes: ``phases_batch`` (n_data, n_phases) → (n_data, n, n)."""
 
-
-def _valid_encoding_mode(encoding_mode: int, n_modes: int) -> int:
-    return min(max(0, int(encoding_mode)), n_modes - 2)
-
-
-def _full_unitary_separate_encoding_batch(
-    u_clem: np.ndarray, enc_phases: np.ndarray, encoding_mode: int, n_modes: int
-) -> np.ndarray:
-    """
-    U_full = U_clem @ U_embed(enc) with a 2-mode encoding block on (m, m+1).
-    Returns shape (n_data, n_modes, n_modes).
-    """
-    m = _valid_encoding_mode(encoding_mode, n_modes)
-    e = _encoding_unitary_2x2_batch(enc_phases)
-    n_data = e.shape[0]
-    u_out = np.empty((n_data, n_modes, n_modes), dtype=np.complex128)
-    u_c = u_clem  # (n_modes, n_modes)
-    for j in range(n_modes):
-        if j not in (m, m + 1):
-            u_out[:, :, j] = u_c[:, j]
-    # Columns m and m+1: (U_clem @ U_enc)[:, k] = U_clem[:, m:m+2] @ E[:, k] for k in {0,1} of 2x2 block
-    u_out[:, :, m] = (
-        e[:, 0, 0, None] * u_c[None, :, m] + e[:, 1, 0, None] * u_c[None, :, m + 1]
-    )
-    u_out[:, :, m + 1] = (
-        e[:, 0, 1, None] * u_c[None, :, m] + e[:, 1, 1, None] * u_c[None, :, m + 1]
-    )
-    return u_out
-
-
-def _encoded_input_state(
-    enc_phi: float,
-    encoding_mode: int,
-    n_modes: int,
-) -> np.ndarray:
-    """Single-photon input state after the separate 2-mode encoding block."""
-
-    m = _valid_encoding_mode(encoding_mode, n_modes)
-    enc_phi = float(enc_phi) % (2 * np.pi)
-    e_phi = np.exp(1j * enc_phi)
-    state = np.zeros(n_modes, dtype=np.complex128)
-    state[m] = 0.5 * (1.0 - e_phi)
-    state[m + 1] = 0.5j * (1.0 + e_phi)
-    return state
+    phases_batch = np.asarray(phases_batch, dtype=np.float64)
+    if phases_batch.ndim != 2:
+        raise ValueError(f"phases_batch must be 2D, got shape {phases_batch.shape}")
+    n_data, n_ph = phases_batch.shape
+    expected = n_modes * (n_modes - 1)
+    if n_ph != expected:
+        raise ValueError(f"Expected {expected} phases per row, got {n_ph}")
+    pairs = clements_mzi_pairs(n_modes)
+    u = np.broadcast_to(np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)).copy()
+    for mzi_idx, (m1, m2) in enumerate(pairs):
+        phi_i = 2 * mzi_idx
+        m2x2 = _mzi_unitary_batch(phases_batch[:, phi_i], phases_batch[:, phi_i + 1])
+        u_mzi = np.broadcast_to(np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)).copy()
+        u_mzi[:, m1, m1] = m2x2[:, 0, 0]
+        u_mzi[:, m1, m2] = m2x2[:, 0, 1]
+        u_mzi[:, m2, m1] = m2x2[:, 1, 0]
+        u_mzi[:, m2, m2] = m2x2[:, 1, 1]
+        u = np.matmul(u_mzi, u)
+    return u
 
 
 def _basis_input_state(input_mode: int, n_modes: int) -> np.ndarray:
@@ -161,14 +147,35 @@ def _propagate_state_vector(
     return out
 
 
+def _unitary_batch_internal_encoding(
+    phases: np.ndarray,
+    enc_phases: np.ndarray,
+    n_modes: int,
+    encoding_phase_idx: int,
+) -> np.ndarray:
+    """Unitary per data point with enc added at encoding_phase_idx. Shape (n_data, n, n).
+
+    Uses one batched Clements pass (``clements_unitary_batch``) instead of rebuilding the
+    mesh in a Python loop per data point — the latter was ~O(n_data) full factorizations
+    and dominated coincidence training cost after internal-encoding migration.
+    """
+    enc = np.asarray(enc_phases, dtype=np.float64).reshape(-1)
+    num_pts = len(enc)
+    idx = int(encoding_phase_idx)
+    phases = np.asarray(phases, dtype=np.float64).reshape(-1)
+    phases_tile = np.broadcast_to(phases, (num_pts, phases.shape[0])).copy()
+    phases_tile[:, idx] = (phases_tile[:, idx] + enc) % (2 * np.pi)
+    return clements_unitary_batch(phases_tile, n_modes)
+
+
 def _singles_probabilities_batch(
     u_batch: np.ndarray,
-    encoding_mode: int,
+    singles_input_mode: int,
     target_mode: Tuple[int, ...],
     return_class_probs: bool,
 ) -> np.ndarray:
-    """u_batch (n_data, n, n); photon input column = encoding_mode."""
-    enc_col = int(encoding_mode)
+    """u_batch (n_data, n, n); Born column = singles_input_mode (input photon mode)."""
+    enc_col = int(singles_input_mode)
     if return_class_probs and len(target_mode) > 1:
         t = np.array(target_mode, dtype=int)
         raw = np.abs(u_batch[:, t, enc_col]) ** 2
@@ -216,10 +223,12 @@ def _process_coincidence_rows(
         if return_class_probs and len(working_cc_indices) > 1:
             preds[i, :] = out[list(working_cc_indices)]
         else:
-            idx = readout_cc_idx if readout_cc_idx is not None else (
-                working_cc_indices[0] if working_cc_indices else 0
-            )
-            preds[i] = out[idx]
+            if readout_cc_idx is None:
+                raise ValueError(
+                    "scalar coincidence output requires readout_cc_idx (set target_mode to the "
+                    "output mode pair (j, k) for the desired CC channel)"
+                )
+            preds[i] = out[readout_cc_idx]
 
 
 def run_vectorized_non_memristive(
@@ -240,19 +249,10 @@ def run_vectorized_non_memristive(
     enc = np.asarray(encoded_phases, dtype=np.float64).reshape(-1)
     num_pts = len(enc)
 
-    in_modes: tuple[int, int] = (0, 1)
     if cfg.output_mode == "coincidence":
-        if cfg.input_modes is not None:
-            in_modes = (int(cfg.input_modes[0]), int(cfg.input_modes[1]))
-        elif cfg.n_modes >= 6:
-            in_modes = (1, 4)
-        else:
-            in_modes = (0, 1)
-        wd = (
-            tuple(cfg.working_detectors)
-            if cfg.working_detectors is not None
-            else (0, 1, 5)
-        )
+        in_modes = (int(cfg.input_state[0]), int(cfg.input_state[1]))
+        assert cfg.working_detectors is not None
+        wd = tuple(cfg.working_detectors)
         working_cc_indices = working_detectors_to_cc_indices(wd, cfg.n_modes)
         cc_labels = get_cc_labels(cfg.n_modes)
         add_noise = _has_positive_noise(cfg.noise_std)
@@ -268,23 +268,15 @@ def run_vectorized_non_memristive(
     else:
         preds = np.zeros(num_pts, dtype=float)
 
-    if cfg.encoding_phase_idx is None:
-        u_clem = clements_unitary(phases, cfg.n_modes)
-        u_batch = _full_unitary_separate_encoding_batch(
-            u_clem, enc, cfg.encoding_mode, cfg.n_modes
-        )
-    else:
-        idx = int(cfg.encoding_phase_idx)
-        u_batch = np.empty((num_pts, cfg.n_modes, cfg.n_modes), dtype=np.complex128)
-        for i in range(num_pts):
-            mp = phases.copy()
-            mp[idx] = (mp[idx] + enc[i]) % (2 * np.pi)
-            u_batch[i] = clements_unitary(mp, cfg.n_modes)
+    u_batch = _unitary_batch_internal_encoding(
+        phases, enc, cfg.n_modes, cfg.encoding_phase_idx
+    )
 
     if cfg.output_mode == "coincidence":
         coinc = _coincidence_raw_batch(u_batch, in_modes, cfg.n_modes)
         readout_cc_idx: Optional[int] = None
-        if cfg.target_mode is not None and len(cfg.target_mode) == 2:
+        if cfg.loss_type == "mse":
+            assert cfg.target_mode is not None and len(cfg.target_mode) == 2
             readout_cc_idx = mode_pair_to_cc_index(
                 cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
             )
@@ -300,11 +292,11 @@ def run_vectorized_non_memristive(
         )
     elif return_class_probs and n_classes > 1:
         preds[:, :] = _singles_probabilities_batch(
-            u_batch, cfg.encoding_mode, target_mode, True
+            u_batch, cfg.singles_input_mode, target_mode, True
         )
     else:
         preds[:] = _singles_probabilities_batch(
-            u_batch, cfg.encoding_mode, target_mode, False
+            u_batch, cfg.singles_input_mode, target_mode, False
         )
 
     return preds
@@ -381,12 +373,9 @@ def run_fast_memristive_singles(
             phases_work[:] = phases_base
             phases_work[list(memristive_indices)] = mem_phis
 
-            if cfg.encoding_phase_idx is None:
-                state_in = _encoded_input_state(enc_phi, cfg.encoding_mode, cfg.n_modes)
-            else:
-                state_in = _basis_input_state(cfg.encoding_mode, cfg.n_modes)
-                idx = int(cfg.encoding_phase_idx)
-                phases_work[idx] = (phases_work[idx] + enc_phi) % (2 * np.pi)
+            state_in = _basis_input_state(cfg.singles_input_mode, cfg.n_modes)
+            idx = int(cfg.encoding_phase_idx)
+            phases_work[idx] = (phases_work[idx] + enc_phi) % (2 * np.pi)
 
             state_out = _propagate_state_vector(phases_work, state_in, cfg.n_modes)
             probs = np.abs(state_out) ** 2
@@ -412,10 +401,10 @@ def run_fast_memristive_singles(
 
 
 def singles_prob_from_unitary(
-    u: np.ndarray, encoding_mode: int, target_mode: Tuple[int, ...]
+    u: np.ndarray, singles_input_mode: int, target_mode: Tuple[int, ...]
 ) -> float:
     """Scalar target probability (possibly averaged) for singles output_mode."""
-    enc_col = int(encoding_mode)
+    enc_col = int(singles_input_mode)
     s = sum(np.abs(u[int(m), enc_col]) ** 2 for m in target_mode)
     if len(target_mode) > 1:
         s /= len(target_mode)
@@ -423,9 +412,9 @@ def singles_prob_from_unitary(
 
 
 def singles_class_probs_from_unitary(
-    u: np.ndarray, encoding_mode: int, target_mode: Tuple[int, ...]
+    u: np.ndarray, singles_input_mode: int, target_mode: Tuple[int, ...]
 ) -> np.ndarray:
-    enc_col = int(encoding_mode)
+    enc_col = int(singles_input_mode)
     return np.array([np.abs(u[int(m), enc_col]) ** 2 for m in target_mode], dtype=float)
 
 
@@ -457,17 +446,11 @@ def unitary_for_point(
     phases: np.ndarray,
     enc_phi: float,
     n_modes: int,
-    encoding_mode: int,
-    encoding_phase_idx: Optional[int],
+    encoding_phase_idx: int,
 ) -> np.ndarray:
-    """Full unitary for one data point (separate or inline encoding)."""
+    """Full unitary for one data point (internal mesh encoding only)."""
     phases = np.asarray(phases, dtype=np.float64).reshape(-1)
     enc_phi = float(enc_phi) % (2 * np.pi)
-    if encoding_phase_idx is None:
-        u_clem = clements_unitary(phases, n_modes)
-        return _full_unitary_separate_encoding_batch(
-            u_clem, np.array([enc_phi]), encoding_mode, n_modes
-        )[0]
     mp = phases.copy()
     idx = int(encoding_phase_idx)
     mp[idx] = (mp[idx] + enc_phi) % (2 * np.pi)

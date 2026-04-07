@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 
 from .circuits import normalize_memristive_phase_idx
-from .config import SimConfig
+from .config import SimConfig, validate_sim_config
 from .logging_config import get_logger, log_params
 from .loss import PhotonicModel
 
@@ -32,14 +32,6 @@ def _init_theta(
         return phases
     weights = rng.uniform(0.01, 1, size=len(memristive_indices))
     return np.concatenate([phases, weights])
-
-
-def _resolve_n_photons(sim_cfg: SimConfig, n_phase_params: int) -> Tuple[int, ...]:
-    if sim_cfg.n_photons is not None:
-        return tuple(int(n) for n in sim_cfg.n_photons)
-
-    default_photons = 2 if sim_cfg.output_mode == "coincidence" else 1
-    return tuple([default_photons] * n_phase_params)
 
 
 def train_pytorch_generic(
@@ -84,6 +76,8 @@ def train_pytorch_generic(
                 f"got {len(sim_cfg_work.target_mode)}"
             )
 
+    validate_sim_config(sim_cfg_work)
+
     if verbose:
         params = {
             **sim_cfg_work.to_dict(),
@@ -102,16 +96,18 @@ def train_pytorch_generic(
     memristive_indices = normalize_memristive_phase_idx(
         sim_cfg_work.memristive_phase_idx, sim_cfg_work.n_modes, expected_phases
     )
-    phase_idx = tuple(i for i in range(expected_phases) if i not in memristive_indices)
-
-    n_photons = _resolve_n_photons(sim_cfg_work, len(phase_idx))
+    enc_pi = int(sim_cfg_work.encoding_phase_idx)
+    phase_idx = tuple(
+        i
+        for i in range(expected_phases)
+        if i not in memristive_indices and i != enc_pi
+    )
 
     model = PhotonicModel(
         init_theta.tolist(),
         enc_np,
         y_np,
         phase_idx,
-        n_photons,
         sim_cfg_work,
     )
     optim = torch.optim.Adam(model.parameters(), lr=lr)
@@ -191,8 +187,9 @@ def gradient_check(
         memristive_phase_idx, n_modes, n_phases
     )
     n_memristive = len(memristive_indices)
-    phase_idx = tuple(i for i in range(n_phases) if i not in memristive_indices)
-    n_photons = tuple([1] * len(phase_idx))
+    non_mem = [i for i in range(n_phases) if i not in memristive_indices]
+    enc_slot = non_mem[0]
+    phase_idx = tuple(i for i in non_mem if i != enc_slot)
 
     theta0 = np.random.rand(n_phases + n_memristive)
     theta0[:n_phases] *= 2 * np.pi
@@ -201,20 +198,10 @@ def gradient_check(
     n_samples = 5
 
     cfg = SimConfig(
-        encoding_phase_idx=None,
-        input_modes=None,
-        working_detectors=None,
-        noise_std=None,
-        n_samples=n_samples,
-        memory_depth=mem_depth,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_photons=n_photons,
-        backend="numpy",
-        loss_type="mse",
-        n_classes=1,
         n_modes=n_modes,
-        encoding_mode=0,
+        input_state=(0,),
+        encoding_phase_idx=enc_slot,
+        photon_distinguishability=None,
         target_mode=(n_modes - 1,) if n_modes else None,
         memristive_phase_idx=(
             None
@@ -225,7 +212,17 @@ def gradient_check(
         ),
         memristive_output_modes=None,
         output_mode="singles",
+        working_detectors=None,
+        noise_std=None,
+        n_samples=n_samples,
+        memory_depth=mem_depth,
+        n_swipe=0,
+        swipe_span=0.0,
+        backend="numpy",
+        loss_type="mse",
+        n_classes=1,
     )
+    validate_sim_config(cfg)
 
     def L(params):
         return 0.5 * ((run_simulation_sequence_np(params, enc, cfg) - y) ** 2).mean()
@@ -244,13 +241,18 @@ def gradient_check(
         torch.from_numpy(enc).double(),
         torch.from_numpy(y).double(),
         phase_idx,
-        n_photons,
         cfg,
     )
     loss.backward()
     assert th_t.grad is not None
     psr_grad = th_t.grad.detach().cpu().numpy()
+    # PSR omits the frozen encoding slot; skip it in the FD comparison.
+    compare_mask = np.ones(len(theta0), dtype=bool)
+    compare_mask[enc_slot] = False
     logger.info("Finite‑diff  : %s", num_grad)
     logger.info("PSR / Torch : %s", psr_grad)
     logger.info("Abs‑error   : %s", np.abs(num_grad - psr_grad))
-    logger.info("Max‑error   : %s", np.abs(num_grad - psr_grad).max())
+    logger.info(
+        "Max‑error (trainable) : %s",
+        np.abs(num_grad[compare_mask] - psr_grad[compare_mask]).max(),
+    )

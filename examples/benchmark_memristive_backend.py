@@ -28,20 +28,19 @@ logger = get_logger(__name__)
 
 BASE_CONFIG: Dict = {
     "n_modes": 6,
-    "encoding_mode": 0,
+    "input_state": (0,),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
     "target_mode": (5,),
     "memristive_phase_idx": (6,),
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
     "noise_std": None,
     "n_samples": 300,
     "memory_depth": 3,
     "n_swipe": 0,
     "swipe_span": 0.0,
-    "n_photons": None,
     "sim_backend": "numpy",
     "loss_type": "mse",
     "n_classes": 1,
@@ -57,7 +56,7 @@ CASES = [
         "n_swipe": 0,
         "swipe_span": 0.0,
         "memory_depth": 3,
-        "encoding_phase_idx": None,
+        "encoding_phase_idx": 0,
         "repeats": 8,
     },
     {
@@ -66,7 +65,7 @@ CASES = [
         "n_swipe": 7,
         "swipe_span": float(np.pi / 18),
         "memory_depth": 3,
-        "encoding_phase_idx": None,
+        "encoding_phase_idx": 0,
         "repeats": 6,
     },
     {
@@ -106,7 +105,7 @@ def _legacy_memristive_reference(
         n_indices=len(memristive_indices),
         memory_depth=cfg.memory_depth,
         output_modes=output_modes,
-        encoding_mode=cfg.encoding_mode,
+        singles_input_mode=cfg.singles_input_mode,
     )
 
     preds = np.zeros(len(encoded_phases), dtype=float)
@@ -134,13 +133,14 @@ def _legacy_memristive_reference(
                 phases_loc,
                 float(enc_phi + off),
                 cfg.n_modes,
-                cfg.encoding_mode,
                 cfg.encoding_phase_idx,
             )
             for j, (m1, m2) in enumerate(output_modes):
-                p1_swipe[k, j] = float(np.abs(u[m1, cfg.encoding_mode]) ** 2)
-                p2_swipe[k, j] = float(np.abs(u[m2, cfg.encoding_mode]) ** 2)
-            target_swipe[k] = singles_prob_from_unitary(u, cfg.encoding_mode, target_mode)
+                p1_swipe[k, j] = float(np.abs(u[m1, cfg.singles_input_mode]) ** 2)
+                p2_swipe[k, j] = float(np.abs(u[m2, cfg.singles_input_mode]) ** 2)
+            target_swipe[k] = singles_prob_from_unitary(
+                u, cfg.singles_input_mode, target_mode
+            )
 
         mem_state.update_from_prob_arrays(i, p1_swipe.mean(axis=0), p2_swipe.mean(axis=0))
         preds[i] = float(target_swipe.mean())

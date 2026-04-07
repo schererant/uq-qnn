@@ -21,7 +21,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Optional, Sequence, Union, cast
 
 import numpy as np
 
@@ -29,10 +29,11 @@ from src.circuit import PhotonicCircuit
 from src.coincidence import (
     apply_noise_to_outcomes,
     get_cc_labels,
+    mode_pair_to_cc_index,
     postselect_measurement,
     working_detectors_to_cc_indices,
 )
-from src.config import SimConfig
+from src.config import SimConfig, validate_sim_config
 from src.hardware import HardwareProfile, get_profile
 from src.logging_config import add_file_handler, get_logger, remove_file_handler
 from src.simulation import sim_logger
@@ -48,12 +49,14 @@ _REQUIRED_CONFIG_KEYS = frozenset(
         "n_samples",
         "n_swipe",
         "swipe_span",
-        "encoding_mode",
+        "input_state",
+        "encoding_phase_idx",
+        "photon_distinguishability",
         "target_mode",
-        "n_photons",
         "memristive_phase_idx",
         "memristive_output_modes",
         "output_mode",
+        "working_detectors",
         "loss_type",
         "n_classes",
         "sim_backend",
@@ -114,6 +117,7 @@ class Experiment:
             raise ValueError(f"Missing required config keys: {sorted(missing)}")
 
         self.sim_cfg = SimConfig.from_experiment_config(self.config)
+        validate_sim_config(self.sim_cfg)
 
         self.timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
         self.project_root = Path(__file__).resolve().parent.parent
@@ -314,8 +318,7 @@ class Experiment:
         return PhotonicCircuit(
             n_modes=cfg.n_modes,
             phases=phases,
-            encoding_mode=cfg.encoding_mode,
-            encoding_phase_idx=cfg.encoding_phase_idx,
+            circuit_config=cfg.circuit_config,
         )
 
     def _predict_singles_with_circuit(
@@ -348,12 +351,8 @@ class Experiment:
         return_class_probs: bool,
     ) -> np.ndarray:
         cfg = self.sim_cfg
-        in_modes = self._coincidence_input_modes()
-        working_detectors = (
-            tuple(cfg.working_detectors)
-            if cfg.working_detectors is not None
-            else (0, 1, 5)
-        )
+        assert cfg.working_detectors is not None
+        working_detectors = tuple(cfg.working_detectors)
         working_cc_indices = working_detectors_to_cc_indices(
             working_detectors, cfg.n_modes
         )
@@ -361,7 +360,6 @@ class Experiment:
         add_noise = self._should_add_noise(cfg.noise_std)
         coinc = circuit.coincidences_batch(
             cast(Sequence[float] | np.ndarray, encoded_phases),
-            input_modes=in_modes,
         )
         n_data = coinc.shape[0]
         n_classes = len(working_cc_indices)
@@ -388,27 +386,16 @@ class Experiment:
             if return_class_probs and n_classes > 1:
                 preds[i, :] = out[list(working_cc_indices)]
             else:
-                preds[i] = out[working_cc_indices[0]] if working_cc_indices else 0.0
-        return preds
-
-    def _coincidence_input_modes(self) -> Tuple[int, int]:
-        cfg = self.sim_cfg
-        if cfg.input_modes is not None:
-            in_modes = (int(cfg.input_modes[0]), int(cfg.input_modes[1]))
-        elif cfg.n_modes >= 6:
-            in_modes = (1, 4)
-        else:
-            in_modes = (0, 1)
-        if len(in_modes) != 2:
-            raise ValueError(
-                f"Coincidence mode requires exactly 2 input modes, got {in_modes}"
-            )
-        for m in in_modes:
-            if m < 0 or m >= cfg.n_modes:
-                raise ValueError(
-                    f"input_modes {in_modes} out of range [0, {cfg.n_modes - 1}]"
+                if cfg.target_mode is None or len(cfg.target_mode) != 2:
+                    raise ValueError(
+                        "scalar coincidence prediction requires target_mode as output "
+                        "mode pair (j, k)"
+                    )
+                ro = mode_pair_to_cc_index(
+                    cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
                 )
-        return in_modes
+                preds[i] = out[ro]
+        return preds
 
     def _should_add_noise(
         self,

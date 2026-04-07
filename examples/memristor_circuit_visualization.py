@@ -41,16 +41,18 @@ def create_memristor_circuit():
     return circuit, phases
 
 
-def create_full_circuit(encoding_mode=0):
-    """Creates a full circuit with encoding and Clements components (3x3).
-    Memristive behavior is enabled in simulation via memristive_phase_idx."""
+def create_full_circuit(encoding_phase_idx=0):
+    """Creates a full Clements circuit (3x3) with internal encoding."""
     n_modes = 3
     n_phases = n_modes * (n_modes - 1)
     phases = np.random.uniform(0, 2 * np.pi, n_phases)
     enc_phi = np.random.uniform(0, 2 * np.pi)
 
     circuit = build_circuit(
-        phases=phases, enc_phi=enc_phi, n_modes=n_modes, encoding_mode=encoding_mode
+        phases=phases,
+        enc_phi=enc_phi,
+        n_modes=n_modes,
+        encoding_phase_idx=encoding_phase_idx,
     )
 
     return circuit, phases, enc_phi
@@ -152,9 +154,9 @@ def main():
             print(f"  {phase_names[i]}: {phase:.4f} radians ({phase * 180 / np.pi:.1f}°)")
     
         # 2. Create a full circuit with encoding
-        encoding_mode = 0
-        full_circuit, phases, enc_phi = create_full_circuit(encoding_mode)
-        print(f"\nFull circuit created with encoding on mode {encoding_mode}")
+        enc_idx = 0
+        full_circuit, phases, enc_phi = create_full_circuit(enc_idx)
+        print(f"\nFull circuit created with internal encoding at phase index {enc_idx}")
         print(f"Encoding phase: {enc_phi:.4f} radians ({enc_phi * 180 / np.pi:.1f}°)")
     
         # 3. Define different input states
@@ -229,20 +231,19 @@ def main():
         n_modes = 3  # 3x3 Clements with memristive phase 2
         sim_cfg = SimConfig(
             n_modes=n_modes,
-            encoding_mode=0,
+            input_state=(0,),
+            encoding_phase_idx=1,
+            photon_distinguishability=None,
             target_mode=(n_modes - 1,),
             memristive_phase_idx=[2],
             memristive_output_modes=None,
-            encoding_phase_idx=None,
             output_mode="singles",
-            input_modes=None,
             working_detectors=None,
             noise_std=None,
             n_samples=n_samples // 20,
             memory_depth=memory_depth,
             n_swipe=0,
             swipe_span=0.0,
-            n_photons=None,
             backend=sim_backend,
             loss_type="mse",
             n_classes=1,

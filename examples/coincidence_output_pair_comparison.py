@@ -62,14 +62,13 @@ CC_PAIRS: List[Tuple[int, int]] = get_cc_mode_pairs(N_MODES)
 
 _COMMON: Dict = {
     "n_modes": N_MODES,
-    "encoding_mode": 0,
+    "input_state": INPUT_MODES,
+    "encoding_phase_idx": 5,
+    "photon_distinguishability": "indistinguishable",
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     "output_mode": "coincidence",
-    "input_modes": INPUT_MODES,
     "working_detectors": WORKING_DETECTORS,
-    "n_photons": tuple([2] * (N_MODES * (N_MODES - 1))),
     "n_samples": 300,
     "noise_std": None,
     "loss_type": "mse",

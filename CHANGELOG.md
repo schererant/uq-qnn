@@ -1,5 +1,48 @@
 # Changelog
 
+## 2026-04-07 — Canonical photonic configuration, internal encoding, and NumPy batching fix
+
+### Why
+
+Circuit and experiment settings had grown ambiguous: **`encoding_mode`** mixed “which mode gets the photon” with “where the data-driven encoding sits,” coincidence runs relied on **implicit defaults** for input modes and working detectors, **`n_photons` on `SimConfig`** duplicated information already fixed by `output_mode` / `input_state`, and the **encoding mesh phase could be trained** alongside other phases. The goal is **one explicit injection** (`input_state`), **one explicit encoding placement** (`encoding_phase_idx` on the Clements mesh), **fail-fast validation** for coincidence readout and two-photon distinguishability, and **PSR/training metadata derived** from the same physics picture.
+
+A follow-on issue appeared after switching the NumPy path to **internal** encoding: `_unitary_batch_internal_encoding` rebuilt a **full `clements_unitary` per data point**, while the old **external** encoding path had used **one mesh unitary plus a batched 2×2 encoding block**. That accidentally made coincidence training roughly **O(n_data)** full meshes per call instead of **one batched pass over MZIs**, which dominated wall time (e.g. ~20 s → ~20 min for `examples/coincidence_regression.py`). **`clements_unitary_batch`** restores vectorized mesh construction for all rows that share the same phase vector except at `encoding_phase_idx`.
+
+### Added
+
+- **`src/config.py`** — `validate_sim_config()` as the single validation entry point; `psr_photon_counts_for_phases()` for PSR photon counts derived from `output_mode` / phase count; `SimConfig.singles_input_mode` helper; **`input_state`**, **`photon_distinguishability`**, required **`encoding_phase_idx: int`**. **`CircuitConfig`** aligned with the same circuit field set (no misleading optional defaults on physics fields).
+- **`src/numpy_backend.py`** — **`_mzi_unitary_batch`**, **`clements_unitary_batch`** — batched Clements products so internal-encoding batches are not implemented as a Python loop of full `clements_unitary` per point.
+- **`tests/test_sim_config_validation.py`** — Validation, distinguishability, coincidence readout, and related config rules.
+- **`tests/test_numpy_perceval_agreement.py`** — **`test_clements_unitary_batch_matches_serial`** — numerical parity of batched vs serial unitaries and `_unitary_batch_internal_encoding` vs `unitary_for_point`.
+
+### Changed
+
+- **`src/circuits.py`** — **`build_circuit`** uses **internal mesh encoding only** (phase offset at `encoding_phase_idx`); removed the default public **external prepended encoding** path and **`build_parametric_circuit`** / parametric Perceval reuse tied to external encoding.
+- **`src/numpy_backend.py`** — Forward paths build from **`input_state`** and internal encoding; **`_unitary_batch_internal_encoding`** now delegates to **`clements_unitary_batch`**; coincidence scalar readout **raises** if the CC channel cannot be resolved (no silent index `0`); **`unitary_for_point`** takes **`encoding_phase_idx: int`** only.
+- **`src/simulation/runner.py`** — Validates config up front; **`BasicState`** from **`input_state`**; coincidence without hidden **`input_modes` / working-detector** fallbacks; Perceval discrete path **rebuilds `build_circuit` per evaluation** when using internal encoding (documented limitation vs old parametric reuse).
+- **`src/simulation/memristive.py`** — **`singles_input_mode`** (from `input_state[0]`) replaces **`encoding_mode`** for memristor monitor semantics.
+- **`src/training.py`** — **`phase_idx`** excludes **`encoding_phase_idx`** and memristive indices; removed **`_resolve_n_photons`** in favor of config-driven PSR counts inside autograd.
+- **`src/autograd.py`**, **`src/loss.py`** — **`MemristorLossPSR`** / **`PhotonicModel`** no longer take user-facing **`n_photons`**; counts come from **`psr_photon_counts_for_phases(sim_cfg, …)`**.
+- **`src/circuit.py`**, **`src/circuit_visualization.py`** — **`PhotonicCircuit`** takes **`circuit_config: CircuitConfig`**; coincidence APIs use config’s **`input_state`** (no default `(0, 1)`).
+- **`src/experiment.py`** — **`_REQUIRED_CONFIG_KEYS`** includes **`input_state`**, **`encoding_phase_idx`**, **`photon_distinguishability`**, **`working_detectors`** where required; drops **`encoding_mode`**, **`n_photons`**; coincidence prediction paths **do not** reintroduce hidden defaults.
+- **`src/__init__.py`** — Exports **`validate_sim_config`**; drops removed parametric circuit exports.
+- **`examples/`** — All experiment **`CONFIG`** blocks migrated to **`input_state` + `encoding_phase_idx` + `photon_distinguishability`**; coincidence scripts set explicit **`working_detectors`** and readout conventions; captions/logs updated.
+- **`scripts/perceval_pytorch.py`** — Standalone **`MemristorLossPSR` / `PhotonicModel`** updated to drop **`n_photons`** from the public API (PSR counts fixed for that singles memristor demo).
+- **`tests/`** — **`test_autograd`**, **`test_circuits`**, **`test_experiment`**, **`test_memristive_numpy_backend`**, **`test_photonic_circuit`**, **`test_training`**, etc., updated for the new config and APIs.
+
+### Removed
+
+- **`SimConfig` / experiment config** — **`encoding_mode`**, **`input_modes`**, **`n_photons`** as user-facing fields.
+- **`src/circuits.py`** — **`build_parametric_circuit`** (and related parametric encoding export) removed from the supported API.
+
+### Behaviour / limitations (documented in code and tests)
+
+- **`photon_distinguishability`**: **`None`** only for **`len(input_state) == 1`**; **required** for two-photon configs; **`"distinguishable"`** raises **`NotImplementedError` / `ValueError`** (bosonic NumPy and Perceval paths implement **`"indistinguishable"`** only).
+- **Coincidence** — **`working_detectors`** required when **`output_mode == "coincidence"`**; scalar MSE regression expects **`target_mode`** as an **output mode pair** **`(j, k)`** mapping to a CC index via **`mode_pair_to_cc_index`**.
+- **Perceval** — No **`build_parametric_circuit`** shortcut when encoding is internal; discrete runs pay **full circuit rebuild** cost by design.
+
+---
+
 ## 2026-04-06 — Coincidence output-pair selection and comparison experiments
 
 ### Added

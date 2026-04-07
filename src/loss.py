@@ -16,8 +16,7 @@ class PhotonicModel(torch.nn.Module):
         init_theta (Sequence[float]): Initial parameter values.
         enc_np (np.ndarray): Encoded phase values.
         y_np (np.ndarray): Target values.
-        phase_idx (Sequence[int]): Indices of phase parameters.
-        n_photons (Sequence[int]): Number of photons for each phase.
+        phase_idx (Sequence[int]): Indices of phase parameters (trainable mesh phases).
         sim_cfg (SimConfig): Circuit, simulation, and task parameters.
     """
 
@@ -27,7 +26,6 @@ class PhotonicModel(torch.nn.Module):
         enc_np: np.ndarray,
         y_np: np.ndarray,
         phase_idx: Sequence[int],
-        n_photons: Sequence[int],
         sim_cfg: SimConfig,
     ) -> None:
         super().__init__()
@@ -35,7 +33,6 @@ class PhotonicModel(torch.nn.Module):
         self.register_buffer("enc", torch.from_numpy(enc_np).double())
         self.register_buffer("y", torch.from_numpy(y_np).double())
         self.phase_idx = phase_idx
-        self.n_photons = n_photons
         self.sim_cfg = sim_cfg
 
         # Validate inputs for classification
@@ -85,6 +82,5 @@ class PhotonicModel(torch.nn.Module):
             self.enc,
             self.y,
             self.phase_idx,
-            self.n_photons,
             cfg,
         )

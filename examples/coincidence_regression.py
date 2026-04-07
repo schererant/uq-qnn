@@ -21,19 +21,19 @@ from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-INPUT_MODES = (0, 3)
+INPUT_STATE = (0, 3)
 TARGET_CC_PAIR = (0, 1)
-ENCODING_MODE = 0
+ENCODING_PHASE_IDX = 7
 
 CONFIG = {
     "n_modes": 6,
-    "encoding_mode": ENCODING_MODE,
+    "input_state": INPUT_STATE,
+    "encoding_phase_idx": ENCODING_PHASE_IDX,
+    "photon_distinguishability": "indistinguishable",
     "target_mode": TARGET_CC_PAIR,
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     "output_mode": "coincidence",
-    "input_modes": INPUT_MODES,
     "working_detectors": tuple(range(6)),
     "loss_type": "mse",
     "n_classes": 1,
@@ -41,14 +41,14 @@ CONFIG = {
     "epochs": 150,
     "n_samples": 1000,
     "memory_depth": 2,
-    "n_photons": None,
     "n_swipe": 0,
     "swipe_span": 0.0,
     "noise_std": None,
     "seed": 42,
     "sim_backend": "numpy",
-    "n_data": 100,
+    "n_data": 500,
     "sigma_noise": 0.005,
+    "data_function": "sinusoid_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
 }
@@ -117,8 +117,8 @@ def _plot_training_loss(history: np.ndarray) -> plt.Figure:
         xlabel="Epoch",
         ylabel="Loss",
         title=(
-            "Training Loss: input_modes=%s, CC%s%s, encoding_mode=%d"
-            % (INPUT_MODES, TARGET_CC_PAIR[0], TARGET_CC_PAIR[1], ENCODING_MODE)
+            "Training Loss: input_state=%s, CC%s%s, encoding_phase_idx=%d"
+            % (INPUT_STATE, TARGET_CC_PAIR[0], TARGET_CC_PAIR[1], ENCODING_PHASE_IDX)
         ),
     )
     ax.grid(True)
@@ -159,7 +159,7 @@ def _plot_summary(
         ylabel="y",
         title=(
             "Validated coincidence regression\n"
-            f"input_modes={INPUT_MODES}, target_mode={TARGET_CC_PAIR}, encoding_mode={ENCODING_MODE}"
+            f"input_state={INPUT_STATE}, target_mode={TARGET_CC_PAIR}, encoding_phase_idx={ENCODING_PHASE_IDX}"
         ),
     )
     axes[0, 1].legend()
@@ -191,17 +191,19 @@ def main() -> None:
     with Experiment("Coincidence Regression", config=CONFIG) as exp:
         np.random.seed(int(CONFIG["seed"]))
         X_train, y_train, X_test, y_test = get_data(
-            CONFIG["n_data"], CONFIG["sigma_noise"], "quartic_data"
+            CONFIG["n_data"],
+            CONFIG["sigma_noise"],
+            CONFIG["data_function"],
         )
         enc_train = 2 * np.arccos(np.clip(X_train, 0.0, 1.0))
         enc_test = 2 * np.arccos(np.clip(X_test, 0.0, 1.0))
         sim_cfg = _sim_cfg()
 
         logger.info(
-            "Training coincidence regression with input_modes=%s, target_mode=%s, encoding_mode=%d",
-            INPUT_MODES,
+            "Training coincidence regression with input_state=%s, target_mode=%s, encoding_phase_idx=%d",
+            INPUT_STATE,
             TARGET_CC_PAIR,
-            ENCODING_MODE,
+            ENCODING_PHASE_IDX,
         )
 
         theta, history = train_pytorch_generic(
@@ -227,8 +229,8 @@ def main() -> None:
         exp.save_metrics(
             {
                 "target_cc_pair": TARGET_CC_PAIR,
-                "input_modes": INPUT_MODES,
-                "encoding_mode": ENCODING_MODE,
+                "input_state": INPUT_STATE,
+                "encoding_phase_idx": ENCODING_PHASE_IDX,
                 "final_loss": final_loss,
                 **metrics,
             }

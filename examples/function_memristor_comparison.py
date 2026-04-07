@@ -47,13 +47,13 @@ logger = get_logger(__name__)
 _COMMON: Dict = {
     # Circuit
     "n_modes": 12,
-    "encoding_mode": 0,
+    "input_state": (0,),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
     "target_mode": (3, 4, 0),
     "encoding_phase_idx": None,
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
-    "n_photons": None,
     # Training
     "n_samples": 300,
     "noise_std": None,
