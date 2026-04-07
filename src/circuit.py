@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
+from itertools import combinations, combinations_with_replacement
+from math import factorial
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -13,6 +16,8 @@ from .numpy_backend import (
     coincidence_raw_vector,
     unitary_for_point,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -119,15 +124,81 @@ class PhotonicCircuit:
 
     def coincidences(
         self,
-        encoding_phase: float,
-    ) -> np.ndarray:
-        if len(self.config.input_state) != 2:
+        input_state: Sequence[int] | np.ndarray | float | None = None,
+        detector_mode: str = "click",
+        *,
+        unitary: Optional[np.ndarray] = None,
+        encoding_phase: Optional[float] = None,
+    ) -> Union[np.ndarray, Dict[Tuple[int, ...], float]]:
+        """Coincidence probabilities.
+
+        New API:
+            ``coincidences(input_state, detector_mode='click'|'pnr', unitary=None)``
+            returns a dict mapping output Fock-state tuples to probabilities for
+            arbitrary photon number N.
+
+        Backward-compatible API:
+            ``coincidences(encoding_phase)`` returns the legacy 2-photon
+            collision-free coincidence vector.
+        """
+        if encoding_phase is not None:
+            legacy_phase = float(encoding_phase)
+            if len(self.config.input_state) != 2:
+                raise ValueError(
+                    "legacy coincidences(encoding_phase=...) requires two-photon "
+                    "input_state in circuit_config"
+                )
+            u_legacy = self.unitary(legacy_phase)
+            a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+            return coincidence_raw_vector(u_legacy, (a, b), self.n_modes)
+
+        if input_state is None:
             raise ValueError(
-                "coincidences() requires two-photon input_state in circuit_config"
+                "input_state is required for N-fold coincidence distributions; "
+                "or pass encoding_phase for legacy 2-photon behavior"
             )
-        u = self.unitary(encoding_phase)
-        a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
-        return coincidence_raw_vector(u, (a, b), self.n_modes)
+
+        if np.isscalar(input_state):
+            legacy_phase = float(input_state)
+            if len(self.config.input_state) != 2:
+                raise ValueError(
+                    "legacy coincidences(encoding_phase) requires two-photon "
+                    "input_state in circuit_config"
+                )
+            u_legacy = self.unitary(legacy_phase)
+            a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+            return coincidence_raw_vector(u_legacy, (a, b), self.n_modes)
+
+        state = tuple(int(v) for v in np.asarray(input_state, dtype=int).ravel())
+        if len(state) != self.n_modes:
+            raise ValueError(
+                f"input_state must have length n_modes={self.n_modes}, got {len(state)}"
+            )
+        if any(v < 0 for v in state):
+            raise ValueError(f"input_state must be non-negative, got {state!r}")
+
+        n_photons = int(sum(state))
+        if n_photons <= 0:
+            raise ValueError("input_state must contain at least one photon")
+        if detector_mode not in ("click", "pnr"):
+            raise ValueError(f"detector_mode must be 'click' or 'pnr', got {detector_mode!r}")
+
+        u = self._mesh_unitary() if unitary is None else np.asarray(unitary, dtype=np.complex128)
+        if u.shape != (self.n_modes, self.n_modes):
+            raise ValueError(
+                f"unitary must have shape ({self.n_modes}, {self.n_modes}), got {u.shape}"
+            )
+
+        input_rows = self._expanded_mode_indices(state)
+        if detector_mode == "click":
+            outputs = self._enumerate_click_output_states(self.n_modes, n_photons)
+        else:
+            outputs = self._enumerate_pnr_output_states(self.n_modes, n_photons)
+
+        probs: Dict[Tuple[int, ...], float] = {}
+        for out_state in outputs:
+            probs[out_state] = self._transition_probability(u, input_rows, out_state)
+        return probs
 
     def coincidences_batch(
         self,
@@ -146,6 +217,27 @@ class PhotonicCircuit:
         )
         a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
         return _coincidence_raw_batch(u_batch, (a, b), self.n_modes)
+
+    @staticmethod
+    def accidentals_rate(singles_rates: Sequence[float], tau: float, N: int) -> float:
+        """Expected accidental N-fold coincidence rate from singles rates."""
+        if N < 2:
+            raise ValueError(f"N must be >= 2 for coincidences, got {N}")
+        if tau < 0:
+            raise ValueError(f"tau must be non-negative, got {tau}")
+        rates = np.asarray(singles_rates, dtype=float).ravel()
+        if len(rates) < N:
+            raise ValueError(
+                f"need at least N={N} singles rates, got {len(rates)}"
+            )
+        if np.any(rates < 0):
+            raise ValueError("singles_rates must be non-negative")
+
+        prefactor = (tau ** (N - 1)) * factorial(N - 1)
+        total = 0.0
+        for idx in combinations(range(len(rates)), N):
+            total += float(np.prod(rates[list(idx)]))
+        return prefactor * total
 
     def target_probability(
         self,
@@ -192,3 +284,65 @@ class PhotonicCircuit:
             f"input_state={self.config.input_state!r}, "
             f"encoding_phase_idx={self.config.encoding_phase_idx})"
         )
+
+    @staticmethod
+    def _expanded_mode_indices(occupation: Sequence[int]) -> np.ndarray:
+        indices = [mode for mode, count in enumerate(occupation) for _ in range(int(count))]
+        return np.asarray(indices, dtype=int)
+
+    @staticmethod
+    def _enumerate_click_output_states(
+        n_modes: int, n_photons: int
+    ) -> Sequence[Tuple[int, ...]]:
+        states = []
+        for fired in combinations(range(n_modes), n_photons):
+            occ = [0] * n_modes
+            for m in fired:
+                occ[m] = 1
+            states.append(tuple(occ))
+        return states
+
+    @staticmethod
+    def _enumerate_pnr_output_states(
+        n_modes: int, n_photons: int
+    ) -> Sequence[Tuple[int, ...]]:
+        states = []
+        for mode_multiset in combinations_with_replacement(range(n_modes), n_photons):
+            occ = [0] * n_modes
+            for m in mode_multiset:
+                occ[m] += 1
+            states.append(tuple(occ))
+        return states
+
+    @staticmethod
+    def _ryser_permanent(matrix: np.ndarray) -> complex:
+        m = np.asarray(matrix, dtype=np.complex128)
+        n = m.shape[0]
+        if m.shape != (n, n):
+            raise ValueError(f"permanent requires a square matrix, got {m.shape}")
+        if n == 0:
+            return complex(1.0, 0.0)
+
+        permanent = 0.0 + 0.0j
+        for mask in range(1, 1 << n):
+            cols = [j for j in range(n) if (mask >> j) & 1]
+            row_sums = np.sum(m[:, cols], axis=1)
+            term = np.prod(row_sums)
+            parity = n - len(cols)
+            sign = -1.0 if (parity % 2) else 1.0
+            permanent += sign * term
+        return permanent
+
+    @classmethod
+    def _transition_probability(
+        cls,
+        unitary: np.ndarray,
+        input_rows: np.ndarray,
+        output_state: Sequence[int],
+    ) -> float:
+        output_cols = cls._expanded_mode_indices(output_state)
+        sub_u = unitary[np.ix_(input_rows, output_cols)]
+        perm = cls._ryser_permanent(sub_u)
+        out_norm = float(np.prod([factorial(int(mu)) for mu in output_state]))
+        prob = (abs(perm) ** 2) / out_norm
+        return float(np.real_if_close(prob))

@@ -13,6 +13,15 @@ def random_phases(n_modes: int, seed: int = 42) -> np.ndarray:
     return rng.uniform(0, 2 * np.pi, size=n_modes * (n_modes - 1))
 
 
+def random_unitary(n: int, seed: int = 0) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    x = rng.normal(size=(n, n)) + 1j * rng.normal(size=(n, n))
+    q, r = np.linalg.qr(x)
+    d = np.diag(r)
+    q = q * (d / np.abs(d))
+    return q
+
+
 def singles_cfg(n_modes: int, *, enc_idx: int = 0) -> CircuitConfig:
     return CircuitConfig(
         n_modes=n_modes,
@@ -125,3 +134,49 @@ def test_consistency_with_run_simulation_sequence_np():
     assert cfg.target_mode is not None
     singles = circuit.singles_batch(encoded)[:, cfg.target_mode[0]]
     np.testing.assert_allclose(preds_runner, singles, atol=1e-12)
+
+
+def test_hom_two_photon_beamsplitter_pnr_and_click():
+    circuit = PhotonicCircuit(
+        n_modes=6, phases=random_phases(6, seed=9), circuit_config=coincidence_cfg(6)
+    )
+    u = np.eye(6, dtype=np.complex128)
+    bs = (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]], dtype=np.complex128)
+    u[np.ix_([0, 1], [0, 1])] = bs
+
+    input_state = (1, 1, 0, 0, 0, 0)
+    probs_pnr = circuit.coincidences(input_state, detector_mode="pnr", unitary=u)
+    probs_click = circuit.coincidences(input_state, detector_mode="click", unitary=u)
+
+    assert np.isclose(probs_pnr[(2, 0, 0, 0, 0, 0)], 0.5, atol=1e-12)
+    assert np.isclose(probs_pnr[(0, 2, 0, 0, 0, 0)], 0.5, atol=1e-12)
+    assert np.isclose(probs_click[(1, 1, 0, 0, 0, 0)], 0.0, atol=1e-12)
+
+
+def test_three_photon_pnr_normalization_random_unitary():
+    circuit = PhotonicCircuit(
+        n_modes=6, phases=random_phases(6, seed=10), circuit_config=coincidence_cfg(6)
+    )
+    u = random_unitary(6, seed=11)
+    input_state = (1, 1, 1, 0, 0, 0)
+
+    probs_pnr = circuit.coincidences(input_state, detector_mode="pnr", unitary=u)
+    assert np.isclose(sum(probs_pnr.values()), 1.0, atol=1e-10)
+    assert all(p >= 0 for p in probs_pnr.values())
+
+
+def test_click_subset_of_pnr_for_three_photon_case():
+    circuit = PhotonicCircuit(
+        n_modes=6, phases=random_phases(6, seed=12), circuit_config=coincidence_cfg(6)
+    )
+    u = random_unitary(6, seed=13)
+    input_state = (1, 1, 1, 0, 0, 0)
+
+    probs_pnr = circuit.coincidences(input_state, detector_mode="pnr", unitary=u)
+    probs_click = circuit.coincidences(input_state, detector_mode="click", unitary=u)
+
+    for state, p in probs_click.items():
+        assert max(state) <= 1
+        assert np.isclose(p, probs_pnr[state], atol=1e-12)
+    assert any(max(state) > 1 for state in probs_pnr.keys())
+    assert not any(max(state) > 1 for state in probs_click.keys())
