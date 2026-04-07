@@ -1,0 +1,63 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Coincidence Regression",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/coincidence_regression/2026-04-07_161431",
+  "timestamp_utc": "2026-04-07T14:14:32.659141+00:00",
+  "python": "3.13.5",
+  "git_commit": "5ca8978",
+  "config": {
+    "n_modes": 6,
+    "input_state": [
+      0,
+      3
+    ],
+    "encoding_phase_idx": 7,
+    "photon_distinguishability": "indistinguishable",
+    "target_mode": [
+      0,
+      1
+    ],
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "output_mode": "coincidence",
+    "working_detectors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "loss_type": "mse",
+    "n_classes": 1,
+    "lr": 0.05,
+    "epochs": 150,
+    "n_samples": 0,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "noise_std": null,
+    "seed": 42,
+    "sim_backend": "numpy",
+    "n_data": 1000,
+    "sigma_noise": 0.005,
+    "data_function": "sinusoid_data",
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05
+  },
+  "hardware": null,
+  "metrics": {
+    "status": "failed",
+    "error": "n_samples must be a positive int, got 0"
+  },
+  "artifacts": [],
+  "simulation": {
+    "call_count": 0,
+    "total_time": 0.0,
+    "samples_counter": {},
+    "circuit_call_count": 0,
+    "circuit_total_time": 0.0,
+    "avg_time_per_sequence": 0,
+    "avg_time_per_circuit": 0
+  }
+}

@@ -64,10 +64,18 @@ def run_simulation_sequence(
     n_swipe = cfg.n_swipe
     if n_swipe < 0:
         raise ValueError("n_swipe must be >= 0.")
-    if not isinstance(cfg.n_samples, int) or cfg.n_samples <= 0:
-        raise ValueError(f"n_samples must be a positive int, got {cfg.n_samples!r}")
     if cfg.backend not in ("numpy", "perceval"):
         raise ValueError(f"backend must be 'numpy' or 'perceval', got {cfg.backend!r}")
+    if not isinstance(cfg.n_samples, int):
+        raise ValueError(f"n_samples must be an int, got {cfg.n_samples!r}")
+    if cfg.backend == "perceval" and cfg.n_samples <= 0:
+        raise ValueError(
+            f"n_samples must be a positive int for perceval backend, got {cfg.n_samples!r}"
+        )
+    if cfg.backend == "numpy" and cfg.n_samples < 0:
+        raise ValueError(
+            f"n_samples must be a non-negative int for numpy backend, got {cfg.n_samples!r}"
+        )
 
     validate_sim_config(cfg)
 
