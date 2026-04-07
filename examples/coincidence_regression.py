@@ -16,7 +16,7 @@ from src.config import SimConfig
 from src.data import get_data
 from src.experiment import Experiment
 from src.logging_config import get_logger
-from src.simulation import run_simulation_sequence_np
+from src.simulation import run_simulation_sequence
 from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
@@ -71,7 +71,7 @@ def _run_uncertainty(
     all_preds = np.zeros((len(enc_test), n_passes), dtype=float)
     for idx in range(n_passes):
         perturbed = theta + rng.normal(0.0, noise_std, size=len(theta))
-        all_preds[:, idx] = run_simulation_sequence_np(perturbed, enc_test, sim_cfg)
+        all_preds[:, idx] = run_simulation_sequence(perturbed, enc_test, sim_cfg)
     return {
         "mean": np.mean(all_preds, axis=1),
         "std": np.std(all_preds, axis=1),

@@ -1,13 +1,26 @@
 from __future__ import annotations
 
-from functools import lru_cache
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Tuple
 
 import numpy as np
-import perceval as pcvl
+
+from . import clements_geometry as _clements_geometry
 
 
-def encoding_circuit(encoded_phase: float) -> pcvl.Circuit:
+def _import_perceval():
+    """Load Perceval on demand so ``import src.circuits`` stays NumPy-only safe."""
+
+    import perceval as pcvl
+
+    return pcvl
+
+clements_mzi_pairs = _clements_geometry.clements_mzi_pairs
+get_mzi_modes_for_phase = _clements_geometry.get_mzi_modes_for_phase
+normalize_memristive_phase_idx = _clements_geometry.normalize_memristive_phase_idx
+normalize_memristive_output_modes = _clements_geometry.normalize_memristive_output_modes
+
+
+def encoding_circuit(encoded_phase: float) -> Any:
     """
     Builds a 2-mode encoding circuit with a phase shifter.
     Args:
@@ -15,6 +28,7 @@ def encoding_circuit(encoded_phase: float) -> pcvl.Circuit:
     Returns:
         pcvl.Circuit: The constructed encoding circuit.
     """
+    pcvl = _import_perceval()
     c = pcvl.Circuit(2, name="Encoding")
     c.add((0, 1), pcvl.BS())
     c.add((1,), pcvl.PS(phi=encoded_phase))
@@ -22,7 +36,7 @@ def encoding_circuit(encoded_phase: float) -> pcvl.Circuit:
     return c
 
 
-def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> pcvl.Circuit:
+def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> Any:
     """
     Creates a basic Mach-Zehnder Interferometer (MZI) unit with two phase shifters.
 
@@ -34,6 +48,7 @@ def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> pcvl.Cir
     Returns:
         pcvl.Circuit: MZI circuit component
     """
+    pcvl = _import_perceval()
     # Ensure phases are within valid range
     phi_int = float(phi_int) % (2 * np.pi)
     phi_ext = float(phi_ext) % (2 * np.pi)
@@ -51,67 +66,7 @@ def mzi_unit(modes: Tuple[int, int], phi_int: float, phi_ext: float) -> pcvl.Cir
     return c
 
 
-@lru_cache(maxsize=None)
-def clements_mzi_pairs(n_modes: int) -> tuple[Tuple[int, int], ...]:
-    """
-    Return the ordered list of MZI mode pairs for a rectangular Clements mesh.
-
-    For n_modes = 6 this gives the familiar 3×2×3×2×3×2 layout:
-    (0,1),(2,3),(4,5),(1,2),(3,4), repeated three times.
-    For n_modes = 3 it yields (0,1),(1,2),(0,1), matching the tests.
-    """
-    if n_modes < 2:
-        raise ValueError(
-            f"Clements architecture requires at least 2 modes, got {n_modes}"
-        )
-
-    pairs: list[Tuple[int, int]] = []
-
-    # Repeat (even-layer, odd-layer) blocks
-    full_blocks = n_modes // 2
-    for _ in range(full_blocks):
-        # Even-start layer: (0,1), (2,3), ...
-        for j in range(0, n_modes - 1, 2):
-            pairs.append((j, j + 1))
-        # Odd-start layer: (1,2), (3,4), ...
-        for j in range(1, n_modes - 1, 2):
-            pairs.append((j, j + 1))
-
-    # For odd n_modes, add a final even-start layer
-    if n_modes % 2 == 1:
-        for j in range(0, n_modes - 1, 2):
-            pairs.append((j, j + 1))
-
-    return tuple(pairs)
-
-
-def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
-    """
-    Maps a phase index to the mode pair (m1, m2) of the MZI that contains it.
-    Uses the same ordering as clements_circuit, with two consecutive phases per MZI.
-
-    Args:
-        phase_idx (int): Index into the phases array (0 to n_modes*(n_modes-1)-1).
-        n_modes (int): Number of modes in the circuit.
-
-    Returns:
-        Tuple[int, int]: (mode_low, mode_high) for the MZI containing this phase.
-    """
-    if n_modes < 2:
-        raise ValueError(f"Requires at least 2 modes, got {n_modes}")
-
-    pairs = clements_mzi_pairs(n_modes)
-    expected_phases = 2 * len(pairs)
-    if phase_idx < 0 or phase_idx >= expected_phases:
-        raise ValueError(
-            f"phase_idx must be in [0, {expected_phases - 1}] for {n_modes} modes, got {phase_idx}"
-        )
-
-    mzi_idx = phase_idx // 2
-    return pairs[mzi_idx]
-
-
-def memristor_circuit(phases: np.ndarray) -> pcvl.Circuit:
+def memristor_circuit(phases: np.ndarray) -> Any:
     """
     Builds a 3-mode memristor circuit with phase shifters and beamsplitters.
     DEPRECATED: Use build_circuit(phases, enc_phi, n_modes) with memristive_phase_idx
@@ -122,6 +77,7 @@ def memristor_circuit(phases: np.ndarray) -> pcvl.Circuit:
     Returns:
         pcvl.Circuit: The constructed memristor circuit.
     """
+    pcvl = _import_perceval()
     phi1, mem_phi, phi3 = phases[0], phases[1], phases[2]
     c = pcvl.Circuit(3, name="Memristor")
     c.add((0, 1), pcvl.BS()).add((1,), pcvl.PS(phi=phi1)).add((0, 1), pcvl.BS())
@@ -130,7 +86,7 @@ def memristor_circuit(phases: np.ndarray) -> pcvl.Circuit:
     return c
 
 
-def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
+def clements_circuit(phases: np.ndarray, n_modes: int) -> Any:
     """
     Builds a rectangular Clements architecture circuit with the given number of modes.
     The circuit consists of a mesh of MZIs arranged in a rectangular grid pattern.
@@ -144,6 +100,7 @@ def clements_circuit(phases: np.ndarray, n_modes: int) -> pcvl.Circuit:
     Returns:
         pcvl.Circuit: The constructed Clements circuit
     """
+    pcvl = _import_perceval()
     # Validate inputs
     if n_modes < 2:
         raise ValueError(
@@ -183,7 +140,7 @@ def build_circuit(
     enc_phi: float,
     n_modes: int,
     encoding_phase_idx: int,
-) -> pcvl.Circuit:
+) -> Any:
     """
     Builds a full Clements circuit with **internal** data encoding.
 
@@ -199,6 +156,7 @@ def build_circuit(
     Returns:
         pcvl.Circuit: The complete circuit.
     """
+    pcvl = _import_perceval()
     enc_phi = float(enc_phi) % (2 * np.pi)
     if n_modes < 2:
         raise ValueError(f"Requires at least 2 modes, got {n_modes}")
@@ -222,66 +180,6 @@ def build_circuit(
     c = pcvl.Circuit(n_modes, name=f"Clements-{n_modes}x{n_modes}")
     c.add(0, clements_circuit(mesh_phases, n_modes), merge=True)
     return c
-
-
-def normalize_memristive_phase_idx(
-    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
-    n_modes: int,
-    n_phases: int,
-) -> Tuple[int, ...]:
-    """Normalize memristive phase indices from user input."""
-
-    if memristive_phase_idx is None:
-        return ()
-    if isinstance(memristive_phase_idx, int):
-        idx = int(memristive_phase_idx)
-        if idx < 0 or idx >= n_phases:
-            raise ValueError(
-                f"memristive_phase_idx must be in [0, {n_phases - 1}] for {n_modes} modes, got {idx}"
-            )
-        return (idx,)
-    indices = tuple(int(x) for x in memristive_phase_idx)
-    if not indices:
-        return ()
-    for idx in indices:
-        if idx < 0 or idx >= n_phases:
-            raise ValueError(
-                f"Each memristive_phase_idx must be in [0, {n_phases - 1}] for {n_modes} modes, got {idx}"
-            )
-    if len(indices) != len(set(indices)):
-        raise ValueError(
-            f"memristive_phase_idx must not contain duplicates, got {memristive_phase_idx}"
-        )
-    return indices
-
-
-def normalize_memristive_output_modes(
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    memristive_indices: Tuple[int, ...],
-    n_modes: int,
-) -> Tuple[Tuple[int, int], ...]:
-    """Normalize memristor output monitors to valid mode pairs."""
-
-    if memristive_output_modes is None:
-        return tuple(
-            get_mzi_modes_for_phase(idx, n_modes) for idx in memristive_indices
-        )
-    modes = tuple((int(m1), int(m2)) for m1, m2 in memristive_output_modes)
-    if len(modes) != len(memristive_indices):
-        raise ValueError(
-            f"memristive_output_modes must have {len(memristive_indices)} entries "
-            f"(one per memristive phase), got {len(modes)}"
-        )
-    for j, (m1, m2) in enumerate(modes):
-        if m1 < 0 or m1 >= n_modes or m2 < 0 or m2 >= n_modes:
-            raise ValueError(
-                f"memristive_output_modes[{j}] = ({m1}, {m2}): modes must be in [0, {n_modes - 1}]"
-            )
-        if m1 == m2:
-            raise ValueError(
-                f"memristive_output_modes[{j}] = ({m1}, {m2}): the two modes must differ"
-            )
-    return modes
 
 
 # Backward compatibility for legacy imports -------------------------------------

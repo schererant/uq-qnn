@@ -21,19 +21,12 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union, cast
+from typing import Any, Optional, Union
 
 import numpy as np
 
-from src.circuit import PhotonicCircuit
-from src.coincidence import (
-    apply_noise_to_outcomes,
-    get_cc_labels,
-    mode_pair_to_cc_index,
-    postselect_measurement,
-    working_detectors_to_cc_indices,
-)
 from src.config import SimConfig, validate_sim_config
+from src.numpy_backend import run_vectorized_non_memristive
 from src.hardware import HardwareProfile, get_profile
 from src.logging_config import add_file_handler, get_logger, remove_file_handler
 from src.simulation import sim_logger
@@ -216,16 +209,17 @@ class Experiment:
             encoded_phases: Phase-encoded input data.
             return_class_probs: If True, return per-class probability vectors.
         """
-        from src.simulation import run_simulation_sequence_np
+        from src.simulation import run_simulation_sequence
 
-        if self._can_use_photonic_circuit():
-            raw = self._predict_with_photonic_circuit(
-                theta,
+        if self._can_use_vectorized_numpy_discrete():
+            raw = run_vectorized_non_memristive(
+                np.asarray(theta, dtype=np.float64),
                 encoded_phases,
+                self.sim_cfg,
                 return_class_probs=return_class_probs,
             )
         else:
-            raw = run_simulation_sequence_np(
+            raw = run_simulation_sequence(
                 theta,
                 encoded_phases,
                 self.sim_cfg,
@@ -273,13 +267,11 @@ class Experiment:
                 result[i] = noised[0]
             return result
 
-    # ── photonic circuit fast path -------------------------------------------
+    def _can_use_vectorized_numpy_discrete(self) -> bool:
+        """Use the same discrete NumPy vectorized path as :func:`run_simulation_sequence`."""
 
-    def _can_use_photonic_circuit(self) -> bool:
         cfg = self.sim_cfg
-        if cfg.backend != "numpy":
-            return False
-        if cfg.n_swipe != 0:
+        if cfg.backend != "numpy" or cfg.n_swipe != 0:
             return False
         return not self._has_memristive_phases()
 
@@ -290,125 +282,6 @@ class Experiment:
         if isinstance(mpi, int):
             return True
         return len(tuple(mpi)) > 0
-
-    def _predict_with_photonic_circuit(
-        self,
-        theta: np.ndarray,
-        encoded_phases: np.ndarray,
-        *,
-        return_class_probs: bool,
-    ) -> np.ndarray:
-        circuit = self._build_photonic_circuit(theta)
-        if self.sim_cfg.output_mode == "coincidence":
-            return self._predict_coincidence_with_circuit(
-                circuit,
-                encoded_phases,
-                return_class_probs=return_class_probs,
-            )
-        return self._predict_singles_with_circuit(
-            circuit,
-            encoded_phases,
-            return_class_probs=return_class_probs,
-        )
-
-    def _build_photonic_circuit(self, theta: np.ndarray) -> PhotonicCircuit:
-        cfg = self.sim_cfg
-        n_phases = cfg.n_modes * (cfg.n_modes - 1)
-        phases = np.asarray(theta[:n_phases], dtype=np.float64)
-        return PhotonicCircuit(
-            n_modes=cfg.n_modes,
-            phases=phases,
-            circuit_config=cfg.circuit_config,
-        )
-
-    def _predict_singles_with_circuit(
-        self,
-        circuit: PhotonicCircuit,
-        encoded_phases: np.ndarray,
-        *,
-        return_class_probs: bool,
-    ) -> np.ndarray:
-        cfg = self.sim_cfg
-        target_mode = (
-            cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
-        )
-        indices = tuple(int(m) for m in target_mode)
-        singles = circuit.singles_batch(
-            cast(Sequence[float] | np.ndarray, encoded_phases)
-        )
-        if return_class_probs and len(indices) > 1:
-            return singles[:, indices]
-        selected = singles[:, indices]
-        if len(indices) > 1:
-            return selected.mean(axis=1)
-        return selected[:, 0]
-
-    def _predict_coincidence_with_circuit(
-        self,
-        circuit: PhotonicCircuit,
-        encoded_phases: np.ndarray,
-        *,
-        return_class_probs: bool,
-    ) -> np.ndarray:
-        cfg = self.sim_cfg
-        assert cfg.working_detectors is not None
-        working_detectors = tuple(cfg.working_detectors)
-        working_cc_indices = working_detectors_to_cc_indices(
-            working_detectors, cfg.n_modes
-        )
-        cc_labels = get_cc_labels(cfg.n_modes)
-        add_noise = self._should_add_noise(cfg.noise_std)
-        coinc = circuit.coincidences_batch(
-            cast(Sequence[float] | np.ndarray, encoded_phases),
-        )
-        n_data = coinc.shape[0]
-        n_classes = len(working_cc_indices)
-        if return_class_probs and n_classes > 1:
-            preds = np.zeros((n_data, n_classes), dtype=float)
-        else:
-            preds = np.zeros(n_data, dtype=float)
-        for i in range(n_data):
-            out = postselect_measurement(
-                coinc[i],
-                working_cc_indices,
-                cc_labels,
-                fallback_uniform=True,
-            )
-            if add_noise:
-                assert cfg.noise_std is not None
-                out = apply_noise_to_outcomes(
-                    out,
-                    cfg.noise_std,
-                    working_cc_indices,
-                    cc_labels,
-                    seed=i,
-                )
-            if return_class_probs and n_classes > 1:
-                preds[i, :] = out[list(working_cc_indices)]
-            else:
-                if cfg.target_mode is None or len(cfg.target_mode) != 2:
-                    raise ValueError(
-                        "scalar coincidence prediction requires target_mode as output "
-                        "mode pair (j, k)"
-                    )
-                ro = mode_pair_to_cc_index(
-                    cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
-                )
-                preds[i] = out[ro]
-        return preds
-
-    def _should_add_noise(
-        self,
-        noise_std: Optional[Union[float, Sequence[float]]],
-    ) -> bool:
-        if noise_std is None:
-            return False
-        if isinstance(noise_std, (int, float)):
-            return float(noise_std) > 0
-        try:
-            return any(float(x) > 0 for x in noise_std)  # type: ignore[arg-type]
-        except TypeError:
-            return False
 
     # ── uncertainty ────────────────────────────────────────────
 

@@ -50,7 +50,11 @@ class TestImports(unittest.TestCase):
         """Test that key functions can be imported."""
         from src.data import get_data, quartic_data
         from src.circuits import encoding_circuit, memristor_circuit, build_circuit
-        from src.simulation import run_simulation_sequence_np, SimulationLogger
+        from src.simulation import (
+            run_simulation_sequence,
+            run_simulation_sequence_np,
+            SimulationLogger,
+        )
         from src.autograd import photonic_psr_coeffs_torch, MemristorLossPSR
         from src.loss import PhotonicModel
         from src.training import train_pytorch, train_pytorch_generic
@@ -61,6 +65,7 @@ class TestImports(unittest.TestCase):
         self.assertIsNotNone(encoding_circuit)
         self.assertIsNotNone(memristor_circuit)
         self.assertIsNotNone(build_circuit)
+        self.assertIsNotNone(run_simulation_sequence)
         self.assertIsNotNone(run_simulation_sequence_np)
         self.assertIsNotNone(SimulationLogger)
         self.assertIsNotNone(photonic_psr_coeffs_torch)

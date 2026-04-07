@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-04-07 — Simulator backend architecture cleanup
+
+### Why
+
+The simulation runner and NumPy backend were **tightly coupled to Perceval at import time** (`runner.py` and `numpy_backend → circuits`), and NumPy coincidence runs still built **`pcvl.BasicState`** before hitting the vectorized path. **`Experiment.predict()`** duplicated the discrete NumPy coincidence path already implemented in **`run_vectorized_non_memristive`**. Experiment **`CONFIG`** uses **`sim_backend`** while **`SimConfig`** stores **`backend`**, which was easy to confuse when reading code.
+
+### Added
+
+- **`src/clements_geometry.py`** — Pure layout helpers: **`clements_mzi_pairs`**, **`get_mzi_modes_for_phase`**, **`normalize_memristive_phase_idx`**, **`normalize_memristive_output_modes`** (no Perceval).
+- **`src/simulation/runner.py`** — **`run_simulation_sequence`** as the primary forward API; **`run_simulation_sequence_np`** remains a **backward-compatible alias** to the same function.
+- **`src/config.py`** — **`SimConfig.sim_backend`** property (alias of **`backend`**) and docstring note on the **`sim_backend`** config key vs dataclass field.
+- **`tests/test_simulation_backend_imports.py`** — Subprocess check that **`src.simulation.runner`** can be imported **without loading Perceval** (stub package layout avoids **`src/__init__.py`**); alias assertion.
+- **`tests/test_coincidence_regression_numpy_backend.py`** — Reference **`SimConfig`** aligned with **`examples/coincidence_regression.py`**, parity runner vs vectorized path, golden values, **`sim_backend`** property.
+
+### Changed
+
+- **`src/circuits.py`** — Re-exports geometry helpers from **`clements_geometry`** under the same public names.
+- **`src/numpy_backend.py`** — Imports **`clements_mzi_pairs`** from **`clements_geometry`** instead of **`circuits`**.
+- **`src/simulation/runner.py`** — **Lazy-imports** Perceval, **`Sampler`**, and **`build_circuit`** only on the **`backend == "perceval"`** branch; **NumPy vectorized and memristive-fast returns run before** any **`BasicState`** construction.
+- **`src/simulation/__init__.py`** — Normalize re-exports from **`clements_geometry`**; exports **`run_simulation_sequence`**.
+- **`src/__init__.py`** — Re-exports **`run_simulation_sequence`**.
+- **`src/experiment.py`** — Discrete NumPy **`predict()`** uses **`run_vectorized_non_memristive`** when eligible; otherwise **`run_simulation_sequence`**; removed PhotonicCircuit-based predict helpers; **`_can_use_vectorized_numpy_discrete`** replaces **`_can_use_photonic_circuit`**.
+- **`examples/coincidence_regression.py`** — Calls **`run_simulation_sequence`**.
+- **`tests/test_imports.py`** — Asserts **`run_simulation_sequence`** is importable.
+- **`src/circuits.py`**, **`src/circuit_visualization.py`** — **Lazy-import Perceval** inside Perceval-specific APIs so **`import src`** does not load **`perceval`** until **`build_circuit`**, **`encoding_circuit`**, etc., or annotated visualization runs.
+- **`tests/test_package_import_hygiene.py`** — Subprocess checks that **`import src`** and **`from src.simulation import run_simulation_sequence`** stay Perceval-free, NumPy forwards via **`src.run_simulation_sequence`** stay Perceval-free, and **`src.build_circuit`** loads Perceval when invoked.
+
+### Behaviour / limitations
+
+- **Perceval** loads when any **Perceval circuit builder or annotated visualization** runs (e.g. **`build_circuit`**, **`display_circuit_annotated`**), not at **`import src`**.
+
+---
+
 ## 2026-04-07 — Canonical photonic configuration, internal encoding, and NumPy batching fix
 
 ### Why
