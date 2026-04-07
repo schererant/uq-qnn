@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-04-07 — Allow `n_samples=0` on NumPy backend
+
+### Why
+
+`examples/coincidence_regression.py` and similar NumPy-only runs can compute analytic probabilities without Perceval sampling, but the shared simulation runner still rejected `n_samples=0` before backend dispatch.
+
+### Changed
+
+- **`src/simulation/runner.py`** — Backend validation now runs before `n_samples` validation. `backend="numpy"` accepts `n_samples >= 0`, while `backend="perceval"` still requires a positive integer.
+
+### Behaviour
+
+- `n_samples=0` is now valid for NumPy simulation and training paths.
+- Perceval sampling semantics are unchanged.
+
 ## 2026-04-07 — Simulator backend architecture cleanup
 
 ### Why
