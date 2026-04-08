@@ -18,7 +18,7 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
     phase_idx = tuple(i for i in range(n_phases) if i not in mem and i != enc_slot)
     cfg = SimConfig(
         n_modes=n_modes,
-        input_state=(0,),
+        input_state=(1, 0, 0),
         encoding_phase_idx=enc_slot,
         photon_distinguishability=None,
         target_mode=(2,),

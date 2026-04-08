@@ -24,14 +24,14 @@ logger = get_logger(__name__)
 CASES = {
     "legacy_cc24": {
         "target_mode": (2, 4),
-        "input_state": (1, 4),
+        "input_state": tuple(1 if i in (1, 4) else 0 for i in range(6)),
         "encoding_phase_idx": 7,
         "photon_distinguishability": "indistinguishable",
         "notes": "Previous example-style configuration.",
     },
     "validated_cc01": {
         "target_mode": (0, 1),
-        "input_state": (0, 3),
+        "input_state": tuple(1 if i in (0, 3) else 0 for i in range(6)),
         "encoding_phase_idx": 7,
         "photon_distinguishability": "indistinguishable",
         "notes": "Best validated input/readout configuration from the input-pair sweep.",

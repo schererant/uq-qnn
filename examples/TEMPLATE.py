@@ -43,7 +43,7 @@ training_loss.png       Log-scale convergence curve
 #
 # Measurement modes:
 #   "singles"     — single-photon Born-rule probabilities (fast, simple)
-#   "coincidence" — two-photon correlations (input_state length 2, working_detectors, distinguishability)
+#   "coincidence" — N-fold correlations (occupation vector, sum>=2, working_detectors, distinguishability)
 #
 # Hardware profiles (src/hardware.py):
 #   IDEAL            — no noise, numpy backend
@@ -78,42 +78,37 @@ logger = get_logger(__name__)
 
 CONFIG = {
     # ── Circuit geometry ──────────────────────────────────────────
-    "n_modes": 6,              # Number of waveguide modes (circuit width)
-    "input_state": (0,),       # Occupied input modes: one int for singles, two for coincidence
-    "encoding_phase_idx": 5,   # Mesh phase index that receives the encoded data phase
-    "photon_distinguishability": None,  # None for singles; "indistinguishable" for two-photon
-    "target_mode": (5,),       # Output mode(s) to read — tuple of ints
-    "memristive_phase_idx": None,       # Index/indices of memristive phases, or None
-    "memristive_output_modes": None,    # Feedback mode pairs for memristor, or None
-
+    "n_modes": 6,  # Number of waveguide modes (circuit width)
+    # Length n_modes occupation vector; e.g. singles in mode 5: one 1 in slot 5.
+    "input_state": tuple(1 if i == 5 else 0 for i in range(6)),
+    "encoding_phase_idx": 5,  # Mesh phase index that receives the encoded data phase
+    "photon_distinguishability": None,  # None for singles; required for sum(input_state)>=2
+    "target_mode": (5,),  # Output mode(s) to read — tuple of ints
+    "memristive_phase_idx": None,  # Index/indices of memristive phases, or None
+    "memristive_output_modes": None,  # Feedback mode pairs for memristor, or None
     # ── Measurement mode ──────────────────────────────────────────
     "output_mode": "singles",  # "singles" or "coincidence"
-    "working_detectors": None, # For coincidence: non-empty tuple of detector indices; None for singles
-    "noise_std": None,         # Simulation-level noise std (None = no noise)
-
+    "working_detectors": None,  # For coincidence: non-empty tuple of detector indices; None for singles
+    "noise_std": None,  # Simulation-level noise std (None = no noise)
     # ── Simulation ────────────────────────────────────────────────
-    "n_samples": 300,          # Number of simulation samples
-    "memory_depth": 1,         # Memristive memory depth
-    "n_swipe": 0,              # Number of discrete phase swipes (0 = off)
-    "swipe_span": 0.0,         # Continuous swipe range
-    "sim_backend": "numpy",    # "numpy" (fast) or "perceval" (memristive/SLOS)
-
+    "n_samples": 300,  # Number of simulation samples
+    "memory_depth": 1,  # Memristive memory depth
+    "n_swipe": 0,  # Number of discrete phase swipes (0 = off)
+    "swipe_span": 0.0,  # Continuous swipe range
+    "sim_backend": "numpy",  # "numpy" (fast) or "perceval" (memristive/SLOS)
     # ── Task ──────────────────────────────────────────────────────
-    "loss_type": "mse",        # "mse" (regression) or "cross_entropy" (classification)
-    "n_classes": 1,            # 1 for regression, >1 for classification
-
+    "loss_type": "mse",  # "mse" (regression) or "cross_entropy" (classification)
+    "n_classes": 1,  # 1 for regression, >1 for classification
     # ── Training ──────────────────────────────────────────────────
-    "lr": 0.05,                # Adam learning rate
-    "epochs": 150,             # Training epochs
-    "seed": 42,                # Random seed for reproducibility
-
+    "lr": 0.05,  # Adam learning rate
+    "epochs": 150,  # Training epochs
+    "seed": 42,  # Random seed for reproducibility
     # ── Data (experiment-level, not passed to SimConfig) ──────────
-    "n_data": 80,              # Number of training data points
-    "sigma_noise": 0.02,       # Noise added to training targets
-
+    "n_data": 80,  # Number of training data points
+    "sigma_noise": 0.02,  # Noise added to training targets
     # ── Uncertainty quantification ────────────────────────────────
-    "unc_n_passes": 15,        # Number of noisy forward passes for UQ
-    "unc_noise_std": 0.05,     # Std-dev of parameter perturbation per UQ pass
+    "unc_n_passes": 15,  # Number of noisy forward passes for UQ
+    "unc_noise_std": 0.05,  # Std-dev of parameter perturbation per UQ pass
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -156,17 +151,21 @@ def main() -> None:
         ss_res = float(np.sum((mean_preds - y_test) ** 2))
         ss_tot = float(np.sum((y_test - np.mean(y_test)) ** 2))
         r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-        coverage = float(np.mean(
-            (y_test >= mean_preds - 1.96 * std_preds)
-            & (y_test <= mean_preds + 1.96 * std_preds)
-        ))
+        coverage = float(
+            np.mean(
+                (y_test >= mean_preds - 1.96 * std_preds)
+                & (y_test <= mean_preds + 1.96 * std_preds)
+            )
+        )
 
-        exp.save_metrics({
-            "test_mse": mse,
-            "test_rmse": rmse,
-            "r2": r2,
-            "coverage_95": coverage,
-        })
+        exp.save_metrics(
+            {
+                "test_mse": mse,
+                "test_rmse": rmse,
+                "r2": r2,
+                "coverage_95": coverage,
+            }
+        )
         logger.info("RMSE=%.4f  R2=%.4f  Coverage@95%%=%.2f", rmse, r2, coverage)
 
         # ── 5. Plot ───────────────────────────────────────────────
@@ -193,7 +192,8 @@ def main() -> None:
             label="95% CI",
         )
         axes[1].set(
-            xlabel="x", ylabel="y",
+            xlabel="x",
+            ylabel="y",
             title=f"Predictions  (RMSE={rmse:.4f}, R²={r2:.3f})",
         )
         axes[1].legend(fontsize=8)

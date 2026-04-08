@@ -37,7 +37,25 @@ class PhotonicModel(torch.nn.Module):
 
         # Validate inputs for classification
         if sim_cfg.loss_type == "cross_entropy":
-            if sim_cfg.target_mode is None or len(sim_cfg.target_mode) != sim_cfg.n_classes:
+            if sim_cfg.output_mode == "coincidence" and sim_cfg.n_classes > 1:
+                from .coincidence import nfold_channel_count
+
+                wd = sim_cfg.working_detectors
+                if wd is None:
+                    raise ValueError(
+                        "coincidence classification requires working_detectors on sim_cfg"
+                    )
+                n_ph = int(sum(sim_cfg.input_state))
+                expected = nfold_channel_count(len(wd), n_ph)
+                if sim_cfg.n_classes != expected:
+                    raise ValueError(
+                        f"coincidence classification requires n_classes=C(W,N)={expected}, "
+                        f"got n_classes={sim_cfg.n_classes}"
+                    )
+            elif (
+                sim_cfg.target_mode is None
+                or len(sim_cfg.target_mode) != sim_cfg.n_classes
+            ):
                 raise ValueError(
                     f"For classification with n_classes={sim_cfg.n_classes}, "
                     f"target_mode must have {sim_cfg.n_classes} elements, "

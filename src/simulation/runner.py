@@ -11,11 +11,11 @@ from ..clements_geometry import (
 )
 from ..coincidence import (
     apply_noise_to_outcomes,
-    get_cc_labels,
-    mode_pair_to_cc_index,
+    get_nfold_channel_labels,
+    nfold_tuple_to_channel_index,
+    nfold_working_detector_tuples,
     postselect_measurement,
-    probs_to_coincidences,
-    working_detectors_to_cc_indices,
+    probs_to_nfold_coincidences,
 )
 from ..config import SimConfig, validate_sim_config
 from ..logging_config import get_logger
@@ -276,17 +276,19 @@ def run_simulation_sequence(
     from ..circuits import build_circuit
 
     if cfg.output_mode == "coincidence":
-        in_modes = (int(cfg.input_state[0]), int(cfg.input_state[1]))
-        inp = [0] * cfg.n_modes
-        for m in in_modes:
-            inp[m] += 1
+        inp = [int(x) for x in cfg.input_state]
+        if len(inp) != cfg.n_modes:
+            raise ValueError(
+                f"input_state must have length n_modes={cfg.n_modes} for Perceval, got {len(inp)}"
+            )
         input_state = pcvl.BasicState(inp)
         assert cfg.working_detectors is not None
-        wd_tuple = tuple(cfg.working_detectors)
-        working_cc_indices = tuple(
-            working_detectors_to_cc_indices(wd_tuple, cfg.n_modes)
-        )
-        cc_labels = get_cc_labels(cfg.n_modes)
+        wd_tuple = tuple(int(x) for x in cfg.working_detectors)
+        n_photons_pv = int(sum(inp))
+        nfold_tuples_pv = nfold_working_detector_tuples(wd_tuple, n_photons_pv)
+        n_ch_pv = len(nfold_tuples_pv)
+        working_cc_indices = tuple(range(n_ch_pv))
+        cc_labels = get_nfold_channel_labels(wd_tuple, n_photons_pv)
         add_noise = _has_positive_noise(cfg.noise_std)
     else:
         inp = [0] * cfg.n_modes
@@ -298,9 +300,11 @@ def run_simulation_sequence(
 
     readout_cc_idx: int | None = None
     if cfg.output_mode == "coincidence" and cfg.loss_type == "mse":
-        assert cfg.target_mode is not None and len(cfg.target_mode) == 2
-        readout_cc_idx = mode_pair_to_cc_index(
-            cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
+        assert cfg.target_mode is not None
+        readout_cc_idx = nfold_tuple_to_channel_index(
+            cfg.target_mode,
+            cfg.working_detectors,
+            int(sum(cfg.input_state)),
         )
 
     state_m1_list: list[Any] = []
@@ -358,7 +362,12 @@ def run_simulation_sequence(
                 p2_vals = [probs.get(state, 0.0) for state in state_m2_list]
                 mem_state.update_from_prob_arrays(i, p1_vals, p2_vals)
             if cfg.output_mode == "coincidence":
-                coinc = probs_to_coincidences(probs, cfg.n_modes)
+                coinc = probs_to_nfold_coincidences(
+                    probs,
+                    cfg.n_modes,
+                    wd_tuple,
+                    n_photons_pv,
+                )
                 out = postselect_measurement(
                     coinc, working_cc_indices, cc_labels, fallback_uniform=True
                 )
@@ -373,7 +382,7 @@ def run_simulation_sequence(
                     if readout_cc_idx is None:
                         raise ValueError(
                             "scalar coincidence readout requires target_mode as output "
-                            "mode pair (j, k) when using loss_type='mse'"
+                            "target_mode as an N-tuple of distinct detector indices when using loss_type='mse'"
                         )
                     preds[i] = out[readout_cc_idx]
             elif return_class_probs and n_classes > 1:
@@ -416,7 +425,12 @@ def run_simulation_sequence(
                     p1_swipe[k, j] = probs.get(state_m1_list[j], 0.0)
                     p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
                 if cfg.output_mode == "coincidence":
-                    coinc = probs_to_coincidences(probs, cfg.n_modes)
+                    coinc = probs_to_nfold_coincidences(
+                        probs,
+                        cfg.n_modes,
+                        wd_tuple,
+                        n_photons_pv,
+                    )
                     out = postselect_measurement(
                         coinc, working_cc_indices, cc_labels, fallback_uniform=True
                     )
@@ -435,7 +449,7 @@ def run_simulation_sequence(
                         if readout_cc_idx is None:
                             raise ValueError(
                                 "scalar coincidence readout requires target_mode as output "
-                                "mode pair (j, k) when using loss_type='mse'"
+                                "target_mode as an N-tuple of distinct detector indices when using loss_type='mse'"
                             )
                         target_swipe[k] = out[readout_cc_idx]
                 elif return_class_probs and n_classes > 1:

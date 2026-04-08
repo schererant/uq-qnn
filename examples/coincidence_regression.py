@@ -21,8 +21,8 @@ from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
 
-# Coincidence readout models a two-photon input across distinct modes.
-INPUT_STATE = (0, 1)
+# Fock occupation (6 modes): one photon each in modes 1 and 4.
+INPUT_STATE = tuple(1 if i in (1, 4) else 0 for i in range(6))
 TARGET_CC_PAIR = (0, 1)
 ENCODING_PHASE_IDX = 7
 

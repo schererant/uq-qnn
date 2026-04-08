@@ -8,7 +8,7 @@ from src.config import SimConfig, validate_sim_config
 def _minimal_singles(**kwargs: object) -> SimConfig:
     base = dict(
         n_modes=4,
-        input_state=(0,),
+        input_state=(1, 0, 0, 0),
         encoding_phase_idx=0,
         photon_distinguishability=None,
         target_mode=(3,),
@@ -32,7 +32,7 @@ def _minimal_singles(**kwargs: object) -> SimConfig:
 def _minimal_coincidence(**kwargs: object) -> SimConfig:
     base = dict(
         n_modes=4,
-        input_state=(0, 1),
+        input_state=(1, 1, 0, 0),
         encoding_phase_idx=0,
         photon_distinguishability="indistinguishable",
         target_mode=(0, 2),
@@ -77,16 +77,21 @@ def test_coincidence_requires_working_detectors():
         validate_sim_config(cfg)
 
 
-def test_coincidence_mse_requires_target_pair():
+def test_coincidence_mse_requires_target_length_n():
     cfg = _minimal_coincidence(target_mode=(0,))
-    with pytest.raises(ValueError, match="target_mode as a pair"):
+    with pytest.raises(ValueError, match="len\\(target_mode\\)==sum"):
         validate_sim_config(cfg)
 
 
-def test_input_state_collision_rejected():
-    cfg = _minimal_coincidence(input_state=(1, 1))
-    with pytest.raises(ValueError, match="distinct"):
+def test_legacy_pair_input_state_rejected_with_migration_hint():
+    cfg = _minimal_coincidence(input_state=(0, 3))
+    with pytest.raises(ValueError, match="occupation vector"):
         validate_sim_config(cfg)
+
+
+def test_coincidence_allows_two_photons_same_mode():
+    cfg = _minimal_coincidence(input_state=(2, 0, 0, 0), target_mode=(0, 1))
+    validate_sim_config(cfg)
 
 
 def test_sim_config_round_trip_dict():

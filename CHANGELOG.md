@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-04-08 — Occupation-vector `input_state` and N-fold training coincidence (breaking)
+
+### Why
+
+`input_state` previously mixed meanings (length-1 or length-2 tuples of mode indices vs Fock occupation). Training and `SimConfig` now follow the same occupation-vector convention as `PhotonicCircuit`, with **N-fold postselected coincidence** over `working_detectors` (`C(W, N)` channels) instead of only two-photon pairs embedded in a full `n*(n-1)/2` layout.
+
+### Breaking
+
+- **`input_state`** must be a **length `n_modes` tuple/list** of non-negative integers whose **sum is the photon number**.
+  - Singles: `sum(input_state) == 1`.
+  - Coincidence: `sum(input_state) >= 2`.
+- Legacy injection pairs like `(j, k)` are **rejected** with a migration hint pointing to an occupation vector.
+- **Coincidence regression** `target_mode` is an **`N`-tuple of distinct detector indices** (subset of `working_detectors`), not only a length-2 pair in the old sense.
+- **Coincidence classification**: `n_classes` must equal **`C(W, N)`** with `W = len(working_detectors)`, `N = sum(input_state)`; class order matches **lexicographic** `combinations(sorted(working_detectors), N)`.
+- **PSR** photon counts use **`sum(input_state)`** (not `output_mode`).
+
+### Added / changed (high level)
+
+- **`src/coincidence.py`** — N-fold helpers: channel enumeration, canonical detector tuples, Perceval `probs_to_nfold_coincidences`, migration hint for legacy pairs.
+- **`src/config.py`** — Validation, guardrails on `N` / channel count, `psr_photon_counts_for_phases` from occupation sum; `CircuitConfig` / `SimConfig` **`singles_input_mode`** from occupation.
+- **`src/numpy_backend.py`** — `_coincidence_nfold_raw_batch` (Ryser path; keeps **vectorized N=2** closed form when input is two photons in **distinct** modes).
+- **`src/simulation/runner.py`** (Perceval) — `BasicState` from occupation vector; N-fold extraction aligned with NumPy.
+- **`src/circuit.py`**, **`src/circuit_visualization.py`** — Legacy / singles paths updated for occupation `input_state`.
+- **`src/loss.py`** — Coincidence classification validates `n_classes` vs `C(W, N)`.
+- **Examples and tests** migrated to occupation vectors.
+
+### Fixed
+
+- **`src/numpy_backend.py`**, **`src/circuit.py`** — Bosonic transition probability divides by **∏ n_in! ∏ n_out!** (not output factorials only), correcting repeated-input Fock states (e.g. two photons in one mode).
+- **`src/numpy_backend.py`**, **`src/circuit.py`** — Ryser submatrix uses **rows = expanded output modes, columns = expanded input modes**, matching Perceval SLOS and the two-photon coincidence formula (reversed indexing matched Perceval only when input/output index sets were identical).
+- **`src/training.py`** — `train_pytorch_generic` skips singles-style `target_mode` auto-fill and `len(target_mode) == n_classes` logic when **`loss_type="cross_entropy"`** and **`output_mode="coincidence"`**; **`gradient_check`** uses a valid occupation-vector **`input_state`**.
+- **`README.md`** — Aligned `PhotonicCircuit` / `SimConfig` examples and coincidence wording with the occupation-vector and N-fold API.
+- **`src/simulation/runner.py`** — Scalar coincidence error messages refer to an **N-tuple** of detector indices, not a two-mode “pair”.
+- **Tests** — NumPy vs Perceval **N=3** coincidence agreement; bunched-input boson probability checks; coincidence cross-entropy training regression (**`target_mode`** left **`None`**).
+
+### Cost / semantics note
+
+- **Exact** N-fold simulation is supported for moderate `N` and `C(W,N)`; defaults **error** if `N > 8` or channels `> 500`. **Regression** (one channel) is cheaper than **full CE** over all N-fold channels; **PSR** scales with **`2N` per phase**.
+
 ## 2026-04-07 — Add full N-fold coincidence distributions to `PhotonicCircuit`
 
 ### Why

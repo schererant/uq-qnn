@@ -55,7 +55,7 @@ OUTPUT_MODES: List[int] = list(range(N_MODES))
 
 CONFIG: Dict = {
     "n_modes": N_MODES,
-    "input_state": (0,),
+    "input_state": tuple(1 if i == 0 else 0 for i in range(N_MODES)),
     "encoding_phase_idx": 10,
     "photon_distinguishability": None,
     "memristive_phase_idx": None,

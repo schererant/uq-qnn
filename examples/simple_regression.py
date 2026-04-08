@@ -20,7 +20,8 @@ logger = get_logger(__name__)
 CONFIG = {
     # Circuit
     "n_modes": 12,  # waveguide modes; 12*11 mesh phases
-    "input_state": (4,),  # single photon injected in this mode (before the mesh)
+    # Length n_modes occupation vector; exactly one photon in mode 4.
+    "input_state": tuple(1 if i == 4 else 0 for i in range(12)),
     "encoding_phase_idx": 10,  # mesh phase index that receives the data-encoded contribution
     "photon_distinguishability": None,  # None for single-photon; required for two-photon runs
     "target_mode": (4,),  # output mode(s) whose Born-rule probability is the prediction

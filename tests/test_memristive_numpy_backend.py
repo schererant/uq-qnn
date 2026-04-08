@@ -125,7 +125,7 @@ def _reference_memristive_singles(
 def _cfg(**overrides: object) -> SimConfig:
     base = dict(
         n_modes=6,
-        input_state=(0,),
+        input_state=tuple(1 if i == 0 else 0 for i in range(6)),
         encoding_phase_idx=0,
         photon_distinguishability=None,
         target_mode=(5,),

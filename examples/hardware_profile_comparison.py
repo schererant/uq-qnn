@@ -26,13 +26,12 @@ logger = get_logger(__name__)
 BASE_CONFIG = {
     # Circuit
     "n_modes": 6,
-    "input_state": (0,),
+    "input_state": tuple(1 if i == 0 else 0 for i in range(6)),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
     "target_mode": (4,),
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     # Measurement
     "output_mode": "singles",
     "working_detectors": None,

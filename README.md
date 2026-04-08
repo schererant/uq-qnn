@@ -61,25 +61,50 @@ uv run python examples/simple_classification.py
 
 ### Simple circuit simulation via `PhotonicCircuit`
 
-Need a quick probability vector without constructing a full `SimConfig`? Use the lightweight `PhotonicCircuit` core:
+Need a quick probability vector without constructing a full `SimConfig`? Use `PhotonicCircuit` with a [`CircuitConfig`](src/config.py) (same circuit fields as `SimConfig`, without training/sim-only keys):
 
 ```python
 import numpy as np
 from src import PhotonicCircuit
+from src.config import CircuitConfig
 
 # 6-mode Clements mesh (30 phases)
 phases = np.random.uniform(0, 2 * np.pi, 6 * (6 - 1))
-circuit = PhotonicCircuit(n_modes=6, phases=phases)
+singles_cfg = CircuitConfig(
+    n_modes=6,
+    input_state=tuple(1 if i == 0 else 0 for i in range(6)),
+    encoding_phase_idx=5,
+    photon_distinguishability=None,
+    output_mode="singles",
+    working_detectors=None,
+)
+circuit = PhotonicCircuit(n_modes=6, phases=phases, circuit_config=singles_cfg)
 
 encoded = np.linspace(0, np.pi, 64)
-singles = circuit.singles_batch(encoded)          # shape (64, 6)
-coinc = circuit.coincidences(0.25, input_modes=(1, 4))  # shape (15,)
+singles = circuit.singles_batch(encoded)  # shape (64, 6)
 
-# Circuit metadata is available via CircuitConfig
-print(circuit.config.n_phases)    # -> 30
+# Legacy-style 2-photon coincidence vector (requires two photons in distinct modes in circuit_config.input_state)
+cc_cfg = CircuitConfig(
+    n_modes=6,
+    input_state=tuple(1 if i in (1, 4) else 0 for i in range(6)),
+    encoding_phase_idx=5,
+    photon_distinguishability="indistinguishable",
+    output_mode="coincidence",
+    working_detectors=tuple(range(6)),
+)
+cc_circ = PhotonicCircuit(n_modes=6, phases=phases, circuit_config=cc_cfg)
+coinc = cc_circ.coincidences(0.25)  # shape (15,) — full mesh CC basis
+
+# General Fock analysis: pass an occupation vector (length n_modes); click vs PNR dict output
+u = cc_circ.unitary(0.25)
+probs_click = cc_circ.coincidences(
+    (1, 1, 0, 0, 0, 0), detector_mode="click", unitary=u
+)
+
+print(circuit.config.n_phases)  # -> 30
 ```
 
-`PhotonicCircuit` always returns all output channels (singles: `n_modes`, coincidences: `n_modes * (n_modes - 1) / 2`). Downstream code can slice or average the modes it cares about, while the simulation runner (`run_simulation_sequence_np`) remains available for memristive, swipe, or Perceval-backed workflows.
+Training and experiment code should use **occupation-vector** `input_state` and N-fold coincidence via `run_simulation_sequence_np` / `Experiment` (see [Config reference](#config-reference)).
 
 ---
 
@@ -116,15 +141,16 @@ from src.experiment import Experiment
 CONFIG = {
     # -- circuit geometry --
     "n_modes": 6,
-    "encoding_mode": 0,
+    # Fock occupation vector length n_modes; exactly one photon (here in mode 4)
+    "input_state": tuple(1 if i == 4 else 0 for i in range(6)),
+    "encoding_phase_idx": 10,
+    "photon_distinguishability": None,
     "target_mode": (4,),
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
 
     # -- measurement --
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
     "noise_std": None,
 
@@ -133,7 +159,6 @@ CONFIG = {
     "memory_depth": 2,
     "n_swipe": 0,
     "swipe_span": 0.0,
-    "n_photons": None,
     "sim_backend": "numpy",
 
     # -- task / loss --
@@ -206,20 +231,19 @@ from src.experiment import Experiment
 
 CONFIG = {
     "n_modes": 3,
-    "encoding_mode": 0,
-    "target_mode": (1, 2),          # one mode per class
+    "input_state": (1, 0, 0),
+    "encoding_phase_idx": 0,
+    "photon_distinguishability": None,
+    "target_mode": (1, 2),          # one output mode per class (singles CE only)
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     "output_mode": "singles",
-    "input_modes": None,
     "working_detectors": None,
     "noise_std": None,
     "n_samples": 500,
     "memory_depth": 2,
     "n_swipe": 0,
     "swipe_span": 0.0,
-    "n_photons": None,
     "sim_backend": "numpy",
     "loss_type": "cross_entropy",
     "n_classes": 2,
@@ -263,38 +287,39 @@ Every key listed below is **required** by `Experiment`. There are no hidden defa
 | Key | Type | Description |
 |---|---|---|
 | `n_modes` | `int` | Number of waveguide modes in the Clements mesh. Determines circuit depth: `n_modes * (n_modes - 1)` phase parameters total. |
-| `encoding_mode` | `int` | Index of the input mode that receives the data-encoded phase (`2*arccos(x)`). Must be `< n_modes`. |
-| `target_mode` | `tuple[int, ...]` or `None` | Output mode indices to read Born-rule probability from. For regression: one mode, e.g. `(4,)`. For classification: one mode per class, e.g. `(1, 2)` for binary. `None` falls back to `(n_modes - 1,)`. |
-| `memristive_phase_idx` | `int`, `tuple[int, ...]`, or `None` | Index/indices of phase parameters that are made memristive (history-dependent feedback). `None` = pure Clements mesh with no memory. |
-| `memristive_output_modes` | `tuple[tuple[int, int], ...]` or `None` | Pairs `(m1, m2)` of output modes used for photon-feedback into memristive phases. Only relevant when `memristive_phase_idx` is set. |
-| `encoding_phase_idx` | `int` or `None` | Overrides which phase slot the data encoding is applied to. `None` = use the default slot derived from `encoding_mode`. |
+| `input_state` | `tuple[int, ...]` | **Fock occupation vector** of length `n_modes`: non-negative integers, `sum(input_state)` = total photon number. Singles: sum `1`. Coincidence: sum `≥ 2` (including bunching, e.g. `(2, 0, 0, …)`). |
+| `encoding_phase_idx` | `int` | Mesh phase index where the data-encoded phase is added (internal encoding). |
+| `photon_distinguishability` | `str` or `None` | `None` when `sum(input_state)==1`. Required when `sum(input_state)≥2` (training stack: `"indistinguishable"` supported on NumPy). |
+| `target_mode` | `tuple[int, ...]` or `None` | **Singles:** output mode(s) for Born-rule readout; regression often `(m,)`. **Singles CE:** one mode index per class. **Coincidence regression:** `N` distinct detector indices in `working_detectors` (`N = sum(input_state)`). **Coincidence CE:** class layout is `C(W, N)` N-fold channels — use `target_mode=None` or any placeholder; `n_classes` must match. |
+| `memristive_phase_idx` | `int`, `tuple[int, ...]`, or `None` | Phase index/indices with memristive feedback. `None` = pure Clements mesh. |
+| `memristive_output_modes` | `tuple[tuple[int, int], ...]` or `None` | Output mode pairs feeding memristive phases. |
 
 ### Measurement
 
 | Key | Type | Description |
 |---|---|---|
-| `output_mode` | `str` | `"singles"` -- 1-photon probabilities via `|U[target, encoding]|^2`. `"coincidence"` -- 2-photon coincidence counting via permanents. |
-| `input_modes` | `tuple[int, ...]` or `None` | For coincidence only: mode indices where the two photons enter, e.g. `(0, 1)`. |
-| `working_detectors` | `tuple[int, ...]` or `None` | For coincidence only: indices of functioning output detectors. Postselection is applied to these modes. |
-| `noise_std` | `float`, `tuple[float, ...]`, or `None` | Gaussian noise standard deviation added to coincidence counts. Can be a single float (all channels) or a per-channel tuple. `None` = noiseless. |
+| `output_mode` | `str` | `"singles"` — single-photon Born probabilities. `"coincidence"` — **N-fold** post-selected coincidence distribution over `working_detectors` (`C(W, N)` channels, `N = sum(input_state)`). |
+| `working_detectors` | `tuple[int, ...]` or `None` | **Coincidence:** non-empty tuple of functioning detector indices. **Singles:** `None`. |
+| `noise_std` | `float`, `tuple[float, ...]`, or `None` | Gaussian noise on channel probabilities (then renormalized). `None` = noiseless. |
 
 ### Simulation
 
 | Key | Type | Description |
 |---|---|---|
-| `n_samples` | `int` | Number of photon samples per data point. Higher values reduce shot noise but increase runtime. Set low (e.g. 20) for fast prototyping, higher (e.g. 1000) for production. |
-| `memory_depth` | `int` | Number of past time steps stored in the memristor buffer. Irrelevant when `memristive_phase_idx` is `None`. |
-| `n_swipe` | `int` | Number of phase points swept per data point in continuous-swipe mode. `0` = discrete mode (single phase per point). |
-| `swipe_span` | `float` | Total phase range (radians) swept around each encoded phase. Used only when `n_swipe > 0`. |
-| `n_photons` | `tuple[int, ...]` or `None` | Photon count associated with each phase parameter for PSR shift computation. `None` = auto-infer (1 for singles, 2 for coincidence). Must match the total photon number in the system. |
-| `sim_backend` | `str` | `"numpy"` -- fast analytic backend: fully vectorized for plain Clements runs and optimized state-propagation for memristive singles runs in both discrete and swipe modes. `"perceval"` -- full Scalable Linear Optical Simulator, still used when you need Perceval fidelity or unsupported NumPy paths. |
+| `n_samples` | `int` | Samples per data point (Perceval); `0` allowed on NumPy for analytic discrete runs. |
+| `memory_depth` | `int` | Memristor buffer depth. |
+| `n_swipe` | `int` | Continuous swipe sample count; `0` = discrete. |
+| `swipe_span` | `float` | Swipe range in radians when `n_swipe > 0`. |
+| `sim_backend` | `str` | `"numpy"` or `"perceval"`. |
 
 ### Task / loss
 
 | Key | Type | Description |
 |---|---|---|
-| `loss_type` | `str` | `"mse"` for regression (mean squared error). `"cross_entropy"` for classification (softmax over `target_mode` probabilities). |
-| `n_classes` | `int` | `1` for regression. Number of classes for classification. Must equal `len(target_mode)` when `loss_type="cross_entropy"`. |
+| `loss_type` | `str` | `"mse"` or `"cross_entropy"`. |
+| `n_classes` | `int` | `1` for regression. For **singles** CE, must match `len(target_mode)` (or auto-filled modes). For **coincidence** CE, must equal `C(W, N)` over `working_detectors` and `N = sum(input_state)`. |
+
+**PSR:** photon count per phase shift is derived from `sum(input_state)` (not from `output_mode` alone).
 
 ### Training
 
@@ -464,7 +489,7 @@ The Parameter-Shift Rule computes **exact** gradients without finite differences
 - Each phase parameter contributes **2n shift terms** (n = photon count)
 - Phase parameters: exact PSR gradients
 - Memristor weights: finite differences (non-unitary parameters)
-- `n_photons` must match the total photon number in the system -- mismatches produce incorrect gradient coefficients
+- PSR photon count is taken from **`sum(input_state)`** for each trainable mesh phase — it must match the physical input photon number or gradients are wrong
 
 ---
 
