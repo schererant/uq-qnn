@@ -17,7 +17,7 @@
 
 \title{UQ-QNN Repository Overview, Development Progress, and Rerun Experiment Analysis}
 \author{Project Presentation Notes}
-\date{April 2, 2026}
+\date{April 8, 2026}
 
 \begin{document}
 \maketitle
@@ -43,7 +43,7 @@ At a high level, the data flow is:
 
 The repository now contains three complementary layers:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Modeling and simulation}: Clements circuits, memristive feedback, singles/coincidence measurements, NumPy and Perceval backends.
+    \item \textbf{Modeling and simulation}: Clements circuits, memristive feedback, singles readout and \textbf{N-fold postselected coincidence} over \texttt{working\_detectors} (\(C(W,N)\) channels with \(N=\sum\texttt{input\_state}\)), NumPy and Perceval backends.
     \item \textbf{Training and experimentation}: \texttt{SimConfig}, \texttt{Experiment}, uncertainty analysis, metrics, artifact export.
     \item \textbf{Analysis and communication}: reproducible report folders, comparison scripts, benchmark scripts, and now this presentation material.
 \end{enumerate}
@@ -75,7 +75,12 @@ The addition of \texttt{PhotonicCircuit}, public circuit helpers, and a simulati
 Further work tightened typing, fixed edge cases in hardware noise and memristive uncertainty handling, and added regression tests. This stage matters because the research questions in the repository are sensitive to subtle simulator and gradient issues.
 
 \subsection{Stage 6: Fast memristive NumPy backend and targeted reruns}
-The latest work targeted a key bottleneck: memristive NumPy simulations were correct but slow because they rebuilt full unitaries at every step. We introduced an optimized state-propagation path for memristive singles runs, first for discrete mode and then for swipe mode. To evaluate both the engineering change and the modeling consequences, we reran and added several experiments focused on memristive circuits.
+Work targeted a key bottleneck: memristive NumPy simulations were correct but slow because they rebuilt full unitaries at every step. An optimized state-propagation path for memristive singles runs was added, first for discrete mode and then for swipe mode. Several reruns focused on memristive circuits.
+
+\subsection{Stage 7: Occupation-vector \texttt{input\_state} and N-fold coincidence (breaking)}
+Training-facing \texttt{SimConfig} and \texttt{PhotonicCircuit} now share a single convention: \texttt{input\_state} is a \textbf{length-\texttt{n\_modes} occupation vector} (non-negative integers summing to the photon number). Legacy length-1/2 ``mode index lists'' for injection are rejected with a migration hint.
+
+Coincidence mode is no longer limited to a two-photon pair embedded in an \(n(n-1)/2\) layout. The stack uses \textbf{N-fold channels}---lexicographic combinations of distinct detectors in \texttt{working\_detectors}---with postselection semantics aligned between the vectorized NumPy path (Ryser permanents, with a fast closed form when \(N=2\) and the input is two photons in distinct modes) and Perceval SLOS. Regression uses an \(N\)-tuple \texttt{target\_mode} of detector indices; coincidence classification expects \texttt{n\_classes} \(= C(W,N)\). PSR gradient counts follow \(2\sum\texttt{input\_state}\) per phase. \texttt{PhotonicCircuit} is constructed with a \texttt{CircuitConfig} carrying the same occupation and encoding slot metadata.
 
 \section{What We Changed to Reach the Goals}
 
@@ -91,7 +96,7 @@ The repository goals were not reached through one single feature but through a s
 \subsection{Architecture and simulator changes}
 \begin{itemize}[leftmargin=*]
     \item Promoted public circuit helpers such as memristive index normalization and phase-to-MZI mapping.
-    \item Added \texttt{PhotonicCircuit} as a lightweight interface for fast NumPy simulations.
+    \item Added \texttt{PhotonicCircuit} (with \texttt{CircuitConfig}) as a lightweight interface for fast NumPy simulations and N-fold coincidence distributions (\texttt{coincidences(..., detector\_mode="click"|"pnr")}).
     \item Refactored simulation code into a clearer package with a dedicated memristive state manager.
 \end{itemize}
 

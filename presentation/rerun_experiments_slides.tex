@@ -11,7 +11,7 @@
 \title{UQ-QNN Rerun Experiments}
 \subtitle{Memristor placement, multi-memristor tests, and backend speedups}
 \author{Project Presentation}
-\date{April 2, 2026}
+\date{April 8, 2026}
 
 \begin{document}
 
@@ -36,13 +36,24 @@ Current goals:
 Recent progress happened in four layers:
 \begin{enumerate}
     \item \textbf{Experiment workflow}: explicit config dictionaries and the \texttt{Experiment} API.
-    \item \textbf{Repository cleanup}: \texttt{PhotonicCircuit}, public helpers, structured simulation package.
+    \item \textbf{Repository cleanup}: \texttt{PhotonicCircuit} + \texttt{CircuitConfig}, public helpers, structured simulation package.
     \item \textbf{Correctness}: fixes for noise handling, memristive UQ, and gradient edge cases.
     \item \textbf{Performance}: fast NumPy memristive backend for discrete and swipe singles runs.
 \end{enumerate}
 
 \vspace{0.5em}
 This enabled the rerun experiments shown in the following slides.
+\end{frame}
+
+\begin{frame}{Config and readout (current API)}
+\begin{itemize}
+    \item \texttt{input\_state}: occupation vector of length \texttt{n\_modes}; photon number \(N = \sum_i \texttt{input\_state}_i\).
+    \item Singles: \(N=1\). Coincidence: \(N \geq 2\); channels are \(N\)-tuples from \texttt{working\_detectors} (\(C(W,N)\) outcomes, postselected).
+    \item Coincidence regression: \texttt{target\_mode} is an \(N\)-tuple of distinct detector indices. CE: \texttt{n\_classes} \(= C(W,N)\).
+    \item PSR uses \(2N\) shift terms per phase (same \(N\)). NumPy and Perceval agree on the N-fold layout.
+\end{itemize}
+\vspace{0.3em}
+\small See \texttt{CHANGELOG.md} (2026-04-08) and root \texttt{README.md} for migration notes.
 \end{frame}
 
 \begin{frame}{Rerun Set}

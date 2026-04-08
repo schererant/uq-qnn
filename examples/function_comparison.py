@@ -49,8 +49,8 @@ logger = get_logger(__name__)
 
 SINGLES_ENCODING_PHASE_IDX = 26
 COINCIDENCE_ENCODING_PHASE_IDX = 7
-SINGLES_INPUT_STATE = tuple(1 if i == 0 else 0 for i in range(6))
-COINCIDENCE_INPUT_STATE = tuple(1 if i in (0, 3) else 0 for i in range(6))
+SINGLES_INPUT_STATE = (1, 0, 0, 0, 0, 0)
+COINCIDENCE_INPUT_STATE = (1, 0, 0, 1, 0, 0)
 SINGLES_TARGET_MODE = (2,)
 COINCIDENCE_TARGET_MODE = (0, 1)
 
