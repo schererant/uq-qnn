@@ -34,6 +34,7 @@
 - **`README.md`** — Aligned `PhotonicCircuit` / `SimConfig` examples and coincidence wording with the occupation-vector and N-fold API.
 - **`src/simulation/runner.py`** — Scalar coincidence error messages refer to an **N-tuple** of detector indices, not a two-mode “pair”.
 - **Tests** — NumPy vs Perceval **N=3** coincidence agreement; bunched-input boson probability checks; coincidence cross-entropy training regression (**`target_mode`** left **`None`**).
+- **`presentation/`** — `repository_overview.tex` (Stage 7 + modeling bullet), `rerun_experiments_slides.tex` (config/readout slide), and `presentation/README.md` aligned with the occupation-vector and N-fold API.
 
 ### Cost / semantics note
 
