@@ -34,6 +34,9 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
         backend="numpy",
         loss_type="mse",
         n_classes=1,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
 
     enc = np.array([0.2, 0.8, 1.1], dtype=np.float64)

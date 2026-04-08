@@ -154,6 +154,9 @@ class TestCircuitArchitectures(unittest.TestCase):
             backend="numpy",
             loss_type="mse",
             n_classes=1,
+            feedback_mode="internal_arm",
+            feedback_modes=None,
+            computation_modes=None,
         )
         preds = run_simulation_sequence_np(params, enc, cfg)
         self.assertEqual(len(preds), 5)
@@ -186,6 +189,9 @@ class TestCircuitArchitectures(unittest.TestCase):
             backend="numpy",
             loss_type="mse",
             n_classes=1,
+            feedback_mode="internal_arm",
+            feedback_modes=None,
+            computation_modes=None,
         )
         preds = run_simulation_sequence_np(params, enc, cfg)
         self.assertEqual(len(preds), 5)

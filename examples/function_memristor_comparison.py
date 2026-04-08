@@ -45,15 +45,15 @@ logger = get_logger(__name__)
 # ===========================================================================
 
 CONFIG: Dict = {
-    "n_modes": 12,
-    "input_state": tuple(1 if i == 0 else 0 for i in range(12)),
-    "encoding_phase_idx": 0,
+    "n_modes": 6,
+    "input_state": (0, 1, 0, 0, 1, 0),
+    "encoding_phase_idx": 7,
     "photon_distinguishability": None,
     "target_mode": (4,),
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
     "output_mode": "singles",
-    "working_detectors": None,
+    "working_detectors": (0, 1, 2, 3, 4, 5),
     "n_samples": 300,
     "noise_std": None,
     "loss_type": "mse",

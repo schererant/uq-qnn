@@ -25,6 +25,9 @@ def _base_cfg(**kwargs) -> SimConfig:
         n_classes=1,
         output_mode="singles",
         working_detectors=None,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
     common.update(kwargs)
     return SimConfig(**common)

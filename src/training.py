@@ -225,6 +225,9 @@ def gradient_check(
         backend="numpy",
         loss_type="mse",
         n_classes=1,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
     validate_sim_config(cfg)
 
