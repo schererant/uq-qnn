@@ -424,6 +424,40 @@ def probs_to_nfold_coincidences(
     return out
 
 
+# ── Marginal and joint detection utilities (hardware-realistic SPAD readout) ──
+
+
+def marginal_click_prob(
+    slos_dist: Dict["pcvl.BasicState", float],
+    mode: int,
+) -> float:
+    """P(s_mode >= 1) summed over all Fock states that have at least one photon at *mode*.
+
+    Used for threshold-detector (SPAD) readout of a single output port from a
+    multi-photon SLOS distribution.  Does not require photon-number resolution.
+    """
+    return sum(p for s, p in slos_dist.items() if s[int(mode)] >= 1)
+
+
+def coincidence_prob(
+    slos_dist: Dict["pcvl.BasicState", float],
+    mode_c: int,
+    mode_d: int,
+) -> float:
+    """P(click at mode_c AND click at mode_d) from a multi-photon SLOS distribution.
+
+    With exactly 2 photons and threshold detectors both firing, the event is
+    unambiguous (no bunching ambiguity): P(s_c=1, s_d=1).
+    Generalises correctly for higher photon numbers (any state with ≥1 photon
+    at both modes contributes).
+    """
+    return sum(
+        p
+        for s, p in slos_dist.items()
+        if s[int(mode_c)] >= 1 and s[int(mode_d)] >= 1
+    )
+
+
 # Hardware accidental correction constants
 COINCIDENCE_WINDOW_FACTOR = 27e-12  # s, hardware-dependent
 DEFAULT_C_WIN_NS = 170  # ns, typical coincidence window

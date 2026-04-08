@@ -27,6 +27,9 @@ def _cfg(output_mode: str) -> SimConfig:
             backend="numpy",
             loss_type="mse",
             n_classes=1,
+            feedback_mode="internal_arm",
+            feedback_modes=None,
+            computation_modes=None,
         )
     return SimConfig(
         n_modes=6,
@@ -46,6 +49,9 @@ def _cfg(output_mode: str) -> SimConfig:
         backend="numpy",
         loss_type="mse",
         n_classes=1,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
 
 
@@ -119,6 +125,9 @@ def test_coincidence_cross_entropy_leaves_target_mode_none():
         backend="numpy",
         loss_type="cross_entropy",
         n_classes=6,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
     validate_sim_config(cfg)
 

@@ -11,7 +11,9 @@ from ..clements_geometry import (
 )
 from ..coincidence import (
     apply_noise_to_outcomes,
+    coincidence_prob,
     get_nfold_channel_labels,
+    marginal_click_prob,
     nfold_tuple_to_channel_index,
     nfold_working_detector_tuples,
     postselect_measurement,
@@ -23,6 +25,7 @@ from ..numpy_backend import (
     _has_positive_noise,
     run_fast_memristive_singles,
     run_vectorized_non_memristive,
+    slos_2photon_numpy,
     singles_class_probs_from_unitary,
     singles_prob_from_unitary,
     unitary_for_point,
@@ -88,11 +91,18 @@ def run_simulation_sequence(
         output_modes = normalize_memristive_output_modes(
             cfg.memristive_output_modes, memristive_indices, cfg.n_modes
         )
+        # chip_output uses marginal probabilities from the SLOS dict; singles_input_mode
+        # is only needed for the legacy internal_arm unitary-column extraction.
+        sim_input_mode = (
+            None
+            if cfg.feedback_mode == "chip_output"
+            else cfg.singles_input_mode
+        )
         mem_state = MemristiveState(
             n_indices=n_memristive,
             memory_depth=cfg.memory_depth,
             output_modes=output_modes,
-            singles_input_mode=cfg.singles_input_mode,
+            singles_input_mode=sim_input_mode,
         )
     else:
         output_modes = ()
@@ -120,7 +130,19 @@ def run_simulation_sequence(
     target_mode = cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
 
     if cfg.output_mode == "coincidence" and n_memristive > 0:
-        raise ValueError("Coincidence mode does not support memristive phases yet")
+        if cfg.feedback_mode != "chip_output":
+            raise ValueError(
+                "Coincidence mode with memristive phases requires feedback_mode='chip_output' "
+                "and backend='perceval'.  Set feedback_mode='chip_output' together with "
+                "feedback_modes and (for regression) computation_modes in SimConfig."
+            )
+        if cfg.backend != "perceval" and not (
+            cfg.backend == "numpy" and int(sum(cfg.input_state)) == 2
+        ):
+            raise ValueError(
+                "feedback_mode='chip_output' with memristive coincidence requires "
+                "backend='perceval', except 2-photon NumPy analytical SLOS fast path."
+            )
 
     num_pts = len(encoded_phases)
 
@@ -174,10 +196,13 @@ def run_simulation_sequence(
 
     # ----- NumPy backend: memristive singles (slow path; rare fallback) -----
     if cfg.backend == "numpy":
-        if cfg.output_mode == "coincidence":
+        if cfg.output_mode == "coincidence" and not (
+            cfg.feedback_mode == "chip_output" and int(sum(cfg.input_state)) == 2
+        ):
             raise ValueError(
-                "numpy backend does not support coincidence with memristive/swipe; "
-                "use backend='perceval'"
+                "numpy backend does not support coincidence with memristive phases; "
+                "use backend='perceval' with feedback_mode='chip_output', except for "
+                "2-photon chip_output analytical fast path"
             )
         n_classes = len(target_mode) if target_mode is not None else 1
         if return_class_probs and n_classes > 1:
@@ -204,16 +229,52 @@ def run_simulation_sequence(
                     cfg.n_modes,
                     cfg.encoding_phase_idx,
                 )
-                if mem_state:
+                if cfg.output_mode == "coincidence":
+                    input_modes = tuple(
+                        int(k) for k, occ in enumerate(cfg.input_state) if int(occ) == 1
+                    )
+                    slos_dist = slos_2photon_numpy(u, input_modes=input_modes)
+                    if mem_state:
+                        assert cfg.feedback_modes is not None
+                        p1_vals = [
+                            marginal_click_prob(slos_dist, fm[0]) for fm in cfg.feedback_modes
+                        ]
+                        p2_vals = [
+                            marginal_click_prob(slos_dist, fm[1]) for fm in cfg.feedback_modes
+                        ]
+                        mem_state.update_from_prob_arrays(i, p1_vals, p2_vals)
+                    if (
+                        cfg.feedback_mode == "chip_output"
+                        and cfg.loss_type == "mse"
+                        and cfg.computation_modes is not None
+                    ):
+                        preds[i] = coincidence_prob(
+                            slos_dist, cfg.computation_modes[0], cfg.computation_modes[1]
+                        )
+                    else:
+                        raise ValueError(
+                            "NumPy 2-photon analytical SLOS path currently supports "
+                            "chip_output coincidence regression only."
+                        )
+                elif mem_state:
                     mem_state.update_from_unitary(i, u)
-                if return_class_probs and n_classes > 1:
-                    preds[i, :] = singles_class_probs_from_unitary(
-                        u, cfg.singles_input_mode, target_mode
-                    )
+                    if return_class_probs and n_classes > 1:
+                        preds[i, :] = singles_class_probs_from_unitary(
+                            u, cfg.singles_input_mode, target_mode
+                        )
+                    else:
+                        preds[i] = singles_prob_from_unitary(
+                            u, cfg.singles_input_mode, target_mode
+                        )
                 else:
-                    preds[i] = singles_prob_from_unitary(
-                        u, cfg.singles_input_mode, target_mode
-                    )
+                    if return_class_probs and n_classes > 1:
+                        preds[i, :] = singles_class_probs_from_unitary(
+                            u, cfg.singles_input_mode, target_mode
+                        )
+                    else:
+                        preds[i] = singles_prob_from_unitary(
+                            u, cfg.singles_input_mode, target_mode
+                        )
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
             else:
@@ -307,9 +368,11 @@ def run_simulation_sequence(
             int(sum(cfg.input_state)),
         )
 
+    # Legacy internal_arm feedback: build 1-photon states for probs.get() lookup.
+    # chip_output feedback: marginal probabilities extracted post-hoc; no state list needed.
     state_m1_list: list[Any] = []
     state_m2_list: list[Any] = []
-    if mem_state:
+    if mem_state and cfg.feedback_mode == "internal_arm":
         for j in range(n_memristive):
             m1, m2 = output_modes[j]
             s1, s2 = [0] * cfg.n_modes, [0] * cfg.n_modes
@@ -358,10 +421,20 @@ def run_simulation_sequence(
             sim_logger.log_circuit(time.perf_counter() - t0)
 
             if mem_state:
-                p1_vals = [probs.get(state, 0.0) for state in state_m1_list]
-                p2_vals = [probs.get(state, 0.0) for state in state_m2_list]
+                if cfg.feedback_mode == "chip_output":
+                    assert cfg.feedback_modes is not None
+                    p1_vals = [marginal_click_prob(probs, fm[0]) for fm in cfg.feedback_modes]
+                    p2_vals = [marginal_click_prob(probs, fm[1]) for fm in cfg.feedback_modes]
+                else:
+                    p1_vals = [probs.get(state, 0.0) for state in state_m1_list]
+                    p2_vals = [probs.get(state, 0.0) for state in state_m2_list]
                 mem_state.update_from_prob_arrays(i, p1_vals, p2_vals)
-            if cfg.output_mode == "coincidence":
+            if cfg.output_mode == "coincidence" and cfg.feedback_mode == "chip_output" and cfg.loss_type == "mse":
+                # Hardware-realistic regression: P(click_c AND click_d) from
+                # cfg.computation_modes, read directly from the SLOS distribution.
+                assert cfg.computation_modes is not None
+                preds[i] = coincidence_prob(probs, cfg.computation_modes[0], cfg.computation_modes[1])
+            elif cfg.output_mode == "coincidence":
                 coinc = probs_to_nfold_coincidences(
                     probs,
                     cfg.n_modes,
@@ -421,10 +494,19 @@ def run_simulation_sequence(
                 t0 = time.perf_counter()
                 probs = Sampler(proc).probs(cfg.n_samples)["results"]
                 sim_logger.log_circuit(time.perf_counter() - t0)
-                for j in range(n_memristive):
-                    p1_swipe[k, j] = probs.get(state_m1_list[j], 0.0)
-                    p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
-                if cfg.output_mode == "coincidence":
+                if cfg.feedback_mode == "chip_output":
+                    assert cfg.feedback_modes is not None
+                    for j in range(n_memristive):
+                        p1_swipe[k, j] = marginal_click_prob(probs, cfg.feedback_modes[j][0])
+                        p2_swipe[k, j] = marginal_click_prob(probs, cfg.feedback_modes[j][1])
+                else:
+                    for j in range(n_memristive):
+                        p1_swipe[k, j] = probs.get(state_m1_list[j], 0.0)
+                        p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
+                if cfg.output_mode == "coincidence" and cfg.feedback_mode == "chip_output" and cfg.loss_type == "mse":
+                    assert cfg.computation_modes is not None
+                    target_swipe[k] = coincidence_prob(probs, cfg.computation_modes[0], cfg.computation_modes[1])
+                elif cfg.output_mode == "coincidence":
                     coinc = probs_to_nfold_coincidences(
                         probs,
                         cfg.n_modes,

@@ -170,6 +170,36 @@ def validate_sim_config(cfg: "SimConfig") -> None:
                     f"(W=len(working_detectors), N=sum(input_state)), got n_classes={cfg.n_classes}"
                 )
 
+    # ── feedback_mode validation ───────────────────────────────────────────────
+    if cfg.feedback_mode not in ("internal_arm", "chip_output"):
+        raise ValueError(
+            f"feedback_mode must be 'internal_arm' or 'chip_output', got {cfg.feedback_mode!r}"
+        )
+
+    if cfg.feedback_mode == "chip_output":
+        if cfg.feedback_modes is None or len(cfg.feedback_modes) == 0:
+            raise ValueError(
+                "feedback_mode='chip_output' requires a non-empty feedback_modes tuple "
+                "(one (port_a, port_b) pair per memristive index)"
+            )
+        for pair in cfg.feedback_modes:
+            for m in pair:
+                if int(m) < 0 or int(m) >= cfg.n_modes:
+                    raise ValueError(
+                        f"feedback_modes index {m} out of range for n_modes={cfg.n_modes}"
+                    )
+        if cfg.output_mode == "coincidence" and cfg.loss_type == "mse":
+            if cfg.computation_modes is None:
+                raise ValueError(
+                    "feedback_mode='chip_output' with coincidence regression (loss_type='mse') "
+                    "requires computation_modes=(port_c, port_d)"
+                )
+            for m in cfg.computation_modes:
+                if int(m) < 0 or int(m) >= cfg.n_modes:
+                    raise ValueError(
+                        f"computation_modes index {m} out of range for n_modes={cfg.n_modes}"
+                    )
+
 
 def psr_photon_counts_for_phases(
     sim_cfg: "SimConfig", n_phase_params: int
@@ -352,6 +382,14 @@ class SimConfig:
     loss_type: str  # "mse" | "cross_entropy"
     n_classes: int
 
+    # ── memristive feedback mode ────────────────────────────────
+    # "internal_arm"  — legacy: feedback from single-photon Born-rule column of U
+    # "chip_output"   — hardware-realistic: feedback from marginal click probabilities
+    #                   at dedicated detector ports (requires backend="perceval")
+    feedback_mode: str  # "internal_arm" | "chip_output"
+    feedback_modes: Optional[Tuple[Tuple[int, int], ...]]  # per-memristor port pairs; required for chip_output
+    computation_modes: Optional[Tuple[int, int]]  # output detector pair for coincidence regression; required for chip_output
+
     @property
     def sim_backend(self) -> str:
         """Same as ``backend``; mirrors the ``sim_backend`` key in experiment configs."""
@@ -379,6 +417,10 @@ class SimConfig:
             if k not in valid:
                 continue
             filtered[k] = _seq_as_tuples(v) if isinstance(v, list) else v
+        # Migration defaults for fields added after initial serialisation.
+        filtered.setdefault("feedback_mode", "internal_arm")
+        filtered.setdefault("feedback_modes", None)
+        filtered.setdefault("computation_modes", None)
         return cls(**filtered)
 
     @classmethod
@@ -429,6 +471,20 @@ class SimConfig:
         if dist is not None:
             dist = str(dist)
 
+        fm_raw = cfg.get("feedback_modes")
+        fm: Optional[Tuple[Tuple[int, int], ...]]
+        if fm_raw is None:
+            fm = None
+        else:
+            fm = tuple((int(p[0]), int(p[1])) for p in fm_raw)
+
+        cm_raw = cfg.get("computation_modes")
+        cm: Optional[Tuple[int, int]]
+        if cm_raw is None:
+            cm = None
+        else:
+            cm = (int(cm_raw[0]), int(cm_raw[1]))
+
         return cls(
             n_modes=int(cfg["n_modes"]),
             input_state=as_int_tuple("input_state"),
@@ -447,6 +503,9 @@ class SimConfig:
             backend=str(backend),
             loss_type=str(cfg["loss_type"]),
             n_classes=int(cfg["n_classes"]),
+            feedback_mode=str(cfg.get("feedback_mode", "internal_arm")),
+            feedback_modes=fm,
+            computation_modes=cm,
         )
 
     def replace(self, **overrides: Any) -> SimConfig:

@@ -24,6 +24,9 @@ def _minimal_singles(**kwargs: object) -> SimConfig:
         backend="numpy",
         loss_type="mse",
         n_classes=1,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
     base.update(kwargs)
     return SimConfig(**base)
@@ -48,6 +51,9 @@ def _minimal_coincidence(**kwargs: object) -> SimConfig:
         backend="numpy",
         loss_type="mse",
         n_classes=1,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
     base.update(kwargs)
     return SimConfig(**base)

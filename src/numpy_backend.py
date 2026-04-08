@@ -29,6 +29,51 @@ from .coincidence import (
 from .config import SimConfig
 
 
+def slos_2photon_numpy(
+    U: np.ndarray,
+    input_modes: tuple[int, int] = (2, 3),
+) -> dict[tuple[int, ...], float]:
+    """
+    Full 2-photon output distribution via analytical 2x2 permanents.
+
+    Returns:
+        Dict mapping n-mode Fock occupation tuples to probabilities.
+        For n_modes=6 this has 21 states (6 bunched + 15 split).
+    """
+    u = np.asarray(U, dtype=np.complex128)
+    if u.ndim != 2 or u.shape[0] != u.shape[1]:
+        raise ValueError(f"U must be square, got shape {u.shape}")
+    n_modes = int(u.shape[0])
+    i, j = int(input_modes[0]), int(input_modes[1])
+    if i == j:
+        raise ValueError("input_modes must be distinct for one photon per mode")
+    if not (0 <= i < n_modes and 0 <= j < n_modes):
+        raise ValueError(
+            f"input modes must be in [0, {n_modes - 1}], got {(i, j)}"
+        )
+
+    dist: dict[tuple[int, ...], float] = {}
+
+    # Bunched outcomes: occupation has 2 photons in one output mode.
+    for m in range(n_modes):
+        occ = [0] * n_modes
+        occ[m] = 2
+        p = 2.0 * (np.abs(u[m, i] * u[m, j]) ** 2)
+        dist[tuple(occ)] = float(np.real_if_close(p))
+
+    # Split outcomes: one photon in m and one in n, with m < n.
+    for m in range(n_modes):
+        for n in range(m + 1, n_modes):
+            occ = [0] * n_modes
+            occ[m] = 1
+            occ[n] = 1
+            amp = u[m, i] * u[n, j] + u[m, j] * u[n, i]
+            p = np.abs(amp) ** 2
+            dist[tuple(occ)] = float(np.real_if_close(p))
+
+    return dist
+
+
 def _has_positive_noise(
     noise_std: Optional[Union[float, Sequence[float]]],
 ) -> bool:

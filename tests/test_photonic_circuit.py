@@ -116,6 +116,9 @@ def test_consistency_with_run_simulation_sequence_np():
         backend="numpy",
         loss_type="mse",
         n_classes=1,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
     )
     preds_runner = run_simulation_sequence_np(
         phases,

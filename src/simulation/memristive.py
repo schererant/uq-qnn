@@ -8,12 +8,18 @@ import numpy as np
 
 @dataclass
 class MemristiveState:
-    """Encapsulates memristive feedback buffers and phase computation."""
+    """Encapsulates memristive feedback buffers and phase computation.
+
+    ``singles_input_mode`` is required only for ``feedback_mode='internal_arm'``
+    (legacy single-photon Born-rule column extraction via :meth:`update_from_unitary`).
+    Set it to ``None`` when using ``feedback_mode='chip_output'``; in that case the
+    runner calls :meth:`update_from_prob_arrays` directly with marginal probabilities.
+    """
 
     n_indices: int
     memory_depth: int
     output_modes: Tuple[Tuple[int, int], ...]
-    singles_input_mode: int
+    singles_input_mode: Optional[int]
 
     def __post_init__(self) -> None:
         if self.n_indices != len(self.output_modes):
@@ -53,8 +59,14 @@ class MemristiveState:
         return np.arccos(np.sqrt(arg))
 
     def update_from_unitary(self, step: int, unitary: np.ndarray) -> None:
+        """Update feedback buffers from a single-photon unitary column (internal_arm mode)."""
         if not self.active:
             return
+        if self.singles_input_mode is None:
+            raise RuntimeError(
+                "update_from_unitary requires singles_input_mode to be set "
+                "(only valid for feedback_mode='internal_arm')"
+            )
         slot = self._slot(step)
         enc_col = self.singles_input_mode
         for j, (m1, m2) in enumerate(self.output_modes):
