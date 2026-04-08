@@ -17,13 +17,12 @@ from src.experiment import Experiment
 CONFIG = {
     # Circuit
     "n_modes": 4,
-    "input_state": (0,),
+    "input_state": (1, 0, 0, 0),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
     "target_mode": (0, 1, 2),
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     # Task — 3-class classification
     "output_mode": "singles",
     "working_detectors": None,

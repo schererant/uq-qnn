@@ -9,6 +9,7 @@ outputs. Vectorizes across data points when the mesh phases are shared
 
 from __future__ import annotations
 
+from math import factorial
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -16,11 +17,14 @@ import numpy as np
 from .clements_geometry import clements_mzi_pairs
 from .coincidence import (
     apply_noise_to_outcomes,
-    get_cc_labels,
+    detector_tuple_to_binary_occupation,
+    expanded_mode_indices_from_occupation,
     get_cc_mode_pairs,
+    get_nfold_channel_labels,
     mode_pair_to_cc_index,
+    nfold_tuple_to_channel_index,
+    nfold_working_detector_tuples,
     postselect_measurement,
-    working_detectors_to_cc_indices,
 )
 from .config import SimConfig
 
@@ -113,11 +117,15 @@ def clements_unitary_batch(phases_batch: np.ndarray, n_modes: int) -> np.ndarray
     if n_ph != expected:
         raise ValueError(f"Expected {expected} phases per row, got {n_ph}")
     pairs = clements_mzi_pairs(n_modes)
-    u = np.broadcast_to(np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)).copy()
+    u = np.broadcast_to(
+        np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)
+    ).copy()
     for mzi_idx, (m1, m2) in enumerate(pairs):
         phi_i = 2 * mzi_idx
         m2x2 = _mzi_unitary_batch(phases_batch[:, phi_i], phases_batch[:, phi_i + 1])
-        u_mzi = np.broadcast_to(np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)).copy()
+        u_mzi = np.broadcast_to(
+            np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)
+        ).copy()
         u_mzi[:, m1, m1] = m2x2[:, 0, 0]
         u_mzi[:, m1, m2] = m2x2[:, 0, 1]
         u_mzi[:, m2, m1] = m2x2[:, 1, 0]
@@ -200,6 +208,91 @@ def _coincidence_raw_batch(
     return np.abs(perm) ** 2
 
 
+def _ryser_permanent(matrix: np.ndarray) -> complex:
+    """Bosonic permanent via Ryser expansion (square complex matrix)."""
+
+    m = np.asarray(matrix, dtype=np.complex128)
+    n = m.shape[0]
+    if m.shape != (n, n):
+        raise ValueError(f"permanent requires a square matrix, got {m.shape}")
+    if n == 0:
+        return complex(1.0, 0.0)
+    permanent = 0.0 + 0.0j
+    for mask in range(1, 1 << n):
+        cols = [j for j in range(n) if (mask >> j) & 1]
+        row_sums = np.sum(m[:, cols], axis=1)
+        term = np.prod(row_sums)
+        parity = n - len(cols)
+        sign = -1.0 if (parity % 2) else 1.0
+        permanent += sign * term
+    return permanent
+
+
+def _transition_probability_boson(
+    u: np.ndarray,
+    input_occ: Tuple[int, ...],
+    output_occ: Tuple[int, ...],
+) -> float:
+    """Born probability for indistinguishable bosons (matches PhotonicCircuit._transition_probability)."""
+
+    in_rows = expanded_mode_indices_from_occupation(input_occ)
+    out_cols = expanded_mode_indices_from_occupation(output_occ)
+    # Rows = output modes, cols = input modes (matches Perceval SLOS and _coincidence_raw_batch).
+    sub_u = u[np.ix_(out_cols, in_rows)]
+    perm = _ryser_permanent(sub_u)
+    in_norm = float(np.prod([factorial(int(nu)) for nu in input_occ]))
+    out_norm = float(np.prod([factorial(int(mu)) for mu in output_occ]))
+    prob = (abs(perm) ** 2) / (in_norm * out_norm)
+    return float(np.real_if_close(prob))
+
+
+def _occupation_two_distinct_modes(
+    input_occ: Tuple[int, ...],
+) -> Optional[Tuple[int, int]]:
+    """If occupation is exactly one photon in each of two distinct modes, return (a, b)."""
+
+    if sum(int(x) for x in input_occ) != 2:
+        return None
+    if max(int(x) for x in input_occ) > 1:
+        return None
+    modes = [i for i, c in enumerate(input_occ) if int(c) == 1]
+    if len(modes) != 2:
+        return None
+    return int(modes[0]), int(modes[1])
+
+
+def _coincidence_nfold_raw_batch(
+    u_batch: np.ndarray,
+    input_occ: Tuple[int, ...],
+    working_detectors: Tuple[int, ...],
+    n_modes: int,
+) -> np.ndarray:
+    """
+    N-fold postselected coincidence probabilities, shape (n_data, C(W, N)).
+
+    Uses the vectorized two-photon closed form when possible; otherwise Ryser per channel.
+    """
+
+    n_photons = int(sum(input_occ))
+    tuples = nfold_working_detector_tuples(working_detectors, n_photons)
+    n_ch = len(tuples)
+    n_data = int(u_batch.shape[0])
+    out = np.zeros((n_data, n_ch), dtype=np.float64)
+
+    pair = _occupation_two_distinct_modes(input_occ)
+    if pair is not None and n_photons == 2:
+        coinc_full = _coincidence_raw_batch(u_batch, pair, n_modes)
+        idxs = [mode_pair_to_cc_index(t[0], t[1], n_modes) for t in tuples]
+        out[:, :] = coinc_full[:, np.asarray(idxs, dtype=int)]
+        return out
+
+    for j, det_tup in enumerate(tuples):
+        out_occ = detector_tuple_to_binary_occupation(det_tup, n_modes)
+        for i in range(n_data):
+            out[i, j] = _transition_probability_boson(u_batch[i], input_occ, out_occ)
+    return out
+
+
 def _process_coincidence_rows(
     coinc: np.ndarray,
     working_cc_indices: Sequence[int],
@@ -225,8 +318,8 @@ def _process_coincidence_rows(
         else:
             if readout_cc_idx is None:
                 raise ValueError(
-                    "scalar coincidence output requires readout_cc_idx (set target_mode to the "
-                    "output mode pair (j, k) for the desired CC channel)"
+                    "scalar coincidence output requires readout_cc_idx (set target_mode to an "
+                    "N-tuple of distinct detector indices matching sum(input_state))"
                 )
             preds[i] = out[readout_cc_idx]
 
@@ -250,13 +343,16 @@ def run_vectorized_non_memristive(
     num_pts = len(enc)
 
     if cfg.output_mode == "coincidence":
-        in_modes = (int(cfg.input_state[0]), int(cfg.input_state[1]))
+        input_occ = tuple(int(x) for x in cfg.input_state)
         assert cfg.working_detectors is not None
-        wd = tuple(cfg.working_detectors)
-        working_cc_indices = working_detectors_to_cc_indices(wd, cfg.n_modes)
-        cc_labels = get_cc_labels(cfg.n_modes)
+        wd = tuple(int(x) for x in cfg.working_detectors)
+        n_photons = int(sum(input_occ))
+        nfold_tuples = nfold_working_detector_tuples(wd, n_photons)
+        n_ch = len(nfold_tuples)
+        working_cc_indices = tuple(range(n_ch))
+        cc_labels = get_nfold_channel_labels(wd, n_photons)
         add_noise = _has_positive_noise(cfg.noise_std)
-        n_classes = len(working_cc_indices)
+        n_classes = n_ch
     else:
         n_classes = len(target_mode)
         add_noise = False
@@ -273,12 +369,12 @@ def run_vectorized_non_memristive(
     )
 
     if cfg.output_mode == "coincidence":
-        coinc = _coincidence_raw_batch(u_batch, in_modes, cfg.n_modes)
+        coinc = _coincidence_nfold_raw_batch(u_batch, input_occ, wd, cfg.n_modes)
         readout_cc_idx: Optional[int] = None
         if cfg.loss_type == "mse":
-            assert cfg.target_mode is not None and len(cfg.target_mode) == 2
-            readout_cc_idx = mode_pair_to_cc_index(
-                cfg.target_mode[0], cfg.target_mode[1], cfg.n_modes
+            assert cfg.target_mode is not None
+            readout_cc_idx = nfold_tuple_to_channel_index(
+                cfg.target_mode, wd, n_photons
             )
         _process_coincidence_rows(
             coinc,

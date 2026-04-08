@@ -62,7 +62,7 @@ CONFIG: Dict[str, object] = {
     "data_function": "sinusoid_data",
     "func_label": r"$\sin(0.7\pi x)$",
     "output_mode": "singles",
-    "input_state": (0,),
+    "input_state": tuple(1 if i == 0 else 0 for i in range(N_MODES)),
     "photon_distinguishability": None,
     "target_mode": (SINGLES_MODES[0],),
     "working_detectors": None,
@@ -78,7 +78,7 @@ def _case_specs() -> List[Dict[str, object]]:
             {
                 "label": f"singles_m{mode}",
                 "family": "singles",
-                "input_state": (0,),
+                "input_state": tuple(1 if i == mode else 0 for i in range(N_MODES)),
                 "photon_distinguishability": None,
                 "target_mode": (mode,),
                 "working_detectors": None,
@@ -89,7 +89,7 @@ def _case_specs() -> List[Dict[str, object]]:
             {
                 "label": f"coinc_cc{pair[0]}{pair[1]}",
                 "family": "coincidence",
-                "input_state": (1, 4),
+                "input_state": tuple(1 if i in (1, 4) else 0 for i in range(N_MODES)),
                 "photon_distinguishability": "indistinguishable",
                 "target_mode": pair,
                 "working_detectors": tuple(range(N_MODES)),

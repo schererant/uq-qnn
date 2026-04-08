@@ -11,6 +11,7 @@ import numpy as np
 from .config import CircuitConfig
 from .numpy_backend import (
     _coincidence_raw_batch,
+    _occupation_two_distinct_modes,
     _unitary_batch_internal_encoding,
     clements_unitary,
     coincidence_raw_vector,
@@ -98,7 +99,7 @@ class PhotonicCircuit:
     ) -> np.ndarray:
         """All singles probabilities for one encoding phase."""
 
-        if len(self.config.input_state) != 1:
+        if sum(int(x) for x in self.config.input_state) != 1:
             raise ValueError("singles() requires single-photon input_state in config")
         mode = self.config.singles_input_mode if input_mode is None else int(input_mode)
         u = self.unitary(encoding_phase)
@@ -111,8 +112,10 @@ class PhotonicCircuit:
         input_mode: Optional[int] = None,
     ) -> np.ndarray:
         enc = np.asarray(encoding_phases, dtype=np.float64).ravel()
-        if len(self.config.input_state) != 1:
-            raise ValueError("singles_batch() requires single-photon input_state in config")
+        if sum(int(x) for x in self.config.input_state) != 1:
+            raise ValueError(
+                "singles_batch() requires single-photon input_state in config"
+            )
         mode = self.config.singles_input_mode if input_mode is None else int(input_mode)
         u_batch = _unitary_batch_internal_encoding(
             self._phases,
@@ -143,13 +146,20 @@ class PhotonicCircuit:
         """
         if encoding_phase is not None:
             legacy_phase = float(encoding_phase)
-            if len(self.config.input_state) != 2:
+            occ = tuple(int(v) for v in self.config.input_state)
+            if len(occ) != self.n_modes:
                 raise ValueError(
-                    "legacy coincidences(encoding_phase=...) requires two-photon "
-                    "input_state in circuit_config"
+                    f"legacy coincidences(encoding_phase=...) requires input_state length "
+                    f"n_modes={self.n_modes}, got {len(occ)}"
+                )
+            pair = _occupation_two_distinct_modes(occ)
+            if pair is None:
+                raise ValueError(
+                    "legacy coincidences(encoding_phase=...) requires two photons in "
+                    "distinct modes (occupation with exactly two 1s)"
                 )
             u_legacy = self.unitary(legacy_phase)
-            a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+            a, b = pair
             return coincidence_raw_vector(u_legacy, (a, b), self.n_modes)
 
         if input_state is None:
@@ -160,13 +170,19 @@ class PhotonicCircuit:
 
         if np.isscalar(input_state):
             legacy_phase = float(input_state)
-            if len(self.config.input_state) != 2:
+            occ = tuple(int(v) for v in self.config.input_state)
+            if len(occ) != self.n_modes:
                 raise ValueError(
-                    "legacy coincidences(encoding_phase) requires two-photon "
-                    "input_state in circuit_config"
+                    f"legacy coincidences(scalar phase) requires input_state length "
+                    f"n_modes={self.n_modes}, got {len(occ)}"
+                )
+            pair = _occupation_two_distinct_modes(occ)
+            if pair is None:
+                raise ValueError(
+                    "legacy coincidences(scalar phase) requires two photons in distinct modes"
                 )
             u_legacy = self.unitary(legacy_phase)
-            a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+            a, b = pair
             return coincidence_raw_vector(u_legacy, (a, b), self.n_modes)
 
         state = tuple(int(v) for v in np.asarray(input_state, dtype=int).ravel())
@@ -181,9 +197,15 @@ class PhotonicCircuit:
         if n_photons <= 0:
             raise ValueError("input_state must contain at least one photon")
         if detector_mode not in ("click", "pnr"):
-            raise ValueError(f"detector_mode must be 'click' or 'pnr', got {detector_mode!r}")
+            raise ValueError(
+                f"detector_mode must be 'click' or 'pnr', got {detector_mode!r}"
+            )
 
-        u = self._mesh_unitary() if unitary is None else np.asarray(unitary, dtype=np.complex128)
+        u = (
+            self._mesh_unitary()
+            if unitary is None
+            else np.asarray(unitary, dtype=np.complex128)
+        )
         if u.shape != (self.n_modes, self.n_modes):
             raise ValueError(
                 f"unitary must have shape ({self.n_modes}, {self.n_modes}), got {u.shape}"
@@ -204,9 +226,16 @@ class PhotonicCircuit:
         self,
         encoding_phases: Sequence[float] | np.ndarray,
     ) -> np.ndarray:
-        if len(self.config.input_state) != 2:
+        occ = tuple(int(v) for v in self.config.input_state)
+        if len(occ) != self.n_modes:
             raise ValueError(
-                "coincidences_batch() requires two-photon input_state in circuit_config"
+                f"coincidences_batch() requires input_state length n_modes={self.n_modes}"
+            )
+        pair = _occupation_two_distinct_modes(occ)
+        if pair is None:
+            raise ValueError(
+                "coincidences_batch() requires two photons in distinct input modes "
+                "(occupation with two 1s)"
             )
         enc = np.asarray(encoding_phases, dtype=np.float64).ravel()
         u_batch = _unitary_batch_internal_encoding(
@@ -215,7 +244,7 @@ class PhotonicCircuit:
             self.n_modes,
             self.config.encoding_phase_idx,
         )
-        a, b = int(self.config.input_state[0]), int(self.config.input_state[1])
+        a, b = pair
         return _coincidence_raw_batch(u_batch, (a, b), self.n_modes)
 
     @staticmethod
@@ -227,9 +256,7 @@ class PhotonicCircuit:
             raise ValueError(f"tau must be non-negative, got {tau}")
         rates = np.asarray(singles_rates, dtype=float).ravel()
         if len(rates) < N:
-            raise ValueError(
-                f"need at least N={N} singles rates, got {len(rates)}"
-            )
+            raise ValueError(f"need at least N={N} singles rates, got {len(rates)}")
         if np.any(rates < 0):
             raise ValueError("singles_rates must be non-negative")
 
@@ -287,7 +314,9 @@ class PhotonicCircuit:
 
     @staticmethod
     def _expanded_mode_indices(occupation: Sequence[int]) -> np.ndarray:
-        indices = [mode for mode, count in enumerate(occupation) for _ in range(int(count))]
+        indices = [
+            mode for mode, count in enumerate(occupation) for _ in range(int(count))
+        ]
         return np.asarray(indices, dtype=int)
 
     @staticmethod
@@ -341,8 +370,12 @@ class PhotonicCircuit:
         output_state: Sequence[int],
     ) -> float:
         output_cols = cls._expanded_mode_indices(output_state)
-        sub_u = unitary[np.ix_(input_rows, output_cols)]
+        # Rows = output modes, cols = input modes (Perceval / singles scattering convention).
+        sub_u = unitary[np.ix_(output_cols, input_rows)]
         perm = cls._ryser_permanent(sub_u)
+        n_modes_u = int(unitary.shape[0])
+        in_counts = np.bincount(np.asarray(input_rows, dtype=int), minlength=n_modes_u)
+        in_norm = float(np.prod([factorial(int(c)) for c in in_counts]))
         out_norm = float(np.prod([factorial(int(mu)) for mu in output_state]))
-        prob = (abs(perm) ** 2) / out_norm
+        prob = (abs(perm) ** 2) / (in_norm * out_norm)
         return float(np.real_if_close(prob))

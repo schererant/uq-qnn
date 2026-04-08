@@ -58,9 +58,13 @@ def train_pytorch_generic(
         Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
     """
     sim_cfg_work = sim_cfg
-    # Validate classification setup
+    # Validate classification setup (singles only: target_mode lists output modes per class).
+    # Coincidence classification uses C(W, N) channels from working_detectors; target_mode
+    # does not define the class basis (see validate_sim_config + PhotonicModel).
     if sim_cfg_work.loss_type == "cross_entropy":
-        if sim_cfg_work.target_mode is None:
+        if sim_cfg_work.output_mode == "coincidence":
+            pass
+        elif sim_cfg_work.target_mode is None:
             if sim_cfg_work.n_classes > sim_cfg_work.n_modes:
                 raise ValueError(
                     f"For {sim_cfg_work.n_classes} classes, need at least "
@@ -199,7 +203,7 @@ def gradient_check(
 
     cfg = SimConfig(
         n_modes=n_modes,
-        input_state=(0,),
+        input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
         encoding_phase_idx=enc_slot,
         photon_distinguishability=None,
         target_mode=(n_modes - 1,) if n_modes else None,

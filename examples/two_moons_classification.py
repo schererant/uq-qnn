@@ -22,13 +22,12 @@ from src.experiment import Experiment
 CONFIG = {
     # Circuit
     "n_modes": 3,
-    "input_state": (0,),
+    "input_state": (1, 0, 0),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
     "target_mode": (1, 2),
     "memristive_phase_idx": [2],
     "memristive_output_modes": None,
-    "encoding_phase_idx": None,
     # Task — binary classification
     "output_mode": "singles",
     "working_detectors": None,

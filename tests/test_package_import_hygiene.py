@@ -64,7 +64,7 @@ if "perceval" in sys.modules:
 
 cfg = SimConfig.from_experiment_config({
     "n_modes": 3,
-    "input_state": (0,),
+    "input_state": (1, 0, 0),
     "encoding_phase_idx": 0,
     "photon_distinguishability": None,
     "target_mode": (2,),

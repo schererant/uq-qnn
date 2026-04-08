@@ -132,7 +132,7 @@ def main():
         save_circuit_annotated(
             str(report_dir / "quartic_circuit_annotated.png"),
             n_modes=N_MODES,
-            input_state=(0,),
+            input_state=tuple(1 if i == 0 else 0 for i in range(N_MODES)),
             encoding_phase_idx=ENCODING_PHASE_IDX,
             target_mode=(N_MODES - 1,),
             memristive_phase_idx=MEMRISTIVE_PHASE_IDX,

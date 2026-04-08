@@ -12,7 +12,7 @@ from src.simulation import run_simulation_sequence_np
 def base_config() -> dict[str, object]:
     return {
         "n_modes": 3,
-        "input_state": (0,),
+        "input_state": (1, 0, 0),
         "encoding_phase_idx": 0,
         "photon_distinguishability": None,
         "target_mode": (2,),

@@ -15,7 +15,7 @@ def _coincidence_regression_sim_config() -> SimConfig:
     return SimConfig.from_experiment_config(
         {
             "n_modes": 6,
-            "input_state": (0, 3),
+            "input_state": tuple(1 if i in (0, 3) else 0 for i in range(6)),
             "encoding_phase_idx": 7,
             "photon_distinguishability": "indistinguishable",
             "target_mode": (0, 1),

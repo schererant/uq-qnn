@@ -45,7 +45,7 @@ def display_circuit_annotated(
 
     Args:
         n_modes: Number of modes (3 for 3x3, 6 for 6x6, etc.).
-        input_state: Occupied input modes (length 1 for singles, 2 for coincidence).
+        input_state: Fock occupation vector of length ``n_modes`` (non-negative ints).
         encoding_phase_idx: Mesh phase index that receives ``enc_phi`` (internal encoding).
         target_mode: Output mode(s) used for measurement. Default: (n_modes - 1,).
         memristive_phase_idx: Phase indices that are memristive (feedback-controlled).
@@ -79,9 +79,11 @@ def display_circuit_annotated(
         encoding_phase_idx=int(encoding_phase_idx),
     )
     proc = pcvl.Processor("SLOS", circ)
-    occ = [0] * n_modes
-    for m in input_state:
-        occ[int(m)] += 1
+    if len(input_state) != n_modes:
+        raise ValueError(
+            f"input_state must have length n_modes={n_modes}, got {len(input_state)}"
+        )
+    occ = [int(x) for x in input_state]
     proc.with_input(pcvl.BasicState(occ))
 
     import tempfile
@@ -101,7 +103,7 @@ def display_circuit_annotated(
     lines = [
         "Circuit configuration",
         "─" * 40,
-        f"Input state (modes): {tuple(input_state)}",
+        f"Input state (occupation): {tuple(input_state)}",
         f"Target output: modes {target_mode}",
         f"Encoding phase enc_φ: {enc_phi:.4f} rad ({np.degrees(enc_phi):.1f}°)",
         "",

@@ -7,7 +7,19 @@ For n modes and 2 photons, there are n*(n-1)/2 collision-free coincidence channe
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union, cast, overload
+from itertools import combinations
+from math import comb
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 import numpy as np
 
@@ -85,8 +97,6 @@ def probs_to_singles(
     Extract single-photon counts (C0..C(n-1)) from SLOS probs dict.
     Cj = sum of probabilities over all states where mode j has >= 1 photon.
     """
-    import perceval as pcvl
-
     singles = np.zeros(n_modes, dtype=float)
     for state, prob in probs.items():
         for j in range(n_modes):
@@ -265,6 +275,153 @@ def apply_noise_to_outcomes(
     if isinstance(outcomes, dict):
         return {label_seq[i]: float(vals[i]) for i in range(len(label_seq))}
     return vals
+
+
+# ── N-fold postselected coincidence (occupation-vector training stack) ─────
+
+
+def expanded_mode_indices_from_occupation(occ: Sequence[int]) -> np.ndarray:
+    """Repeat each mode index according to occupation (bosonic row expansion)."""
+
+    rows: List[int] = []
+    for mode, count in enumerate(occ):
+        c = int(count)
+        if c < 0:
+            raise ValueError(f"occupation must be non-negative, got {occ!r}")
+        rows.extend([mode] * c)
+    return np.asarray(rows, dtype=int)
+
+
+def detector_tuple_to_binary_occupation(
+    det_tuple: Sequence[int], n_modes: int
+) -> Tuple[int, ...]:
+    """Map a collision-free detector tuple to a 0/1 occupation vector."""
+
+    occ = [0] * int(n_modes)
+    seen = set()
+    for m in det_tuple:
+        j = int(m)
+        if j < 0 or j >= n_modes:
+            raise ValueError(f"detector index {j} out of range for n_modes={n_modes}")
+        if j in seen:
+            raise ValueError(f"duplicate detector index in tuple {det_tuple!r}")
+        seen.add(j)
+        occ[j] = 1
+    return tuple(occ)
+
+
+def nfold_channel_count(n_working: int, n_photons: int) -> int:
+    """Number of N-fold coincidence channels: C(W, N)."""
+
+    if n_working < 0 or n_photons < 0:
+        raise ValueError("n_working and n_photons must be non-negative")
+    if n_photons > n_working:
+        return 0
+    return int(comb(n_working, n_photons))
+
+
+def nfold_working_detector_tuples(
+    working_detectors: Sequence[int], n_photons: int
+) -> List[Tuple[int, ...]]:
+    """
+    Lexicographic N-tuples from sorted working detectors (same order as itertools.combinations).
+    """
+
+    wd_sorted = sorted(int(x) for x in working_detectors)
+    if len(wd_sorted) != len(set(wd_sorted)):
+        raise ValueError("working_detectors must contain unique mode indices")
+    if n_photons < 1:
+        raise ValueError(f"n_photons must be >= 1 for N-fold channels, got {n_photons}")
+    if n_photons > len(wd_sorted):
+        raise ValueError(
+            f"n_photons={n_photons} exceeds len(working_detectors)={len(wd_sorted)}"
+        )
+    return list(combinations(wd_sorted, n_photons))
+
+
+def canonical_sorted_detector_tuple(t: Sequence[int]) -> Tuple[int, ...]:
+    """Sort and validate distinct detector indices (canonical N-fold channel key)."""
+
+    tup = tuple(sorted(int(x) for x in t))
+    if len(tup) != len(set(tup)):
+        raise ValueError(f"detector indices must be distinct, got {t!r}")
+    return tup
+
+
+def nfold_tuple_to_channel_index(
+    det_tuple: Sequence[int],
+    working_detectors: Sequence[int],
+    n_photons: int,
+) -> int:
+    """Index of an N-fold channel in the lex-ordered working-detector basis."""
+
+    key = canonical_sorted_detector_tuple(det_tuple)
+    if len(key) != n_photons:
+        raise ValueError(
+            f"expected target_mode length {n_photons}, got {len(key)} for tuple {key!r}"
+        )
+    wset = {int(x) for x in working_detectors}
+    if not set(key).issubset(wset):
+        raise ValueError(
+            f"target_mode {key!r} must be contained in working_detectors={tuple(working_detectors)!r}"
+        )
+    tups = nfold_working_detector_tuples(working_detectors, n_photons)
+    try:
+        return tups.index(key)
+    except ValueError as exc:
+        raise ValueError(
+            f"target_mode {key!r} is not in the N-fold coincidence basis for "
+            f"working_detectors={tuple(working_detectors)!r}"
+        ) from exc
+
+
+def get_nfold_channel_labels(
+    working_detectors: Sequence[int], n_photons: int
+) -> List[str]:
+    """Human-readable labels for postselection / noise helpers."""
+
+    tups = nfold_working_detector_tuples(working_detectors, n_photons)
+    return ["NF" + "".join(str(x) for x in t) for t in tups]
+
+
+def migration_hint_legacy_input_state_pair(
+    st: Sequence[int], n_modes: int
+) -> Optional[str]:
+    """If ``st`` looks like a legacy (j, k) injection pair, return a migration message."""
+
+    if len(st) != 2:
+        return None
+    try:
+        a, b = int(st[0]), int(st[1])
+    except (TypeError, ValueError):
+        return None
+    if 0 <= a < n_modes and 0 <= b < n_modes:
+        return (
+            f"input_state {st!r} looks like a legacy pair of occupied mode indices. "
+            f"Use a length-{n_modes} occupation vector instead, e.g. "
+            f"tuple(1 if i in ({a}, {b}) else 0 for i in range({n_modes})) "
+            f"for two photons in distinct modes."
+        )
+    return None
+
+
+def probs_to_nfold_coincidences(
+    probs: Dict["pcvl.BasicState", float],
+    n_modes: int,
+    working_detectors: Sequence[int],
+    n_photons: int,
+) -> np.ndarray:
+    """Extract N-fold collision-free probabilities from an SLOS probs dict (Perceval)."""
+
+    import perceval as pcvl
+
+    tups = nfold_working_detector_tuples(working_detectors, n_photons)
+    out = np.zeros(len(tups), dtype=float)
+    for i, det_tup in enumerate(tups):
+        occ = list(detector_tuple_to_binary_occupation(det_tup, n_modes))
+        state = pcvl.BasicState(occ)
+        out[i] = float(probs.get(state, 0.0))
+    return out
 
 
 # Hardware accidental correction constants

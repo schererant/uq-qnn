@@ -17,7 +17,7 @@ from src.experiment import Experiment
 CONFIG = {
     # Circuit
     "n_modes": 3,
-    "input_state": (0,),
+    "input_state": (1, 0, 0),
     "encoding_phase_idx": 1,
     "photon_distinguishability": None,
     "target_mode": (1, 2),

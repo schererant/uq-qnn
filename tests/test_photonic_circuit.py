@@ -25,7 +25,7 @@ def random_unitary(n: int, seed: int = 0) -> np.ndarray:
 def singles_cfg(n_modes: int, *, enc_idx: int = 0) -> CircuitConfig:
     return CircuitConfig(
         n_modes=n_modes,
-        input_state=(0,),
+        input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
         encoding_phase_idx=enc_idx,
         photon_distinguishability=None,
         output_mode="singles",
@@ -36,7 +36,7 @@ def singles_cfg(n_modes: int, *, enc_idx: int = 0) -> CircuitConfig:
 def coincidence_cfg(n_modes: int) -> CircuitConfig:
     return CircuitConfig(
         n_modes=n_modes,
-        input_state=(0, 1),
+        input_state=tuple(1 if i in (0, 1) else 0 for i in range(n_modes)),
         encoding_phase_idx=0,
         photon_distinguishability="indistinguishable",
         output_mode="coincidence",
@@ -48,9 +48,7 @@ def test_construction_requires_exact_phase_count():
     phases = random_phases(6)
     PhotonicCircuit(n_modes=6, phases=phases, circuit_config=singles_cfg(6))
     with pytest.raises(ValueError):
-        PhotonicCircuit(
-            n_modes=6, phases=phases[:-1], circuit_config=singles_cfg(6)
-        )
+        PhotonicCircuit(n_modes=6, phases=phases[:-1], circuit_config=singles_cfg(6))
 
 
 def test_singles_shape_and_normalization():
@@ -102,7 +100,7 @@ def test_consistency_with_run_simulation_sequence_np():
     encoded = np.linspace(0.2, 1.3, 8)
     cfg = SimConfig(
         n_modes=n_modes,
-        input_state=(0,),
+        input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
         encoding_phase_idx=0,
         photon_distinguishability=None,
         target_mode=(n_modes - 1,),
@@ -134,6 +132,27 @@ def test_consistency_with_run_simulation_sequence_np():
     assert cfg.target_mode is not None
     singles = circuit.singles_batch(encoded)[:, cfg.target_mode[0]]
     np.testing.assert_allclose(preds_runner, singles, atol=1e-12)
+
+
+def test_identity_preserves_bunched_two_photon_fock_state():
+    """Bosonic transition prob must include input factorials: |2,0,0> -> |2,0,0> on I is unity."""
+    n_modes = 3
+    circuit = PhotonicCircuit(
+        n_modes=n_modes,
+        phases=random_phases(n_modes, seed=20),
+        circuit_config=singles_cfg(n_modes),
+    )
+    u = np.eye(n_modes, dtype=np.complex128)
+    probs = circuit.coincidences((2, 0, 0), detector_mode="pnr", unitary=u)
+    assert np.isclose(probs.get((2, 0, 0), 0.0), 1.0, atol=1e-10)
+
+
+def test_numpy_backend_bunched_boson_probability_normalized():
+    from src.numpy_backend import _transition_probability_boson
+
+    u = np.eye(3, dtype=np.complex128)
+    p = _transition_probability_boson(u, (2, 0, 0), (2, 0, 0))
+    assert np.isclose(p, 1.0, atol=1e-10)
 
 
 def test_hom_two_photon_beamsplitter_pnr_and_click():

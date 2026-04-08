@@ -22,7 +22,8 @@ from src.training import train_pytorch_generic
 logger = get_logger(__name__)
 
 N_MODES_LIST: Tuple[int, ...] = (6, 8, 12)
-INPUT_STATE = (0, 3)
+# Photons injected in modes 0 and 3 (occupation built per n_modes in _sim_cfg).
+INJECTION_MODES: Tuple[int, int] = (0, 3)
 TARGET_CC_PAIR = (0, 1)
 ENCODING_PHASE_IDX = 7
 
@@ -30,7 +31,9 @@ CONFIG: Dict = {
     "memristive_phase_idx": None,
     "memristive_output_modes": None,
     "encoding_phase_idx": ENCODING_PHASE_IDX,
-    "input_state": INPUT_STATE,
+    "input_state": tuple(
+        1 if i in INJECTION_MODES else 0 for i in range(N_MODES_LIST[0])
+    ),
     "photon_distinguishability": "indistinguishable",
     "output_mode": "coincidence",
     "loss_type": "mse",
@@ -60,6 +63,9 @@ def _sim_cfg(n_modes: int) -> SimConfig:
     base = {k: v for k, v in CONFIG.items() if k != "n_modes_list"}
     base["n_modes"] = n_modes
     base["working_detectors"] = tuple(range(n_modes))
+    base["input_state"] = tuple(
+        1 if i in INJECTION_MODES else 0 for i in range(n_modes)
+    )
     return SimConfig.from_experiment_config(base)
 
 
@@ -186,13 +192,13 @@ def main() -> None:
 
         results: Dict[int, Dict[str, object]] = {}
         for n_modes in N_MODES_LIST:
+            sim_cfg = _sim_cfg(n_modes)
             logger.info(
                 "Training validated coincidence configuration with n_modes=%d, input_state=%s, target_mode=%s",
                 n_modes,
-                INPUT_STATE,
+                sim_cfg.input_state,
                 TARGET_CC_PAIR,
             )
-            sim_cfg = _sim_cfg(n_modes)
             theta, history = train_pytorch_generic(
                 enc_train,
                 y_train,

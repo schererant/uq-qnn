@@ -54,7 +54,7 @@ logger = get_logger(__name__)
 # ════════════════════════════════════════════════════════════════════════════
 
 N_MODES = 6
-INPUT_MODES = (1, 4)
+INPUT_MODES = tuple(1 if i in (1, 4) else 0 for i in range(N_MODES))
 WORKING_DETECTORS = tuple(range(N_MODES))
 
 # All 15 collision-free output CC pairs

@@ -46,8 +46,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.coincidence import (
     get_cc_mode_pairs,
-    mode_pair_to_cc_index,
-    working_detectors_to_cc_indices,
+    nfold_tuple_to_channel_index,
+    nfold_working_detector_tuples,
 )
 from src.config import SimConfig
 from src.data import get_data
@@ -97,7 +97,7 @@ CONFIG: Dict = {
     "unc_noise_std": 0.05,
     "data_function": "sinusoid_data",
     "func_label": r"$\sin(0.7\pi x)$",
-    "input_state": INPUT_PAIRS[0],
+    "input_state": tuple(1 if i in INPUT_PAIRS[0] else 0 for i in range(N_MODES)),
 }
 
 FUNC_LABEL = CONFIG["func_label"]
@@ -122,25 +122,24 @@ def _readout_label() -> str:
 
 
 def _sim_cfg(input_pair: Tuple[int, int]) -> SimConfig:
-    cfg = {**CONFIG, "input_state": input_pair}
+    occ = tuple(1 if i in input_pair else 0 for i in range(N_MODES))
+    cfg = {**CONFIG, "input_state": occ}
     sim_cfg = SimConfig.from_experiment_config(cfg)
 
     assert sim_cfg.working_detectors is not None
-    working_cc_indices = working_detectors_to_cc_indices(
-        sim_cfg.working_detectors,
-        sim_cfg.n_modes,
-    )
-    if len(working_cc_indices) <= 1:
+    n_ph = int(sum(sim_cfg.input_state))
+    tups = nfold_working_detector_tuples(sim_cfg.working_detectors, n_ph)
+    if len(tups) <= 1:
         raise ValueError(
-            "Coincidence input-pair comparison requires multiple working CC "
+            "Coincidence input-pair comparison requires multiple working N-fold "
             "channels for non-degenerate postselection. "
             f"Got working_detectors={sim_cfg.working_detectors}."
         )
 
-    readout_cc_idx = mode_pair_to_cc_index(
-        READOUT_CC_PAIR[0], READOUT_CC_PAIR[1], sim_cfg.n_modes
+    readout_cc_idx = nfold_tuple_to_channel_index(
+        READOUT_CC_PAIR, sim_cfg.working_detectors, n_ph
     )
-    if readout_cc_idx not in working_cc_indices:
+    if readout_cc_idx < 0 or readout_cc_idx >= len(tups):
         raise ValueError(
             f"Readout pair {_readout_label()} is not available under "
             f"working_detectors={sim_cfg.working_detectors}."

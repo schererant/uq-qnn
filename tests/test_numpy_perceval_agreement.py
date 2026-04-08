@@ -40,7 +40,7 @@ class TestNumpyPercevalAgreement(unittest.TestCase):
         cfg_np = _base_cfg(
             n_samples=30,
             n_modes=n_modes,
-            input_state=(0,),
+            input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
             encoding_phase_idx=0,
             photon_distinguishability=None,
             target_mode=(5,),
@@ -60,7 +60,7 @@ class TestNumpyPercevalAgreement(unittest.TestCase):
         cfg_np = _base_cfg(
             n_samples=40,
             n_modes=n_modes,
-            input_state=(1, 4),
+            input_state=tuple(1 if i in (1, 4) else 0 for i in range(n_modes)),
             encoding_phase_idx=10,
             photon_distinguishability="indistinguishable",
             target_mode=(0, 1),
@@ -73,6 +73,30 @@ class TestNumpyPercevalAgreement(unittest.TestCase):
         b = run_simulation_sequence_np(params, enc, cfg_pc)
         np.testing.assert_allclose(a, b, rtol=0, atol=1e-9)
 
+    def test_coincidence_three_photons_four_modes(self):
+        """N=3 coincidence (Ryser path) agrees between NumPy and Perceval."""
+        n_modes = 4
+        n_ph = n_modes * (n_modes - 1)
+        rng = np.random.default_rng(3)
+        params = rng.random(n_ph) * 2 * np.pi
+        enc = np.linspace(0.15, 0.95, 5)
+        inp = tuple(1 if i < 3 else 0 for i in range(n_modes))
+        cfg_np = _base_cfg(
+            n_samples=60,
+            n_modes=n_modes,
+            input_state=inp,
+            encoding_phase_idx=5,
+            photon_distinguishability="indistinguishable",
+            target_mode=(0, 1, 2),
+            output_mode="coincidence",
+            working_detectors=tuple(range(n_modes)),
+            backend="numpy",
+        )
+        cfg_pc = cfg_np.replace(backend="perceval")
+        a = run_simulation_sequence_np(params, enc, cfg_np)
+        b = run_simulation_sequence_np(params, enc, cfg_pc)
+        np.testing.assert_allclose(a, b, rtol=0, atol=1e-8)
+
     def test_inline_encoding(self):
         n_modes = 4
         n_ph = n_modes * (n_modes - 1)
@@ -82,7 +106,7 @@ class TestNumpyPercevalAgreement(unittest.TestCase):
         cfg_np = _base_cfg(
             n_samples=25,
             n_modes=n_modes,
-            input_state=(0,),
+            input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
             encoding_phase_idx=5,
             photon_distinguishability=None,
             target_mode=(2,),
