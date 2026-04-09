@@ -131,7 +131,7 @@ def main() -> None:
         )
 
         # ── 2. Train ──────────────────────────────────────────────
-        theta, history = exp.train(X_train, y_train)
+        theta, history, model = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         # ── 3. Predict with uncertainty ───────────────────────────
@@ -141,6 +141,7 @@ def main() -> None:
             enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
+            model=model,
         )
         mean_preds = unc["mean"]
         std_preds = unc["std"]

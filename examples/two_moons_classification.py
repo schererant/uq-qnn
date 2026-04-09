@@ -74,10 +74,10 @@ def main():
         enc_train = encode_2d_to_phase(X_train, method=enc_method)
         enc_test = encode_2d_to_phase(X_test, method=enc_method)
 
-        theta, history = exp.train(enc_train, y_train, encoded=True)
+        theta, history, model = exp.train(enc_train, y_train, encoded=True)
         exp.save_metrics({"final_loss": history[-1]})
 
-        preds_probs = exp.predict(theta, enc_test, return_class_probs=True)
+        preds_probs = model.predict(enc_test)
         preds_discrete = np.argmax(preds_probs, axis=1)
 
         accuracy = accuracy_score(y_test, preds_discrete)
@@ -86,9 +86,11 @@ def main():
         print(classification_report(y_test, preds_discrete))
 
         unc = exp.run_uncertainty_analysis(
-            theta, enc_test,
+            theta,
+            enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
+            model=model,
         )
         mean_probs = unc["mean"]
         mean_preds = np.argmax(mean_probs, axis=1)
@@ -104,11 +106,11 @@ def main():
         )
         grid_points = np.c_[xx.ravel(), yy.ravel()]
         enc_grid = encode_2d_to_phase(grid_points, method=enc_method)
-        grid_probs = exp.predict(theta, enc_grid, return_class_probs=True)
+        grid_probs = model.predict(enc_grid)
         grid_preds = np.argmax(grid_probs, axis=1).reshape(xx.shape)
-        grid_entropy = (
-            -np.sum(grid_probs * np.log(grid_probs + eps), axis=1)
-        ).reshape(xx.shape)
+        grid_entropy = (-np.sum(grid_probs * np.log(grid_probs + eps), axis=1)).reshape(
+            xx.shape
+        )
         grid_p1 = grid_probs[:, 1].reshape(xx.shape)
 
         exp.save_metrics({"test_accuracy": float(accuracy)})
@@ -127,8 +129,12 @@ def main():
         for c in range(n_classes):
             mask = y_test == c
             ax2.scatter(
-                X_test[mask, 0], X_test[mask, 1],
-                c=colors[c], label=f"Class {c}", alpha=0.6, s=20,
+                X_test[mask, 0],
+                X_test[mask, 1],
+                c=colors[c],
+                label=f"Class {c}",
+                alpha=0.6,
+                s=20,
             )
         ax2.set(xlabel="x₁", ylabel="x₂", title="Test Data (True Labels)")
         ax2.legend()
@@ -139,9 +145,14 @@ def main():
         for c in range(n_classes):
             mask = y_test == c
             ax3.scatter(
-                X_test[mask, 0], X_test[mask, 1],
-                c=colors[c], label=f"Class {c}", alpha=0.6, s=20,
-                edgecolors="black", linewidths=0.5,
+                X_test[mask, 0],
+                X_test[mask, 1],
+                c=colors[c],
+                label=f"Class {c}",
+                alpha=0.6,
+                s=20,
+                edgecolors="black",
+                linewidths=0.5,
             )
         ax3.set(xlabel="x₁", ylabel="x₂", title="Decision Boundary")
         ax3.legend()
@@ -153,9 +164,13 @@ def main():
         for c in range(n_classes):
             mask = y_test == c
             ax4.scatter(
-                X_test[mask, 0], X_test[mask, 1],
-                c=colors[c], alpha=0.6, s=15,
-                edgecolors="black", linewidths=0.5,
+                X_test[mask, 0],
+                X_test[mask, 1],
+                c=colors[c],
+                alpha=0.6,
+                s=15,
+                edgecolors="black",
+                linewidths=0.5,
             )
         ax4.set(xlabel="x₁", ylabel="x₂", title="Class 1 Probability")
         ax4.grid(True)
@@ -166,9 +181,13 @@ def main():
         for c in range(n_classes):
             mask = y_test == c
             ax5.scatter(
-                X_test[mask, 0], X_test[mask, 1],
-                c=colors[c], alpha=0.6, s=15,
-                edgecolors="black", linewidths=0.5,
+                X_test[mask, 0],
+                X_test[mask, 1],
+                c=colors[c],
+                alpha=0.6,
+                s=15,
+                edgecolors="black",
+                linewidths=0.5,
             )
         ax5.set(xlabel="x₁", ylabel="x₂", title="Prediction Uncertainty (Entropy)")
         ax5.grid(True)
@@ -182,8 +201,11 @@ def main():
         thresh = cm.max() / 2.0
         for i, j in np.ndindex(cm.shape):
             ax6.text(
-                j, i, format(cm[i, j], "d"),
-                ha="center", color="white" if cm[i, j] > thresh else "black",
+                j,
+                i,
+                format(cm[i, j], "d"),
+                ha="center",
+                color="white" if cm[i, j] > thresh else "black",
             )
         ax6.set(ylabel="True label", xlabel="Predicted label")
 

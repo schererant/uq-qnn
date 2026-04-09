@@ -36,7 +36,7 @@ from src.config import SimConfig
 from src.data import get_data
 from src.experiment import Experiment
 from src.logging_config import get_logger
-from src.simulation import run_simulation_sequence_np
+from src.loss import PhotonicModel
 from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
@@ -110,9 +110,8 @@ def _sim_cfg(architecture: str) -> SimConfig:
 
 
 def _run_uncertainty(
-    theta: np.ndarray,
+    model: PhotonicModel,
     enc_test: np.ndarray,
-    sim_cfg: SimConfig,
     *,
     n_passes: int,
     noise_std: float,
@@ -121,16 +120,14 @@ def _run_uncertainty(
     rng = np.random.default_rng(seed)
     n = len(enc_test)
     all_preds = np.zeros((n, n_passes))
+    theta_base = model.theta.detach().cpu().numpy()
 
     for i in range(n_passes):
-        sample_count = max(0, sim_cfg.n_samples + int(rng.integers(-50, 51)))
-        perturbed = theta + rng.normal(0, noise_std, size=len(theta))
-        preds = run_simulation_sequence_np(
-            perturbed,
-            enc_test,
-            sim_cfg.replace(n_samples=sample_count),
+        sample_count = max(0, model.sim_cfg.n_samples + int(rng.integers(-50, 51)))
+        perturbed = theta_base + rng.normal(0, noise_std, size=len(theta_base))
+        all_preds[:, i] = model.predict(
+            enc_test, theta_np=perturbed, n_samples=sample_count
         )
-        all_preds[:, i] = preds
 
     return {
         "mean": np.mean(all_preds, axis=1),
@@ -186,7 +183,7 @@ def train_and_evaluate(
     sc = _sim_cfg(architecture)
     enc_train = 2 * np.arccos(np.clip(X_train, 0, 1))
 
-    theta, history = train_pytorch_generic(
+    theta, history, model = train_pytorch_generic(
         enc_train,
         y_train,
         sim_cfg=sc,
@@ -197,9 +194,8 @@ def train_and_evaluate(
 
     enc_test = 2 * np.arccos(np.clip(X_test, 0, 1))
     unc = _run_uncertainty(
-        theta,
+        model,
         enc_test,
-        sc,
         n_passes=int(CONFIG["unc_n_passes"]),
         noise_std=float(CONFIG["unc_noise_std"]),
         seed=int(CONFIG["seed"]),
@@ -236,7 +232,9 @@ def plot_predictions_grid(
             ax = axes[i, j]
             r = results[func][architecture]
             m = r["metrics"]
-            ax.scatter(X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train")
+            ax.scatter(
+                X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train"
+            )
             ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
             ax.plot(
                 X_test,

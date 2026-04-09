@@ -63,14 +63,16 @@ def main():
             return_one_hot=True,
         )
 
-        theta, history = exp.train(X_train, y_train)
+        theta, history, model = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         enc_test = 2 * np.arccos(X_test)
         unc = exp.run_uncertainty_analysis(
-            theta, enc_test,
+            theta,
+            enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
+            model=model,
         )
         mean_probs = unc["mean"]
         std_probs = unc["std"]
@@ -96,8 +98,11 @@ def main():
         for c in range(n_classes):
             mask = y_test_labels == c
             axes[0, 1].scatter(
-                X_test[mask], [c] * mask.sum(), c=colors[c],
-                label=f"Class {c}", alpha=0.6,
+                X_test[mask],
+                [c] * mask.sum(),
+                c=colors[c],
+                label=f"Class {c}",
+                alpha=0.6,
             )
         axes[0, 1].scatter(
             X_test, mean_preds + 0.1, c="orange", marker="x", label="Preds", s=15
@@ -112,13 +117,15 @@ def main():
             X_test,
             mean_probs[:, 0] - std_probs[:, 0],
             mean_probs[:, 0] + std_probs[:, 0],
-            color="blue", alpha=0.1,
+            color="blue",
+            alpha=0.1,
         )
         axes[0, 2].fill_between(
             X_test,
             mean_probs[:, 1] - std_probs[:, 1],
             mean_probs[:, 1] + std_probs[:, 1],
-            color="red", alpha=0.1,
+            color="red",
+            alpha=0.1,
         )
         axes[0, 2].set(title="Class Probabilities")
         axes[0, 2].legend()

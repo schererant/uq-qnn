@@ -26,6 +26,7 @@ from typing import Any, Optional, Union
 import numpy as np
 
 from src.config import SimConfig, validate_sim_config
+from src.loss import PhotonicModel
 from src.numpy_backend import run_vectorized_non_memristive
 from src.hardware import HardwareProfile, get_profile
 from src.logging_config import add_file_handler, get_logger, remove_file_handler
@@ -161,7 +162,7 @@ class Experiment:
         y: np.ndarray,
         *,
         encoded: bool = False,
-    ) -> tuple[np.ndarray, list[float]]:
+    ) -> tuple[np.ndarray, list[float], PhotonicModel]:
         """Train the photonic model using parameters from self.config.
 
         Args:
@@ -172,7 +173,7 @@ class Experiment:
                 ``2 * arccos(X)`` encoding is applied first.
 
         Returns:
-            ``(theta_opt, loss_history)`` tuple.
+            ``(theta_opt, loss_history, trained_model)`` tuple.
         """
         from src.training import train_pytorch_generic
 
@@ -293,6 +294,7 @@ class Experiment:
         n_passes: int,
         noise_std: float,
         return_class_probs: bool = False,
+        model: Optional[PhotonicModel] = None,
     ) -> dict[str, np.ndarray]:
         """Multi-pass uncertainty estimation via parameter perturbation.
 
@@ -304,6 +306,10 @@ class Experiment:
                 on each pass.
             return_class_probs: If True, collect per-class probabilities
                 (inferred automatically when loss_type is cross_entropy).
+            model: Trained :class:`~src.loss.PhotonicModel`. When set, each pass
+                uses :meth:`~src.loss.PhotonicModel.predict` so the readout head
+                matches training (recommended). When omitted, uses the legacy
+                raw simulation path (no linear head).
 
         Returns:
             Dict with ``'mean'``, ``'std'``, and ``'all_preds'`` arrays.
@@ -341,8 +347,7 @@ class Experiment:
         else:
             n_memristive = len(memristive_phase_idx)
 
-        jobs = []
-        for _ in range(n_passes):
+        def _perturb_params() -> tuple[np.ndarray, int]:
             sample_count = max(100, n_samples_base + int(rng.integers(-100, 101)))
             perturbed = theta.copy()
             if n_memristive > 0:
@@ -351,42 +356,60 @@ class Experiment:
                 )
             else:
                 perturbed += rng.normal(0, noise_std, size=len(perturbed))
-            jobs.append(
-                (
-                    perturbed,
-                    sample_count,
-                    encoded_phases,
-                    unc_sim_cfg.to_dict(),
-                    is_classification,
-                )
-            )
-
-        def _run_sequential():
-            return [
-                uncertainty_forward_pass(job)
-                for job in tqdm(jobs, total=n_passes, desc="UQ passes")
-            ]
+            return perturbed, sample_count
 
         results: list[np.ndarray]
-        if n_passes == 1:
-            results = _run_sequential()
-        else:
-            max_workers = min(n_passes, os.cpu_count() or 2)
-            try:
-                with ProcessPoolExecutor(max_workers=max_workers) as pool:
-                    results = list(
-                        tqdm(
-                            pool.map(uncertainty_forward_pass, jobs),
-                            total=n_passes,
-                            desc="UQ passes",
-                        )
+        if model is not None:
+            results = []
+            for _ in tqdm(range(n_passes), desc="UQ passes"):
+                perturbed, sample_count = _perturb_params()
+                results.append(
+                    model.predict(
+                        encoded_phases,
+                        theta_np=perturbed,
+                        n_samples=sample_count,
+                        uq_pass_cfg=True,
                     )
-            except (PermissionError, OSError) as exc:
-                logger.warning(
-                    "ProcessPool unavailable (%s); falling back to sequential UQ passes",
-                    exc,
                 )
+        else:
+            jobs = []
+            for _ in range(n_passes):
+                perturbed, sample_count = _perturb_params()
+                jobs.append(
+                    (
+                        perturbed,
+                        sample_count,
+                        encoded_phases,
+                        unc_sim_cfg.to_dict(),
+                        is_classification,
+                    )
+                )
+
+            def _run_sequential():
+                return [
+                    uncertainty_forward_pass(job)
+                    for job in tqdm(jobs, total=n_passes, desc="UQ passes")
+                ]
+
+            if n_passes == 1:
                 results = _run_sequential()
+            else:
+                max_workers = min(n_passes, os.cpu_count() or 2)
+                try:
+                    with ProcessPoolExecutor(max_workers=max_workers) as pool:
+                        results = list(
+                            tqdm(
+                                pool.map(uncertainty_forward_pass, jobs),
+                                total=n_passes,
+                                desc="UQ passes",
+                            )
+                        )
+                except (PermissionError, OSError) as exc:
+                    logger.warning(
+                        "ProcessPool unavailable (%s); falling back to sequential UQ passes",
+                        exc,
+                    )
+                    results = _run_sequential()
 
         has_hw_noise = self.hardware is not None and self.hardware.noise is not None
 

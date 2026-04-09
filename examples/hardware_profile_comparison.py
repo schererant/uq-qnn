@@ -75,9 +75,9 @@ def main():
     all_results = {}
 
     for profile_name, profile in PROFILES:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  Hardware profile: {profile_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         config = BASE_CONFIG.copy()
 
@@ -86,7 +86,7 @@ def main():
             config=config,
             hardware=profile,
         ) as exp:
-            theta, history = exp.train(X_train, y_train)
+            theta, history, model = exp.train(X_train, y_train)
             exp.save_metrics({"final_loss": history[-1]})
 
             enc_test = 2 * np.arccos(X_test)
@@ -95,6 +95,7 @@ def main():
                 enc_test,
                 n_passes=BASE_CONFIG["unc_n_passes"],
                 noise_std=BASE_CONFIG["unc_noise_std"],
+                model=model,
             )
             mean_preds = unc["mean"]
             std_preds = unc["std"]
@@ -111,7 +112,9 @@ def main():
             }
 
     # ── comparison plot ──
-    fig, axes = plt.subplots(1, len(PROFILES), figsize=(6 * len(PROFILES), 5), sharey=True)
+    fig, axes = plt.subplots(
+        1, len(PROFILES), figsize=(6 * len(PROFILES), 5), sharey=True
+    )
     if len(PROFILES) == 1:
         axes = [axes]
 

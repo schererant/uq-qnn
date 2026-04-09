@@ -44,13 +44,13 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
     theta0 = np.array([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 0.35, 0.75], dtype=np.float64)
 
     theta = torch.tensor(theta0, dtype=torch.float64, requires_grad=True)
-    loss = MemristorLossPSR.apply(
+    feats = MemristorLossPSR.apply(
         theta,
         torch.from_numpy(enc),
-        torch.from_numpy(y),
         phase_idx,
         cfg,
     )
+    loss = 0.5 * torch.mean((feats[:, -1] - torch.from_numpy(y)) ** 2)
     loss.backward()
     assert theta.grad is not None
     grads = theta.grad.detach().cpu().numpy()

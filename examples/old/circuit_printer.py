@@ -158,7 +158,9 @@ def create_clements_circuit(n_modes=6):
     # Create basic Clements circuit
     basic_clements = clements_circuit(phases, n_modes)
 
-    full_clements = build_circuit(phases, enc_phi, n_modes=n_modes, encoding_phase_idx=0)
+    full_clements = build_circuit(
+        phases, enc_phi, n_modes=n_modes, encoding_phase_idx=0
+    )
 
     # Input state: |100000>
     input_modes = [0] * n_modes

@@ -61,7 +61,7 @@ def main():
             CONFIG["n_data"], CONFIG["sigma_noise"], "quartic_data"
         )
 
-        theta, history = exp.train(X_train, y_train)
+        theta, history, model = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         enc_test = 2 * np.arccos(X_test)
@@ -70,6 +70,7 @@ def main():
             enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
+            model=model,
         )
         mean_preds = unc["mean"]
         std_preds = unc["std"]

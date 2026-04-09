@@ -63,12 +63,12 @@ def main():
             return_one_hot=False,
         )
 
-        theta, history = exp.train(X_train, y_train)
+        theta, history, model = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         enc_test = 2 * np.arccos(X_test)
 
-        preds_probs = exp.predict(theta, enc_test, return_class_probs=True)
+        preds_probs = model.predict(enc_test)
         preds_discrete = np.argmax(preds_probs, axis=1)
 
         accuracy = accuracy_score(y_test, preds_discrete)
@@ -77,9 +77,11 @@ def main():
         print(classification_report(y_test, preds_discrete))
 
         unc = exp.run_uncertainty_analysis(
-            theta, enc_test,
+            theta,
+            enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
+            model=model,
         )
         mean_probs = unc["mean"]
         std_probs = unc["std"]
@@ -103,15 +105,23 @@ def main():
         for c in range(n_classes):
             mask = y_test == c
             ax_res.scatter(
-                X_test[mask], [c] * mask.sum(),
-                c=colors[c], label=f"Class {c} (true)", alpha=0.6, s=20,
+                X_test[mask],
+                [c] * mask.sum(),
+                c=colors[c],
+                label=f"Class {c} (true)",
+                alpha=0.6,
+                s=20,
             )
         for c in range(n_classes):
             pred_mask = mean_preds == c
             if pred_mask.sum() > 0:
                 ax_res.scatter(
-                    X_test[pred_mask], [c + 0.1] * pred_mask.sum(),
-                    c=colors[c], marker="x", label=f"Pred {c}", s=15,
+                    X_test[pred_mask],
+                    [c + 0.1] * pred_mask.sum(),
+                    c=colors[c],
+                    marker="x",
+                    label=f"Pred {c}",
+                    s=15,
                 )
         ax_res.set(xlabel="x", ylabel="Class", title="Classification Results")
         ax_res.legend(fontsize=7)
@@ -119,16 +129,27 @@ def main():
         ax_res.grid(True)
 
         for c in range(n_classes):
-            ax = axes_flat[0, 2] if c == 0 else axes_flat[0, 3] if c == 1 else axes_flat[1, 0]
+            ax = (
+                axes_flat[0, 2]
+                if c == 0
+                else axes_flat[0, 3]
+                if c == 1
+                else axes_flat[1, 0]
+            )
             ax.plot(
-                X_test, mean_probs[:, c],
-                color=colors[c], label=f"P(Class {c})", linewidth=2, alpha=0.7,
+                X_test,
+                mean_probs[:, c],
+                color=colors[c],
+                label=f"P(Class {c})",
+                linewidth=2,
+                alpha=0.7,
             )
             ax.fill_between(
                 X_test,
                 mean_probs[:, c] - std_probs[:, c],
                 mean_probs[:, c] + std_probs[:, c],
-                color=colors[c], alpha=0.2,
+                color=colors[c],
+                alpha=0.2,
             )
             ax.set(xlabel="x", ylabel="Probability", title=f"Class {c} Probability")
             ax.legend()
@@ -139,7 +160,9 @@ def main():
             X_test, entropy, c=(mean_preds != y_test), cmap="RdYlGn", alpha=0.7
         )
         fig.colorbar(sc, ax=axes_flat[1, 1], label="Misclassified")
-        axes_flat[1, 1].set(xlabel="x", ylabel="Entropy", title="Prediction Uncertainty")
+        axes_flat[1, 1].set(
+            xlabel="x", ylabel="Entropy", title="Prediction Uncertainty"
+        )
         axes_flat[1, 1].grid(True)
 
         ax_cm = axes_flat[1, 2]
@@ -151,16 +174,18 @@ def main():
         thresh = cm.max() / 2.0
         for i, j in np.ndindex(cm.shape):
             ax_cm.text(
-                j, i, format(cm[i, j], "d"),
-                ha="center", color="white" if cm[i, j] > thresh else "black",
+                j,
+                i,
+                format(cm[i, j], "d"),
+                ha="center",
+                color="white" if cm[i, j] > thresh else "black",
             )
         ax_cm.set(ylabel="True label", xlabel="Predicted label")
 
-        axes_flat[1, 3].scatter(
-            entropy, (mean_preds != y_test).astype(int), alpha=0.7
-        )
+        axes_flat[1, 3].scatter(entropy, (mean_preds != y_test).astype(int), alpha=0.7)
         axes_flat[1, 3].set(
-            xlabel="Entropy", ylabel="Error (0=correct, 1=wrong)",
+            xlabel="Entropy",
+            ylabel="Error (0=correct, 1=wrong)",
             title="Uncertainty vs. Error",
         )
         axes_flat[1, 3].grid(True)

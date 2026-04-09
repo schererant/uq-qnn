@@ -27,6 +27,7 @@ from src.config import SimConfig
 from src.training import train_pytorch
 from src.simulation import run_simulation_sequence_np, sim_logger
 from src.circuits import build_circuit
+
 SIM_BACKEND = "numpy"
 MEMORY_DEPTH = 2
 LR = 0.02
@@ -368,31 +369,29 @@ def main():
     try:
         # Set random seed for reproducibility
         np.random.seed(42)
-    
+
         # Configure parameters
         n_data = 80
         sigma_noise = 0.05
         epochs = 10  # Reduced for demonstration
-    
+
         # Create and visualize memristor circuit
         mem_circuit, mem_input, mem_measurement = create_and_visualize_memristor()
-    
+
         # Create and visualize 6-mode Clements circuit
         clem_circuit, clem_input, clem_measurement = create_and_visualize_clements(
             n_modes=6
         )
-    
+
         # Generate synthetic data
         print("\n=== Generating Quartic Function Data ===")
-        X_train, y_train, X_test, y_test = get_data(
-            n_data, sigma_noise, "quartic_data"
-        )
-    
+        X_train, y_train, X_test, y_test = get_data(n_data, sigma_noise, "quartic_data")
+
         # Show example of the quartic function
         x_sample = np.linspace(0, 1, 100)
         y_sample = quartic_data(x_sample)
         print(f"Quartic function examples: f(0.5) = {0.5**4}, f(0.8) = {0.8**4}")
-    
+
         # Plot quartic function
         plt.figure(figsize=(8, 5))
         plt.scatter(X_train, y_train, label="Training data", alpha=0.7)
@@ -403,56 +402,70 @@ def main():
         plt.legend()
         plt.grid(True)
         plt.savefig(report_dir / "quartic_function.png", dpi=300)
-    
+
         # Train and evaluate both circuit types
         results = {}
-    
+
         # 1. Clements with memristive phase
         results["memristive"] = train_and_evaluate(
             "memristive", 3, X_train, y_train, X_test, y_test, memristive_phase_idx=[2]
         )
-    
+
         # 2. Standard Clements (no memristive)
         try:
             print("\nNote: Using 3-mode Clements circuit")
             results["standard"] = train_and_evaluate(
-                "standard", 3, X_train, y_train, X_test, y_test, memristive_phase_idx=None
+                "standard",
+                3,
+                X_train,
+                y_train,
+                X_test,
+                y_test,
+                memristive_phase_idx=None,
             )
         except Exception as e:
             print(f"Error training Clements circuit: {e}")
             print("Using simplified results for visualization")
-    
+
             # Create dummy results for visualization
-            dummy_preds = quartic_data(X_test) + np.random.normal(0, 0.1, size=len(X_test))
+            dummy_preds = quartic_data(X_test) + np.random.normal(
+                0, 0.1, size=len(X_test)
+            )
             dummy_mse = np.mean((dummy_preds - y_test) ** 2)
             dummy_rmse = np.sqrt(dummy_mse)
-    
+
             results["standard"] = {
                 "history": [1.0, 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1],
                 "predictions": dummy_preds,
                 "metrics": {"rmse": dummy_rmse, "mse": dummy_mse},
                 "theta": np.random.rand(6),  # 6 phases for 3-mode Clements
             }
-    
+
         # Plot and compare results
         fig = plot_results(results, X_train, y_train, X_test, y_test, report_dir)
         plt.show()
-    
+
         sim_logger.report()
-    
-    
+
         # Print simulation statistics
         write_run_summary(
             report_dir,
             metrics={
-                k: results[k]["metrics"] for k in ("memristive", "standard") if k in results
+                k: results[k]["metrics"]
+                for k in ("memristive", "standard")
+                if k in results
             },
-            artifacts=["quartic_function.png", "circuit_training_comparison.png", "run.log"],
-            simulation=sim_logger.stats_dict()
+            artifacts=[
+                "quartic_function.png",
+                "circuit_training_comparison.png",
+                "run.log",
+            ],
+            simulation=sim_logger.stats_dict(),
         )
-    
+
     finally:
         _end_capture()
+
 
 if __name__ == "__main__":
     main()
