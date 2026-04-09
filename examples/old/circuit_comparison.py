@@ -400,8 +400,8 @@ def main():
                     "n_modes": 3,
                     "n_phases": 6,
                     "input_state": (0,),
-    "encoding_phase_idx": 0,
-    "photon_distinguishability": None,
+                    "encoding_phase_idx": 0,
+                    "photon_distinguishability": None,
                     "target_mode": (2,),
                 },
             }

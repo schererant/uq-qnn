@@ -20,7 +20,7 @@ from src.config import SimConfig
 from src.data import get_data
 from src.experiment import Experiment
 from src.logging_config import get_logger
-from src.simulation import run_simulation_sequence_np
+from src.loss import PhotonicModel
 from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
@@ -100,9 +100,8 @@ def _sim_cfg(name: str) -> SimConfig:
 
 
 def _run_uncertainty(
-    theta: np.ndarray,
+    model: PhotonicModel,
     enc_test: np.ndarray,
-    sim_cfg: SimConfig,
     *,
     n_passes: int,
     noise_std: float,
@@ -110,14 +109,13 @@ def _run_uncertainty(
 ) -> Dict[str, np.ndarray]:
     rng = np.random.default_rng(seed)
     all_preds = np.zeros((len(enc_test), n_passes))
+    theta_base = model.theta.detach().cpu().numpy()
 
     for i in range(n_passes):
-        sample_count = max(100, sim_cfg.n_samples + int(rng.integers(-50, 51)))
-        perturbed = theta + rng.normal(0, noise_std, size=len(theta))
-        all_preds[:, i] = run_simulation_sequence_np(
-            perturbed,
-            enc_test,
-            sim_cfg.replace(n_samples=sample_count),
+        sample_count = max(100, model.sim_cfg.n_samples + int(rng.integers(-50, 51)))
+        perturbed = theta_base + rng.normal(0, noise_std, size=len(theta_base))
+        all_preds[:, i] = model.predict(
+            enc_test, theta_np=perturbed, n_samples=sample_count
         )
 
     return {
@@ -167,7 +165,7 @@ def train_and_evaluate(
     enc_train = 2 * np.arccos(np.clip(X_train, 0, 1))
     logger.info("▶ Training config=%-12s  label=%s", name, LABELS[name])
 
-    theta, history = train_pytorch_generic(
+    theta, history, model = train_pytorch_generic(
         enc_train,
         y_train,
         sim_cfg=sim_cfg,
@@ -178,9 +176,8 @@ def train_and_evaluate(
 
     enc_test = 2 * np.arccos(np.clip(X_test, 0, 1))
     unc = _run_uncertainty(
-        theta,
+        model,
         enc_test,
-        sim_cfg,
         n_passes=int(CONFIG["unc_n_passes"]),
         noise_std=float(CONFIG["unc_noise_std"]),
         seed=int(CONFIG["seed"]),

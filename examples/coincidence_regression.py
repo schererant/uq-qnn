@@ -16,7 +16,7 @@ from src.config import SimConfig
 from src.data import get_data
 from src.experiment import Experiment
 from src.logging_config import get_logger
-from src.simulation import run_simulation_sequence
+from src.loss import PhotonicModel
 from src.training import train_pytorch_generic
 
 logger = get_logger(__name__)
@@ -60,19 +60,19 @@ def _sim_cfg() -> SimConfig:
 
 
 def _run_uncertainty(
-    theta: np.ndarray,
+    model: PhotonicModel,
     enc_test: np.ndarray,
-    sim_cfg: SimConfig,
     *,
     n_passes: int,
     noise_std: float,
     seed: int,
 ) -> Dict[str, np.ndarray]:
     rng = np.random.default_rng(seed)
+    theta_base = model.theta.detach().cpu().numpy()
     all_preds = np.zeros((len(enc_test), n_passes), dtype=float)
     for idx in range(n_passes):
-        perturbed = theta + rng.normal(0.0, noise_std, size=len(theta))
-        all_preds[:, idx] = run_simulation_sequence(perturbed, enc_test, sim_cfg)
+        perturbed = theta_base + rng.normal(0.0, noise_std, size=len(theta_base))
+        all_preds[:, idx] = model.predict(enc_test, theta_np=perturbed)
     return {
         "mean": np.mean(all_preds, axis=1),
         "std": np.std(all_preds, axis=1),
@@ -207,7 +207,7 @@ def main() -> None:
             ENCODING_PHASE_IDX,
         )
 
-        theta, history = train_pytorch_generic(
+        theta, history, model = train_pytorch_generic(
             enc_train,
             y_train,
             sim_cfg=sim_cfg,
@@ -217,9 +217,8 @@ def main() -> None:
         )
 
         unc = _run_uncertainty(
-            theta,
+            model,
             enc_test,
-            sim_cfg,
             n_passes=int(CONFIG["unc_n_passes"]),
             noise_std=float(CONFIG["unc_noise_std"]),
             seed=int(CONFIG["seed"]),

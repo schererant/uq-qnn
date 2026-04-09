@@ -8,6 +8,7 @@ import time
 from typing import Dict
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -142,7 +143,9 @@ def _legacy_memristive_reference(
                 u, cfg.singles_input_mode, target_mode
             )
 
-        mem_state.update_from_prob_arrays(i, p1_swipe.mean(axis=0), p2_swipe.mean(axis=0))
+        mem_state.update_from_prob_arrays(
+            i, p1_swipe.mean(axis=0), p2_swipe.mean(axis=0)
+        )
         preds[i] = float(target_swipe.mean())
 
     return preds
@@ -176,8 +179,12 @@ def _benchmark_case(case: Dict[str, object]) -> Dict[str, float]:
     np.testing.assert_allclose(fast_preds, legacy_preds, rtol=0.0, atol=1e-12)
 
     repeats = int(case["repeats"])
-    fast_times = _time_call(run_simulation_sequence_np, params, encoded, cfg, repeats=repeats)
-    legacy_times = _time_call(_legacy_memristive_reference, params, encoded, cfg, repeats=repeats)
+    fast_times = _time_call(
+        run_simulation_sequence_np, params, encoded, cfg, repeats=repeats
+    )
+    legacy_times = _time_call(
+        _legacy_memristive_reference, params, encoded, cfg, repeats=repeats
+    )
 
     return {
         "n_points": float(len(encoded)),
@@ -201,8 +208,22 @@ def _plot_results(results: Dict[str, Dict[str, float]]) -> plt.Figure:
     width = 0.36
 
     fig, ax = plt.subplots(figsize=(9, 5))
-    ax.bar(x - width / 2, legacy_means, width, yerr=legacy_std, label="Legacy reference", color="#9aa0a6")
-    ax.bar(x + width / 2, fast_means, width, yerr=fast_std, label="Fast NumPy path", color="#1f77b4")
+    ax.bar(
+        x - width / 2,
+        legacy_means,
+        width,
+        yerr=legacy_std,
+        label="Legacy reference",
+        color="#9aa0a6",
+    )
+    ax.bar(
+        x + width / 2,
+        fast_means,
+        width,
+        yerr=fast_std,
+        label="Fast NumPy path",
+        color="#1f77b4",
+    )
 
     for i, key in enumerate(labels):
         ax.text(

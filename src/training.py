@@ -43,9 +43,9 @@ def train_pytorch_generic(
     epochs: int,
     seed: int,
     verbose: bool = False,
-) -> Tuple[np.ndarray, List[float]]:
+) -> Tuple[np.ndarray, List[float], PhotonicModel]:
     """
-    Trains the photonic model using PyTorch and returns optimized parameters and loss history.
+    Trains the photonic model using PyTorch and returns parameters, loss history, and model.
     Args:
         enc_np (np.ndarray): Encoded phase values.
         y_np (np.ndarray): Target values.
@@ -55,7 +55,7 @@ def train_pytorch_generic(
         seed (int): Random seed for reproducibility.
         verbose (bool): If True, print per-epoch loss and final parameters.
     Returns:
-        Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
+        Optimized parameters, loss history, and trained :class:`PhotonicModel`.
     """
     sim_cfg_work = sim_cfg
     # Validate classification setup (singles only: target_mode lists output modes per class).
@@ -102,24 +102,29 @@ def train_pytorch_generic(
     )
     enc_pi = int(sim_cfg_work.encoding_phase_idx)
     phase_idx = tuple(
-        i
-        for i in range(expected_phases)
-        if i not in memristive_indices and i != enc_pi
+        i for i in range(expected_phases) if i not in memristive_indices and i != enc_pi
     )
 
     model = PhotonicModel(
         init_theta.tolist(),
         enc_np,
-        y_np,
         phase_idx,
         sim_cfg_work,
     )
+    if sim_cfg_work.loss_type == "cross_entropy":
+        if y_np.ndim == 2:
+            y_t = torch.from_numpy(np.argmax(y_np, axis=1)).long()
+        else:
+            y_t = torch.from_numpy(y_np).long()
+    else:
+        y_t = torch.from_numpy(y_np).double()
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     hist = []
     pbar = tqdm(range(epochs), desc="Training", ncols=100)
     for e in pbar:
         optim.zero_grad()
         loss = model(
+            y=y_t,
             n_samples=sim_cfg_work.n_samples,
             n_swipe=sim_cfg_work.n_swipe,
             swipe_span=sim_cfg_work.swipe_span,
@@ -139,7 +144,7 @@ def train_pytorch_generic(
     theta_opt = model.theta.detach().cpu().numpy()
     if verbose:
         logger.info("Final parameters: %s", theta_opt)
-    return theta_opt, hist
+    return theta_opt, hist, model
 
 
 def train_pytorch(
@@ -151,7 +156,7 @@ def train_pytorch(
     epochs: int,
     seed: int,
     verbose: bool = False,
-) -> Tuple[np.ndarray, List[float]]:
+) -> Tuple[np.ndarray, List[float], PhotonicModel]:
     """
     Unified training path for both discrete and continuous modes.
     Args:
@@ -160,7 +165,7 @@ def train_pytorch(
         sim_cfg (SimConfig): Circuit and simulation parameters.
         **kwargs: Additional arguments for training.
     Returns:
-        Tuple[np.ndarray, List[float]]: Optimized parameters and loss history.
+        Optimized parameters, loss history, and trained :class:`PhotonicModel`.
     """
     enc = 2 * np.arccos(X)
     return train_pytorch_generic(
@@ -243,13 +248,13 @@ def gradient_check(
         num_grad[k] = (L(p_plus) - L(p_minus)) / (2 * eps)
 
     th_t = torch.tensor(theta0, dtype=torch.float64, requires_grad=True)
-    loss = MemristorLossPSR.apply(
+    feats = MemristorLossPSR.apply(
         th_t,
         torch.from_numpy(enc).double(),
-        torch.from_numpy(y).double(),
         phase_idx,
         cfg,
     )
+    loss = 0.5 * torch.mean((feats[:, -1] - torch.from_numpy(y).double()) ** 2)
     loss.backward()
     assert th_t.grad is not None
     psr_grad = th_t.grad.detach().cpu().numpy()

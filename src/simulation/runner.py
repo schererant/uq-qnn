@@ -12,8 +12,10 @@ from ..clements_geometry import (
 from ..coincidence import (
     apply_noise_to_outcomes,
     coincidence_prob,
+    detector_tuple_to_binary_occupation,
     get_nfold_channel_labels,
     marginal_click_prob,
+    nfold_channel_count,
     nfold_tuple_to_channel_index,
     nfold_working_detector_tuples,
     postselect_measurement,
@@ -94,9 +96,7 @@ def run_simulation_sequence(
         # chip_output uses marginal probabilities from the SLOS dict; singles_input_mode
         # is only needed for the legacy internal_arm unitary-column extraction.
         sim_input_mode = (
-            None
-            if cfg.feedback_mode == "chip_output"
-            else cfg.singles_input_mode
+            None if cfg.feedback_mode == "chip_output" else cfg.singles_input_mode
         )
         mem_state = MemristiveState(
             n_indices=n_memristive,
@@ -204,11 +204,27 @@ def run_simulation_sequence(
                 "use backend='perceval' with feedback_mode='chip_output', except for "
                 "2-photon chip_output analytical fast path"
             )
-        n_classes = len(target_mode) if target_mode is not None else 1
+        if cfg.output_mode == "coincidence" and cfg.working_detectors is not None:
+            n_classes = nfold_channel_count(
+                len(cfg.working_detectors), int(sum(cfg.input_state))
+            )
+        else:
+            n_classes = len(target_mode) if target_mode is not None else 1
         if return_class_probs and n_classes > 1:
             preds = np.zeros((num_pts, n_classes), dtype=float)
         else:
             preds = np.zeros(num_pts, dtype=float)
+
+        if cfg.output_mode == "coincidence":
+            assert cfg.working_detectors is not None
+            wd_tuple_np = tuple(int(x) for x in cfg.working_detectors)
+            n_photons_np = int(sum(cfg.input_state))
+            nfold_tuples_np = nfold_working_detector_tuples(wd_tuple_np, n_photons_np)
+            n_ch_np = len(nfold_tuples_np)
+            working_cc_indices_np = tuple(range(n_ch_np))
+            cc_labels_np = get_nfold_channel_labels(wd_tuple_np, n_photons_np)
+            add_noise_np = _has_positive_noise(cfg.noise_std)
+
         for i in range(num_pts):
             mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
@@ -237,24 +253,48 @@ def run_simulation_sequence(
                     if mem_state:
                         assert cfg.feedback_modes is not None
                         p1_vals = [
-                            marginal_click_prob(slos_dist, fm[0]) for fm in cfg.feedback_modes
+                            marginal_click_prob(slos_dist, fm[0])
+                            for fm in cfg.feedback_modes
                         ]
                         p2_vals = [
-                            marginal_click_prob(slos_dist, fm[1]) for fm in cfg.feedback_modes
+                            marginal_click_prob(slos_dist, fm[1])
+                            for fm in cfg.feedback_modes
                         ]
                         mem_state.update_from_prob_arrays(i, p1_vals, p2_vals)
-                    if (
-                        cfg.feedback_mode == "chip_output"
-                        and cfg.loss_type == "mse"
-                        and cfg.computation_modes is not None
-                    ):
+                    if return_class_probs and n_classes > 1:
+                        raw = np.zeros(n_ch_np, dtype=float)
+                        for ch_idx, det_tup in enumerate(nfold_tuples_np):
+                            occ = detector_tuple_to_binary_occupation(
+                                det_tup, cfg.n_modes
+                            )
+                            raw[ch_idx] = slos_dist.get(occ, 0.0)
+                        out = postselect_measurement(
+                            raw,
+                            working_cc_indices_np,
+                            cc_labels_np,
+                            fallback_uniform=True,
+                        )
+                        if add_noise_np:
+                            assert cfg.noise_std is not None
+                            out = apply_noise_to_outcomes(
+                                out,
+                                cfg.noise_std,
+                                working_cc_indices_np,
+                                cc_labels_np,
+                                seed=i,
+                            )
+                        preds[i, :] = out[list(working_cc_indices_np)]
+                    elif cfg.computation_modes is not None:
                         preds[i] = coincidence_prob(
-                            slos_dist, cfg.computation_modes[0], cfg.computation_modes[1]
+                            slos_dist,
+                            cfg.computation_modes[0],
+                            cfg.computation_modes[1],
                         )
                     else:
                         raise ValueError(
-                            "NumPy 2-photon analytical SLOS path currently supports "
-                            "chip_output coincidence regression only."
+                            "NumPy 2-photon analytical SLOS path: need "
+                            "computation_modes for scalar readout, or return_class_probs "
+                            "with full working-detector coincidence channels."
                         )
                 elif mem_state:
                     mem_state.update_from_unitary(i, u)
@@ -278,6 +318,11 @@ def run_simulation_sequence(
                 sim_logger.log_circuit(time.perf_counter() - t0)
 
             else:
+                if cfg.output_mode == "coincidence":
+                    raise ValueError(
+                        "Continuous swipe mode (n_swipe > 0) is not supported for "
+                        "memristive coincidence on the numpy backend. Use n_swipe=0."
+                    )
                 p1_swipe = np.empty((n_swipe, n_memristive), dtype=float)
                 p2_swipe = np.empty((n_swipe, n_memristive), dtype=float)
                 target_swipe = np.empty(
@@ -423,17 +468,27 @@ def run_simulation_sequence(
             if mem_state:
                 if cfg.feedback_mode == "chip_output":
                     assert cfg.feedback_modes is not None
-                    p1_vals = [marginal_click_prob(probs, fm[0]) for fm in cfg.feedback_modes]
-                    p2_vals = [marginal_click_prob(probs, fm[1]) for fm in cfg.feedback_modes]
+                    p1_vals = [
+                        marginal_click_prob(probs, fm[0]) for fm in cfg.feedback_modes
+                    ]
+                    p2_vals = [
+                        marginal_click_prob(probs, fm[1]) for fm in cfg.feedback_modes
+                    ]
                 else:
                     p1_vals = [probs.get(state, 0.0) for state in state_m1_list]
                     p2_vals = [probs.get(state, 0.0) for state in state_m2_list]
                 mem_state.update_from_prob_arrays(i, p1_vals, p2_vals)
-            if cfg.output_mode == "coincidence" and cfg.feedback_mode == "chip_output" and cfg.loss_type == "mse":
+            if (
+                cfg.output_mode == "coincidence"
+                and cfg.feedback_mode == "chip_output"
+                and cfg.loss_type == "mse"
+            ):
                 # Hardware-realistic regression: P(click_c AND click_d) from
                 # cfg.computation_modes, read directly from the SLOS distribution.
                 assert cfg.computation_modes is not None
-                preds[i] = coincidence_prob(probs, cfg.computation_modes[0], cfg.computation_modes[1])
+                preds[i] = coincidence_prob(
+                    probs, cfg.computation_modes[0], cfg.computation_modes[1]
+                )
             elif cfg.output_mode == "coincidence":
                 coinc = probs_to_nfold_coincidences(
                     probs,
@@ -497,15 +552,25 @@ def run_simulation_sequence(
                 if cfg.feedback_mode == "chip_output":
                     assert cfg.feedback_modes is not None
                     for j in range(n_memristive):
-                        p1_swipe[k, j] = marginal_click_prob(probs, cfg.feedback_modes[j][0])
-                        p2_swipe[k, j] = marginal_click_prob(probs, cfg.feedback_modes[j][1])
+                        p1_swipe[k, j] = marginal_click_prob(
+                            probs, cfg.feedback_modes[j][0]
+                        )
+                        p2_swipe[k, j] = marginal_click_prob(
+                            probs, cfg.feedback_modes[j][1]
+                        )
                 else:
                     for j in range(n_memristive):
                         p1_swipe[k, j] = probs.get(state_m1_list[j], 0.0)
                         p2_swipe[k, j] = probs.get(state_m2_list[j], 0.0)
-                if cfg.output_mode == "coincidence" and cfg.feedback_mode == "chip_output" and cfg.loss_type == "mse":
+                if (
+                    cfg.output_mode == "coincidence"
+                    and cfg.feedback_mode == "chip_output"
+                    and cfg.loss_type == "mse"
+                ):
                     assert cfg.computation_modes is not None
-                    target_swipe[k] = coincidence_prob(probs, cfg.computation_modes[0], cfg.computation_modes[1])
+                    target_swipe[k] = coincidence_prob(
+                        probs, cfg.computation_modes[0], cfg.computation_modes[1]
+                    )
                 elif cfg.output_mode == "coincidence":
                     coinc = probs_to_nfold_coincidences(
                         probs,
