@@ -24,8 +24,8 @@ training_loss.png       Log-scale convergence curve
 # Key conventions:
 #   1. CONFIG must contain ALL required keys (no hidden defaults).
 #   2. Use `with Experiment(...) as exp:` context manager for lifecycle.
-#   3. Use exp.train(), exp.predict(), exp.run_uncertainty_analysis() —
-#      these handle encoding, hardware noise, and logging automatically.
+#   3. Use exp.train() to get `trained_state`, then call
+#      `trained_state.predict(...)` / `exp.run_uncertainty_analysis(...)`.
 #   4. Use exp.savefig() to save plots (auto-tracks artifacts).
 #   5. Use exp.save_metrics() to record numeric results.
 #   6. Use matplotlib "Agg" backend for headless environments.
@@ -34,7 +34,7 @@ training_loss.png       Log-scale convergence curve
 # Available data functions (src/data.py):
 #   Regression (1D → 1D, values in [0,1]):
 #     "quartic_data", "neg_quadratic_data", "neg_qubic_data",
-#     "sinusoid_data", "multi_modal_data", "step_function_data",
+#     "sinusoid_data", "multi_modal_data", "gaussian_bump_data", "step_function_data",
 #     "oscillating_poly_data", "damped_cosine_data"
 #   Classification (2D):
 #     get_classification_data(n_samples, dataset="two_moons"|"circles"|...)
@@ -131,17 +131,16 @@ def main() -> None:
         )
 
         # ── 2. Train ──────────────────────────────────────────────
-        theta, history, model = exp.train(X_train, y_train)
+        trained_state, history, _ = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         # ── 3. Predict with uncertainty ───────────────────────────
         enc_test = 2 * np.arccos(X_test)
         unc = exp.run_uncertainty_analysis(
-            theta,
+            trained_state,
             enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
-            model=model,
         )
         mean_preds = unc["mean"]
         std_preds = unc["std"]

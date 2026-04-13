@@ -173,3 +173,5 @@ cython_debug/
 #.idea/
 
 CLAUDE.md
+
+reports/

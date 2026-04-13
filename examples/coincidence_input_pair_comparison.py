@@ -212,7 +212,7 @@ def train_and_evaluate(
     logger.info("▶ Training  input_modes=(%d, %d)", j, k)
     sc = _sim_cfg(input_pair)
     enc_train = 2 * np.arccos(np.clip(X_train, 0, 1))
-    theta, history, model = train_pytorch_generic(
+    trained_state, history, model = train_pytorch_generic(
         enc_train,
         y_train,
         sim_cfg=sc,
@@ -239,7 +239,7 @@ def train_and_evaluate(
         metrics["calibration_rho"],
     )
     return {
-        "theta": theta,
+        "trained_state": trained_state,
         "history": history,
         "mean_preds": unc["mean"],
         "std_preds": unc["std"],

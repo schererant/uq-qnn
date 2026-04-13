@@ -1,5 +1,67 @@
 # Changelog
 
+## 2026-04-13 — Serializable trained state, deprecated `Experiment.predict()`, head-aware UQ
+
+### Why
+
+The linear readout head made bare `theta` arrays insufficient for inference. Training, deprecated `Experiment.predict()`, and uncertainty analysis needed a shared artifact that preserves both the photonic parameters and the learned linear head.
+
+### Breaking
+
+- `Experiment.train`, `train_pytorch_generic`, and `train_pytorch` now return `(trained_state, loss_history, PhotonicModel)`.
+- The first return value is a serializable `TrainedPhotonicState`, not a raw NumPy `theta` array.
+- `Experiment.predict()` is deprecated and now requires a `TrainedPhotonicState` or `PhotonicModel`; passing bare `theta` is rejected.
+
+### Added
+
+- `src/loss.py` — `TrainedPhotonicState` with `to_dict()`, `from_dict()`, `save_json()`, `load_json()`, `theta_array()`, and `predict()`.
+- `PhotonicModel.export_state()` for exporting the trained serializable state directly from the module.
+- `Experiment.run_uncertainty_analysis()` now accepts a `TrainedPhotonicState` as its first argument and uses it automatically for head-aware passes.
+
+### Changed
+
+- `src/experiment.py` — deprecated prediction now routes through the trained head instead of raw simulation, and scalar hardware-output noise is skipped for linear-head regression outputs.
+- `README.md`, `examples/`, and `examples/TEMPLATE.py` now use `trained_state.predict(...)` and `exp.run_uncertainty_analysis(trained_state, ...)`.
+- `examples/coincidence_hard_function_search.py` — new preset sweep for the harder regression targets, with multi-modal configurations listed first and dedicated larger-capacity coincidence / memristive runs.
+- `src/data.py` and `examples/coincidence_gaussian_bump.py` — added `gaussian_bump_data`, a simpler localized nonlinear regression target plus a dedicated static-vs-memristive coincidence comparison example.
+- `tests/test_experiment.py` and `tests/test_training.py` now validate the serialized-state workflow and deprecated wrapper behavior.
+
+## 2026-04-09 — Linear readout head: `predict`, training return value, UQ alignment (breaking); NumPy memristor coincidence features
+
+### Why
+
+Training uses **`MemristorLossPSR`** to emit full photonic features **`(K, F)`** (all singles modes or all N-fold coincidence channels) plus a **trainable linear head** and PyTorch loss. Evaluation and uncertainty passes that only called **`run_simulation_sequence`** with the original **`target_mode`** scalar readout **ignored the head**, so plots and metrics no longer matched the trained objective.
+
+Separately, **`_feature_cfg()`** sets **`loss_type="cross_entropy"`** and **`n_classes = C(W, N)`** so the runner returns a full coincidence vector. The **NumPy memristive 2-photon** branch only supported scalar **`coincidence_prob`** when **`loss_type == "mse"`**, so memristive coincidence training raised **`ValueError`**.
+
+### Breaking
+
+- **`train_pytorch_generic`** and **`train_pytorch`** now return **`(theta_opt, loss_history, PhotonicModel)`** (third element is the trained module with **`theta`** and **`head`**).
+- **`Experiment.train`** returns the same **3-tuple**. Callers must unpack three values (or use **`_`** for the model if unused — not recommended when reporting UQ).
+
+### Added
+
+- **`src/loss.py`** — **`PhotonicModel.predict`**: same feature layout as training, optional **`uq_pass_cfg`** for discrete UQ-style passes (**`n_swipe=0`**, **`noise_std=None`**).
+- **`src/experiment.py`** — **`run_uncertainty_analysis(..., model=PhotonicModel | None)`**. When **`model`** is set, sequential passes use **`model.predict`** so the readout head matches training; **`model=None`** keeps the legacy raw-simulation multiprocessing path.
+
+### Changed
+
+- **Examples** using **`train_pytorch_generic`** or **`Experiment.train`** then uncertainty or test plots: unpack **`theta, history, model`**, pass **`model`** into **`_run_uncertainty`** / **`run_uncertainty_analysis`**, and use **`model.predict`** where **`Experiment.predict`** would skip the head (e.g. **two-moons** / **multi-class** test probabilities).
+- **`src/simulation/runner.py`** (NumPy memristive slow path):
+  - **`n_classes`** for coincidence uses **`nfold_channel_count(len(working_detectors), sum(input_state))`** when **`working_detectors`** is set, so **`preds`** is shaped **`(num_pts, C(W,N))`** under **`return_class_probs`**.
+  - **Discrete coincidence**: multi-channel path builds N-fold probabilities from **`slos_2photon_numpy`** tuple-keyed dicts via **`detector_tuple_to_binary_occupation`**, then **`postselect_measurement`** / optional **`apply_noise_to_outcomes`** (no Perceval). Scalar readout remains **`coincidence_prob`** when **`computation_modes`** is set.
+- **`tests/test_training.py`** — Updated unpack for the new return signature.
+
+### Behaviour
+
+- **Coincidence regression** (non-memristor and memristor NumPy) can train on the full channel tensor and evaluate with the same head.
+- **`examples/coincidence_regression_memristor.py`** runs again with the linear-head stack on **`backend="numpy"`** for 2-photon chip-output feedback.
+
+### Not changed (by design)
+
+- **`src/autograd.py`** **`_feature_cfg`** and **`src/loss.py`** head wiring.
+- Non-memristive vectorized NumPy path and Perceval backend coincidence logic (already supported multi-channel).
+
 ## 2026-04-08 — Occupation-vector `input_state` and N-fold training coincidence (breaking)
 
 ### Why

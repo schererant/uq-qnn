@@ -19,6 +19,7 @@ import json
 import os
 import subprocess
 import sys
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -26,8 +27,7 @@ from typing import Any, Optional, Union
 import numpy as np
 
 from src.config import SimConfig, validate_sim_config
-from src.loss import PhotonicModel
-from src.numpy_backend import run_vectorized_non_memristive
+from src.loss import PhotonicModel, TrainedPhotonicState
 from src.hardware import HardwareProfile, get_profile
 from src.logging_config import add_file_handler, get_logger, remove_file_handler
 from src.simulation import sim_logger
@@ -162,7 +162,7 @@ class Experiment:
         y: np.ndarray,
         *,
         encoded: bool = False,
-    ) -> tuple[np.ndarray, list[float], PhotonicModel]:
+    ) -> tuple[TrainedPhotonicState, list[float], PhotonicModel]:
         """Train the photonic model using parameters from self.config.
 
         Args:
@@ -173,7 +173,7 @@ class Experiment:
                 ``2 * arccos(X)`` encoding is applied first.
 
         Returns:
-            ``(theta_opt, loss_history, trained_model)`` tuple.
+            ``(trained_state, loss_history, trained_model)`` tuple.
         """
         from src.training import train_pytorch_generic
 
@@ -195,39 +195,45 @@ class Experiment:
 
     def predict(
         self,
-        theta: np.ndarray,
+        trained: Union[TrainedPhotonicState, PhotonicModel],
         encoded_phases: np.ndarray,
         *,
         return_class_probs: bool = False,
     ) -> np.ndarray:
-        """Run a single forward pass through the trained circuit.
+        """Deprecated wrapper for head-aware inference.
 
-        If a hardware profile with a noise model is set, noise is applied
-        to the raw simulation outputs.
-
-        Args:
-            theta: Optimized parameter vector.
-            encoded_phases: Phase-encoded input data.
-            return_class_probs: If True, return per-class probability vectors.
+        Use ``trained.predict(...)`` directly on the returned
+        :class:`~src.loss.TrainedPhotonicState` or :class:`~src.loss.PhotonicModel`.
         """
-        from src.simulation import run_simulation_sequence
-
-        if self._can_use_vectorized_numpy_discrete():
-            raw = run_vectorized_non_memristive(
-                np.asarray(theta, dtype=np.float64),
-                encoded_phases,
-                self.sim_cfg,
-                return_class_probs=return_class_probs,
+        warnings.warn(
+            "Experiment.predict() is deprecated; call trained_state.predict(...) "
+            "or model.predict(...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if not isinstance(trained, (TrainedPhotonicState, PhotonicModel)):
+            raise TypeError(
+                "Experiment.predict() now requires a TrainedPhotonicState or "
+                "PhotonicModel. Bare theta arrays no longer include the linear head."
             )
-        else:
-            raw = run_simulation_sequence(
-                theta,
-                encoded_phases,
-                self.sim_cfg,
-                return_class_probs=return_class_probs,
+
+        raw = trained.predict(encoded_phases)
+        if return_class_probs and self.sim_cfg.loss_type != "cross_entropy":
+            raise ValueError(
+                "return_class_probs=True is only valid for classification inference"
             )
         if self.hardware is not None and self.hardware.noise is not None:
-            raw = self._apply_hardware_noise(raw)
+            if self.sim_cfg.loss_type == "mse":
+                warnings.warn(
+                    "Skipping hardware output noise for scalar linear-head regression "
+                    "predictions because they are not bounded detector probabilities.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            raw = self._apply_hardware_noise(
+                raw,
+                linear_head=self.sim_cfg.loss_type == "mse",
+            )
         return raw
 
     def _apply_hardware_noise(
@@ -235,6 +241,7 @@ class Experiment:
         preds: np.ndarray,
         *,
         seed: Optional[int] = None,
+        linear_head: bool = False,
     ) -> np.ndarray:
         """Apply the hardware profile's noise model to prediction outputs.
 
@@ -256,6 +263,8 @@ class Experiment:
                 result[i] = noise(preds[i], working_indices, labels, rng=rng)
             return result
         else:
+            if linear_head:
+                return preds
             # Scalar outputs are embedded into a 2-channel distribution so the
             # hardware noise models can perturb them without collapsing them to 1.
             working_indices = (0, 1)
@@ -268,48 +277,33 @@ class Experiment:
                 result[i] = noised[0]
             return result
 
-    def _can_use_vectorized_numpy_discrete(self) -> bool:
-        """Use the same discrete NumPy vectorized path as :func:`run_simulation_sequence`."""
-
-        cfg = self.sim_cfg
-        if cfg.backend != "numpy" or cfg.n_swipe != 0:
-            return False
-        return not self._has_memristive_phases()
-
-    def _has_memristive_phases(self) -> bool:
-        mpi = self.sim_cfg.memristive_phase_idx
-        if mpi is None:
-            return False
-        if isinstance(mpi, int):
-            return True
-        return len(tuple(mpi)) > 0
-
     # ── uncertainty ────────────────────────────────────────────
 
     def run_uncertainty_analysis(
         self,
-        theta: np.ndarray,
+        trained: Union[np.ndarray, TrainedPhotonicState],
         encoded_phases: np.ndarray,
         *,
         n_passes: int,
         noise_std: float,
         return_class_probs: bool = False,
-        model: Optional[PhotonicModel] = None,
+        model: Optional[Union[PhotonicModel, TrainedPhotonicState]] = None,
     ) -> dict[str, np.ndarray]:
         """Multi-pass uncertainty estimation via parameter perturbation.
 
         Args:
-            theta: Optimized parameter vector.
+            trained: Optimized parameter vector or serialized trained state.
             encoded_phases: Phase-encoded test inputs.
             n_passes: Number of noisy forward passes.
             noise_std: Std-dev of Gaussian noise added to phase parameters
                 on each pass.
             return_class_probs: If True, collect per-class probabilities
                 (inferred automatically when loss_type is cross_entropy).
-            model: Trained :class:`~src.loss.PhotonicModel`. When set, each pass
-                uses :meth:`~src.loss.PhotonicModel.predict` so the readout head
-                matches training (recommended). When omitted, uses the legacy
-                raw simulation path (no linear head).
+            model: Trained :class:`~src.loss.PhotonicModel` or
+                :class:`~src.loss.TrainedPhotonicState`. When set, each pass uses
+                ``predict()`` on that object so the readout head matches training.
+                When omitted and ``trained`` is not a serialized state, uses the
+                legacy raw simulation path (no linear head).
 
         Returns:
             Dict with ``'mean'``, ``'std'``, and ``'all_preds'`` arrays.
@@ -338,6 +332,14 @@ class Experiment:
         unc_sim_cfg = self.sim_cfg.replace(n_swipe=0, swipe_span=0.0, noise_std=None)
 
         rng = np.random.default_rng(c["seed"])
+        base_theta = (
+            trained.theta_array()
+            if isinstance(trained, TrainedPhotonicState)
+            else np.asarray(trained, dtype=np.float64)
+        )
+        predictor: Optional[Union[PhotonicModel, TrainedPhotonicState]] = (
+            trained if isinstance(trained, TrainedPhotonicState) else model
+        )
         n_samples_base = c["n_samples"]
         memristive_phase_idx = c["memristive_phase_idx"]
         if memristive_phase_idx is None:
@@ -349,7 +351,7 @@ class Experiment:
 
         def _perturb_params() -> tuple[np.ndarray, int]:
             sample_count = max(100, n_samples_base + int(rng.integers(-100, 101)))
-            perturbed = theta.copy()
+            perturbed = base_theta.copy()
             if n_memristive > 0:
                 perturbed[:-n_memristive] += rng.normal(
                     0, noise_std, size=len(perturbed) - n_memristive
@@ -359,12 +361,12 @@ class Experiment:
             return perturbed, sample_count
 
         results: list[np.ndarray]
-        if model is not None:
+        if predictor is not None:
             results = []
             for _ in tqdm(range(n_passes), desc="UQ passes"):
                 perturbed, sample_count = _perturb_params()
                 results.append(
-                    model.predict(
+                    predictor.predict(
                         encoded_phases,
                         theta_np=perturbed,
                         n_samples=sample_count,
@@ -412,9 +414,19 @@ class Experiment:
                     results = _run_sequential()
 
         has_hw_noise = self.hardware is not None and self.hardware.noise is not None
+        skip_hw_noise = has_hw_noise and predictor is not None and not (
+            is_classification and n_classes > 1
+        )
+        if skip_hw_noise:
+            warnings.warn(
+                "Skipping hardware output noise for scalar linear-head regression "
+                "uncertainty passes because they are not bounded detector probabilities.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
         for i, preds in enumerate(results):
-            if has_hw_noise:
+            if has_hw_noise and not skip_hw_noise:
                 preds = self._apply_hardware_noise(
                     np.atleast_2d(preds)
                     if (is_classification and n_classes > 1)

@@ -44,7 +44,7 @@ CONFIG = {
     "loss_type": "mse",
     "n_classes": 1,
     "lr": 0.05,
-    "epochs": 300,
+    "epochs": 100,
     "n_samples": 0,
     "memory_depth": 2,
     "n_swipe": 0,
@@ -52,9 +52,9 @@ CONFIG = {
     "noise_std": None,
     "seed": 42,
     "sim_backend": "numpy",
-    "n_data": 1000,
+    "n_data": 200,
     "sigma_noise": 0.005,
-    "data_function": "step_function_data",
+    "data_function": "quartic_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
 }
@@ -214,7 +214,7 @@ def main() -> None:
             MEMRISTIVE_PHASE_IDX,
         )
 
-        theta, history, model = train_pytorch_generic(
+        _, history, model = train_pytorch_generic(
             enc_train,
             y_train,
             sim_cfg=sim_cfg,

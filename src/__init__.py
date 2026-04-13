@@ -55,6 +55,7 @@ _ATTR_EXPORTS = {
     "SimConfig": ("config", "SimConfig"),
     "validate_sim_config": ("config", "validate_sim_config"),
     "get_data": ("data", "get_data"),
+    "gaussian_bump_data": ("data", "gaussian_bump_data"),
     "load_measurement_pickle": ("data", "load_measurement_pickle"),
     "load_timetags_measurement": ("data", "load_timetags_measurement"),
     "multi_modal_data": ("data", "multi_modal_data"),
@@ -86,6 +87,7 @@ _ATTR_EXPORTS = {
     "log_params": ("logging_config", "log_params"),
     "set_verbosity": ("logging_config", "set_verbosity"),
     "PhotonicModel": ("loss", "PhotonicModel"),
+    "TrainedPhotonicState": ("loss", "TrainedPhotonicState"),
     "SimulationLogger": ("simulation", "SimulationLogger"),
     "run_simulation_sequence": ("simulation", "run_simulation_sequence"),
     "run_simulation_sequence_np": ("simulation", "run_simulation_sequence_np"),
@@ -119,6 +121,7 @@ __all__ = [
     "neg_quadratic_data",
     "neg_qubic_data",
     "sinusoid_data",
+    "gaussian_bump_data",
     # Circuits
     "encoding_circuit",
     "memristor_circuit",
@@ -135,6 +138,7 @@ __all__ = [
     "MemristorLossPSR",
     # Loss / Training
     "PhotonicModel",
+    "TrainedPhotonicState",
     "train_pytorch",
     "train_pytorch_generic",
     "gradient_check",

@@ -52,6 +52,8 @@ This installs all dependencies (PyTorch, Perceval, NumPy, scikit-learn, matplotl
 | `examples/memristor_circuit_visualization.py` | Memristor circuit diagram |
 | `examples/hardware_profile_comparison.py` | Compare ideal vs noisy hardware profiles |
 | `examples/coincidence_regression.py` | Two-photon coincidence regression |
+| `examples/coincidence_gaussian_bump.py` | Static vs memristive coincidence comparison on a single Gaussian bump |
+| `examples/coincidence_hard_function_search.py` | Preset sweep for multi-modal, step, and oscillatory coincidence regression |
 | `examples/6x6.py` | 6-mode circuit example |
 
 ```bash
@@ -116,7 +118,7 @@ Training and experiment code should use **occupation-vector** `input_state` and 
 - Writes a structured `run.log` via the package logger
 - Validates that all required config keys are present (no hidden defaults)
 - Writes a `run_summary.json` (config, metrics, artifacts, git SHA) on exit
-- Exposes `train`, `predict`, `run_uncertainty_analysis`, and `savefig` helpers
+- Exposes `train`, `run_uncertainty_analysis`, and `savefig` helpers, plus a deprecated `predict` wrapper
 - Builds a frozen `SimConfig` from your config dict automatically
 
 ### Step-by-step guide
@@ -124,9 +126,9 @@ Training and experiment code should use **occupation-vector** `input_state` and 
 1. **Define a CONFIG dict** with all required keys (see [Config reference](#config-reference) below).
 2. **Prepare your data** using the built-in generators or your own arrays.
 3. **Open an `Experiment` context** -- this creates the run directory and starts logging.
-4. **Train** with `exp.train(X, y)` -- phase encoding is applied automatically.
-5. **Predict** with `exp.predict(theta, encoded_phases)` on test data.
-6. **Run UQ** with `exp.run_uncertainty_analysis(...)` for uncertainty estimates.
+4. **Train** with `exp.train(X, y)` -- phase encoding is applied automatically and you get back a serializable `trained_state`.
+5. **Predict** with `trained_state.predict(encoded_phases)` on test data.
+6. **Run UQ** with `exp.run_uncertainty_analysis(trained_state, ...)` for uncertainty estimates.
 7. **Save figures** with `exp.savefig(fig, "name.png")`.
 8. **Exit the context** -- `run_summary.json` is written automatically.
 
@@ -187,16 +189,16 @@ def main():
 
     with Experiment("my_regression", config=CONFIG) as exp:
         # Train -- exp.train applies 2*arccos(X) encoding automatically
-        theta, history = exp.train(X_train, y_train)
+        trained_state, history, _ = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         # Predict on test data (must encode manually)
         enc_test = 2 * np.arccos(X_test)
-        preds = exp.predict(theta, enc_test)
+        preds = trained_state.predict(enc_test)
 
         # Uncertainty analysis (parallel forward passes with perturbed params)
         unc = exp.run_uncertainty_analysis(
-            theta, enc_test,
+            trained_state, enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
         )
@@ -261,11 +263,11 @@ X_train, y_train, X_test, y_test = get_classification_data(
 )
 
 with Experiment("binary_classification", config=CONFIG) as exp:
-    theta, history = exp.train(X_train, y_train)
+    trained_state, history, _ = exp.train(X_train, y_train)
 
     enc_test = 2 * np.arccos(X_test)
     unc = exp.run_uncertainty_analysis(
-        theta, enc_test,
+        trained_state, enc_test,
         n_passes=CONFIG["unc_n_passes"],
         noise_std=CONFIG["unc_noise_std"],
     )
@@ -384,11 +386,11 @@ from src.hardware import LAB_6MODE, NOISY_PROTOTYPE
 
 # By object
 with Experiment("my_run", config=CONFIG, hardware=LAB_6MODE) as exp:
-    theta, history = exp.train(X_train, y_train)
+    trained_state, history, _ = exp.train(X_train, y_train)
 
 # By name
 with Experiment("my_run", config=CONFIG, hardware="noisy_prototype") as exp:
-    theta, history = exp.train(X_train, y_train)
+    trained_state, history, _ = exp.train(X_train, y_train)
 ```
 
 The profile's noise model is applied automatically to `predict()` and `run_uncertainty_analysis()` outputs. If the profile specifies a backend (e.g. `"numpy"`), it is merged into your config (explicit `sim_backend` in the config takes precedence).
@@ -445,7 +447,7 @@ register_backend("my_chip", backend)
 |---|---|
 | `src/config.py` | `SimConfig` frozen dataclass -- the single config object flowing through the entire stack |
 | `src/hardware.py` | Hardware abstraction -- `HardwareProfile`, noise models, `TimingParams`, backend registry |
-| `src/experiment.py` | `Experiment` context manager -- run directories, logging, train/predict/UQ helpers |
+| `src/experiment.py` | `Experiment` context manager -- run directories, logging, train/UQ helpers, deprecated predict wrapper |
 | `src/circuits.py` | Perceval circuit builders: `build_circuit()`, `build_parametric_circuit()` |
 | `src/simulation.py` | Central orchestrator `run_simulation_sequence_np()`; routes to backends; handles memristive feedback, noise, swipe |
 | `src/numpy_backend.py` | Fast analytic backend -- vectorized plain Clements runs, optimized memristive singles scans, 2x2 permanents for coincidences |
@@ -495,20 +497,20 @@ The Parameter-Shift Rule computes **exact** gradients without finite differences
 
 ## Uncertainty quantification
 
-`Experiment.run_uncertainty_analysis` runs `n_passes` parallel forward passes, each with Gaussian noise `~ N(0, unc_noise_std^2)` added to the phase parameters. This approximates the effect of parameter uncertainty or hardware noise.
+`Experiment.run_uncertainty_analysis` runs `n_passes` forward passes, each with Gaussian noise `~ N(0, unc_noise_std^2)` added to the phase parameters. Pass a `trained_state` to keep the learned linear head attached during every pass.
 
 Passes run in parallel via `ProcessPoolExecutor` up to `os.cpu_count()` workers.
 
 **Regression:**
 ```python
-unc = exp.run_uncertainty_analysis(theta, enc_test, n_passes=20, noise_std=0.05)
+unc = exp.run_uncertainty_analysis(trained_state, enc_test, n_passes=20, noise_std=0.05)
 mean = unc["mean"]   # (n_test,)
 std  = unc["std"]    # (n_test,)  -- predictive uncertainty
 ```
 
 **Classification:**
 ```python
-unc = exp.run_uncertainty_analysis(theta, enc_test, n_passes=20, noise_std=0.05)
+unc = exp.run_uncertainty_analysis(trained_state, enc_test, n_passes=20, noise_std=0.05)
 mean_probs = unc["mean"]   # (n_test, n_classes)
 entropy = -np.sum(mean_probs * np.log(mean_probs + 1e-15), axis=1)
 ```
@@ -531,6 +533,7 @@ Available via `src.data.get_data(n_data, sigma_noise, function_name)`:
 | `quartic_data` | x^4 |
 | `sinusoid_data` | sin(2*pi*x) * 0.5 + 0.5 |
 | `multi_modal_data` | Sum of Gaussian peaks |
+| `gaussian_bump_data` | Single smooth Gaussian bump |
 | `step_function_data` | Smooth tanh step |
 | `oscillating_poly_data` | x^3 - 0.5*x^2 + 0.1*sin(15x) |
 | `damped_cosine_data` | Damped cosine wave |
