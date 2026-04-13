@@ -63,16 +63,15 @@ def main():
             return_one_hot=True,
         )
 
-        theta, history, model = exp.train(X_train, y_train)
+        trained_state, history, _ = exp.train(X_train, y_train)
         exp.save_metrics({"final_loss": history[-1]})
 
         enc_test = 2 * np.arccos(X_test)
         unc = exp.run_uncertainty_analysis(
-            theta,
+            trained_state,
             enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
-            model=model,
         )
         mean_probs = unc["mean"]
         std_probs = unc["std"]

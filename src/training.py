@@ -9,7 +9,7 @@ from tqdm import tqdm
 from .circuits import normalize_memristive_phase_idx
 from .config import SimConfig, validate_sim_config
 from .logging_config import get_logger, log_params
-from .loss import PhotonicModel
+from .loss import PhotonicModel, TrainedPhotonicState
 
 logger = get_logger(__name__)
 
@@ -43,9 +43,9 @@ def train_pytorch_generic(
     epochs: int,
     seed: int,
     verbose: bool = False,
-) -> Tuple[np.ndarray, List[float], PhotonicModel]:
+) -> Tuple[TrainedPhotonicState, List[float], PhotonicModel]:
     """
-    Trains the photonic model using PyTorch and returns parameters, loss history, and model.
+    Trains the photonic model and returns serialized state, loss history, and model.
     Args:
         enc_np (np.ndarray): Encoded phase values.
         y_np (np.ndarray): Target values.
@@ -55,7 +55,7 @@ def train_pytorch_generic(
         seed (int): Random seed for reproducibility.
         verbose (bool): If True, print per-epoch loss and final parameters.
     Returns:
-        Optimized parameters, loss history, and trained :class:`PhotonicModel`.
+        Serialized trained state, loss history, and trained :class:`PhotonicModel`.
     """
     sim_cfg_work = sim_cfg
     # Validate classification setup (singles only: target_mode lists output modes per class).
@@ -141,10 +141,10 @@ def train_pytorch_generic(
 
         hist.append(loss.item())
         pbar.set_postfix(loss=f"{loss.item():.6f}")
-    theta_opt = model.theta.detach().cpu().numpy()
+    trained_state = model.export_state()
     if verbose:
-        logger.info("Final parameters: %s", theta_opt)
-    return theta_opt, hist, model
+        logger.info("Final parameters: %s", trained_state.theta)
+    return trained_state, hist, model
 
 
 def train_pytorch(
@@ -156,7 +156,7 @@ def train_pytorch(
     epochs: int,
     seed: int,
     verbose: bool = False,
-) -> Tuple[np.ndarray, List[float], PhotonicModel]:
+) -> Tuple[TrainedPhotonicState, List[float], PhotonicModel]:
     """
     Unified training path for both discrete and continuous modes.
     Args:
@@ -165,7 +165,7 @@ def train_pytorch(
         sim_cfg (SimConfig): Circuit and simulation parameters.
         **kwargs: Additional arguments for training.
     Returns:
-        Optimized parameters, loss history, and trained :class:`PhotonicModel`.
+        Serialized trained state, loss history, and trained :class:`PhotonicModel`.
     """
     enc = 2 * np.arccos(X)
     return train_pytorch_generic(

@@ -263,6 +263,17 @@ def multi_modal_data(x: np.ndarray) -> np.ndarray:
     return g1 + g2 + g3
 
 
+def gaussian_bump_data(x: np.ndarray) -> np.ndarray:
+    """
+    Computes a single smooth Gaussian bump on a positive baseline.
+    Args:
+        x (np.ndarray): Input array.
+    Returns:
+        np.ndarray: Output array with one localized peak, bounded in [0, 1].
+    """
+    return 0.15 + 0.7 * np.exp(-((x - 0.55) ** 2) / 0.03)
+
+
 def step_function_data(x: np.ndarray) -> np.ndarray:
     """
     Computes a step function with smooth transitions.
@@ -514,6 +525,7 @@ def get_data(
         "neg_qubic_data": neg_qubic_data,
         "sinusoid_data": sinusoid_data,
         "multi_modal_data": multi_modal_data,
+        "gaussian_bump_data": gaussian_bump_data,
         "step_function_data": step_function_data,
         "oscillating_poly_data": oscillating_poly_data,
         "damped_cosine_data": damped_cosine_data,

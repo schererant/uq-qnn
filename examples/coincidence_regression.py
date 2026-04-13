@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 # Fock occupation (6 modes): one photon each in modes 1 and 4.
 INPUT_STATE = tuple(1 if i in (1, 4) else 0 for i in range(6))
-TARGET_CC_PAIR = (0, 1)
+TARGET_CC_PAIR = (0, 5)
 ENCODING_PHASE_IDX = 7
 
 CONFIG = {
@@ -39,7 +39,7 @@ CONFIG = {
     "loss_type": "mse",
     "n_classes": 1,
     "lr": 0.05,
-    "epochs": 300,
+    "epochs": 150,
     "n_samples": 0,
     "memory_depth": 2,
     "n_swipe": 0,
@@ -49,7 +49,7 @@ CONFIG = {
     "sim_backend": "numpy",
     "n_data": 1000,
     "sigma_noise": 0.005,
-    "data_function": "step_function_data",
+    "data_function": "neg_qubic_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
 }
@@ -207,7 +207,7 @@ def main() -> None:
             ENCODING_PHASE_IDX,
         )
 
-        theta, history, model = train_pytorch_generic(
+        _, history, model = train_pytorch_generic(
             enc_train,
             y_train,
             sim_cfg=sim_cfg,

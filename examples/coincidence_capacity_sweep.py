@@ -199,7 +199,7 @@ def main() -> None:
                 sim_cfg.input_state,
                 TARGET_CC_PAIR,
             )
-            theta, history, model = train_pytorch_generic(
+            _, history, model = train_pytorch_generic(
                 enc_train,
                 y_train,
                 sim_cfg=sim_cfg,

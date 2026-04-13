@@ -74,7 +74,7 @@ def main():
         enc_train = encode_2d_to_phase(X_train, method=enc_method)
         enc_test = encode_2d_to_phase(X_test, method=enc_method)
 
-        theta, history, model = exp.train(enc_train, y_train, encoded=True)
+        trained_state, history, model = exp.train(enc_train, y_train, encoded=True)
         exp.save_metrics({"final_loss": history[-1]})
 
         preds_probs = model.predict(enc_test)
@@ -86,11 +86,10 @@ def main():
         print(classification_report(y_test, preds_discrete))
 
         unc = exp.run_uncertainty_analysis(
-            theta,
+            trained_state,
             enc_test,
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
-            model=model,
         )
         mean_probs = unc["mean"]
         mean_preds = np.argmax(mean_probs, axis=1)

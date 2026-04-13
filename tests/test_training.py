@@ -93,7 +93,7 @@ def test_frozen_encoding_slot_is_not_clamped_like_a_weight():
     enc_idx = int(sim_cfg.encoding_phase_idx)
     assert init_theta[enc_idx] > 1.0
 
-    theta_opt, _, _ = train_pytorch_generic(
+    trained_state, _, _ = train_pytorch_generic(
         enc_train,
         y_train,
         sim_cfg=sim_cfg,
@@ -102,7 +102,7 @@ def test_frozen_encoding_slot_is_not_clamped_like_a_weight():
         seed=42,
     )
 
-    assert np.isclose(theta_opt[enc_idx], init_theta[enc_idx])
+    assert np.isclose(trained_state.theta[enc_idx], init_theta[enc_idx])
 
 
 def test_coincidence_cross_entropy_leaves_target_mode_none():

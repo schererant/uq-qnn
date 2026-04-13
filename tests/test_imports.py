@@ -48,7 +48,7 @@ class TestImports(unittest.TestCase):
 
     def test_function_imports(self):
         """Test that key functions can be imported."""
-        from src.data import get_data, quartic_data
+        from src.data import gaussian_bump_data, get_data, quartic_data
         from src.circuits import encoding_circuit, memristor_circuit, build_circuit
         from src.simulation import (
             run_simulation_sequence,
@@ -61,6 +61,7 @@ class TestImports(unittest.TestCase):
         from src.hardware import HardwareProfile, get_profile, IDEAL
 
         self.assertIsNotNone(get_data)
+        self.assertIsNotNone(gaussian_bump_data)
         self.assertIsNotNone(quartic_data)
         self.assertIsNotNone(encoding_circuit)
         self.assertIsNotNone(memristor_circuit)

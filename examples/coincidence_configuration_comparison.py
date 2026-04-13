@@ -206,7 +206,7 @@ def main() -> None:
         for name, case in CASES.items():
             logger.info("Training %s", _display(name, case))
             sim_cfg = _sim_cfg(case)
-            theta, history, model = train_pytorch_generic(
+            _, history, model = train_pytorch_generic(
                 enc_train,
                 y_train,
                 sim_cfg=sim_cfg,

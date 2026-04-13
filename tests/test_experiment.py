@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import warnings
 from typing import cast
 
 import numpy as np
 
 from src.experiment import Experiment
 from src.hardware import GaussianNoise, HardwareProfile
-from src.simulation import run_simulation_sequence_np
+from src.loss import TrainedPhotonicState
 
 
 def base_config() -> dict[str, object]:
@@ -34,15 +35,11 @@ def base_config() -> dict[str, object]:
     }
 
 
-def test_predict_with_hardware_noise_preserves_scalar_regression_shape():
+def test_predict_deprecated_wrapper_matches_serialized_state():
     config = base_config()
-    n_modes = cast(int, config["n_modes"])
-    theta = np.linspace(0.1, 0.6, n_modes * (n_modes - 1))
-    encoded = np.array([0.2, 0.7, 1.1])
-
-    baseline = run_simulation_sequence_np(
-        theta, encoded, Experiment("baseline", config=config).sim_cfg
-    )
+    X_train = np.array([0.1, 0.3, 0.6, 0.9], dtype=np.float64)
+    y_train = np.array([0.2, 0.4, 0.5, 0.7], dtype=np.float64)
+    encoded = np.array([0.2, 0.7, 1.1], dtype=np.float64)
 
     zero_noise_profile = HardwareProfile(
         name="zero_noise",
@@ -53,11 +50,35 @@ def test_predict_with_hardware_noise_preserves_scalar_regression_shape():
         coincidence_window_factor=None,
     )
     exp = Experiment("regression_hw_noise", config=config, hardware=zero_noise_profile)
+    trained_state, _, model = exp.train(X_train, y_train)
 
-    preds = exp.predict(theta, encoded)
+    expected = trained_state.predict(encoded)
+    np.testing.assert_allclose(model.predict(encoded), expected, atol=1e-12)
 
-    np.testing.assert_allclose(preds, baseline, atol=1e-12)
-    assert not np.allclose(preds, np.ones_like(preds))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        preds = exp.predict(trained_state, encoded)
+
+    np.testing.assert_allclose(preds, expected, atol=1e-12)
+    assert any(issubclass(w.category, DeprecationWarning) for w in caught)
+
+
+def test_trained_state_roundtrip_preserves_predictions():
+    config = base_config()
+    X_train = np.array([0.2, 0.4, 0.8], dtype=np.float64)
+    y_train = np.array([0.3, 0.6, 0.9], dtype=np.float64)
+    encoded = np.array([0.1, 0.9], dtype=np.float64)
+
+    exp = Experiment("trained_state_roundtrip", config=config)
+    trained_state, _, _ = exp.train(X_train, y_train)
+
+    restored = TrainedPhotonicState.from_dict(trained_state.to_dict())
+
+    np.testing.assert_allclose(
+        restored.predict(encoded),
+        trained_state.predict(encoded),
+        atol=1e-12,
+    )
 
 
 def test_uncertainty_analysis_accepts_int_memristive_phase_idx():
@@ -70,8 +91,15 @@ def test_uncertainty_analysis_accepts_int_memristive_phase_idx():
     theta = np.concatenate([np.linspace(0.1, 0.6, n_phases), np.array([0.4])])
     encoded = np.array([0.2, 0.7])
 
+    trained_state = TrainedPhotonicState(
+        theta=tuple(float(x) for x in theta),
+        head_weight=((1.0, 0.0, 0.0),),
+        head_bias=(0.0,),
+        sim_cfg=exp.sim_cfg.to_dict(),
+    )
+
     result = exp.run_uncertainty_analysis(
-        theta,
+        trained_state,
         encoded,
         n_passes=1,
         noise_std=0.01,
