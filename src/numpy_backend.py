@@ -84,14 +84,13 @@ def _has_positive_noise(
     return any(float(s) > 0 for s in noise_std)
 
 
-def _bs_2x2() -> np.ndarray:
-    return np.array([[1, 1j], [1j, 1]], dtype=np.complex128) / np.sqrt(2)
+_BS_2X2: np.ndarray = np.array([[1, 1j], [1j, 1]], dtype=np.complex128) / np.sqrt(2)
 
 
 def _mzi_unitary(phi_int: float, phi_ext: float) -> np.ndarray:
     phi_int = float(phi_int) % (2 * np.pi)
     phi_ext = float(phi_ext) % (2 * np.pi)
-    bs = _bs_2x2()
+    bs = _BS_2X2
     p_int = np.diag(np.array([1.0, np.exp(1j * phi_int)], dtype=np.complex128))
     p_ext = np.diag(np.array([1.0, np.exp(1j * phi_ext)], dtype=np.complex128))
     return p_ext @ bs @ p_int @ bs
@@ -102,7 +101,7 @@ def _mzi_unitary_batch(phi_int: np.ndarray, phi_ext: np.ndarray) -> np.ndarray:
 
     phi_int = np.asarray(phi_int, dtype=np.float64) % (2 * np.pi)
     phi_ext = np.asarray(phi_ext, dtype=np.float64) % (2 * np.pi)
-    bs = _bs_2x2()
+    bs = _BS_2X2
     n_data = int(phi_int.shape[0])
     p_int = np.zeros((n_data, 2, 2), dtype=np.complex128)
     p_int[:, 0, 0] = 1.0
