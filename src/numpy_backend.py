@@ -347,25 +347,54 @@ def _process_coincidence_rows(
     preds: np.ndarray,
     readout_cc_idx: Optional[int] = None,
 ) -> None:
-    n_data = coinc.shape[0]
-    for i in range(n_data):
-        out = postselect_measurement(
-            coinc[i], working_cc_indices, cc_labels, fallback_uniform=True
-        )
-        if add_noise:
+    if add_noise:
+        # Per-row sequential path preserves the seed=i reproducibility contract.
+        n_data = coinc.shape[0]
+        for i in range(n_data):
+            out = postselect_measurement(
+                coinc[i], working_cc_indices, cc_labels, fallback_uniform=True
+            )
             assert noise_std is not None
             out = apply_noise_to_outcomes(
                 out, noise_std, working_cc_indices, cc_labels, seed=i
             )
-        if return_class_probs and len(working_cc_indices) > 1:
-            preds[i, :] = out[list(working_cc_indices)]
-        else:
-            if readout_cc_idx is None:
-                raise ValueError(
-                    "scalar coincidence output requires readout_cc_idx (set target_mode to an "
-                    "N-tuple of distinct detector indices matching sum(input_state))"
-                )
-            preds[i] = out[readout_cc_idx]
+            if return_class_probs and len(working_cc_indices) > 1:
+                preds[i, :] = out[list(working_cc_indices)]
+            else:
+                if readout_cc_idx is None:
+                    raise ValueError(
+                        "scalar coincidence output requires readout_cc_idx (set target_mode to an "
+                        "N-tuple of distinct detector indices matching sum(input_state))"
+                    )
+                preds[i] = out[readout_cc_idx]
+        return
+
+    # Vectorized path (no noise): postselect and normalise the whole batch at once.
+    wci = np.asarray(list(working_cc_indices), dtype=int)
+    n_w = len(wci)
+    working_vals = coinc[:, wci]                              # (n_data, n_working)
+    totals = working_vals.sum(axis=1, keepdims=True)          # (n_data, 1)
+    safe_totals = np.where(totals > 0, totals, 1.0)
+    normalized = np.where(                                    # (n_data, n_working)
+        totals > 0,
+        working_vals / safe_totals,
+        1.0 / n_w,
+    )
+
+    if return_class_probs and n_w > 1:
+        preds[:, :] = normalized
+    else:
+        if readout_cc_idx is None:
+            raise ValueError(
+                "scalar coincidence output requires readout_cc_idx (set target_mode to an "
+                "N-tuple of distinct detector indices matching sum(input_state))"
+            )
+        hits = np.flatnonzero(wci == readout_cc_idx)
+        if hits.size == 0:
+            raise ValueError(
+                f"readout_cc_idx {readout_cc_idx} is not in working_cc_indices"
+            )
+        preds[:] = normalized[:, hits[0]]
 
 
 def run_vectorized_non_memristive(
