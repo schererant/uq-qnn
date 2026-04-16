@@ -49,7 +49,7 @@ CONFIG = {
     "sim_backend": "numpy",
     "n_data": 1000,
     "sigma_noise": 0.005,
-    "data_function": "neg_qubic_data",
+    "data_function": "sinusoid_data",
     "unc_n_passes": 10,
     "unc_noise_std": 0.05,
 }
