@@ -7,8 +7,10 @@ import numpy as np
 import torch
 from torch import Tensor
 
+from .circuits import normalize_memristive_phase_idx
 from .coincidence import nfold_channel_count, nfold_working_detector_tuples
 from .config import SimConfig, psr_photon_counts_for_phases
+from .numpy_backend import run_psr_forward_batch
 from .simulation import run_simulation_sequence_np
 
 
@@ -115,22 +117,43 @@ class MemristorLossPSR(torch.autograd.Function):
         grads = np.zeros_like(theta_np)
         eps = 1e-3
 
+        # Determine whether the fast batched PSR path is applicable.
+        # Conditions: numpy backend, discrete mode (n_swipe==0), no memristive phases.
+        # Memristive circuits fall back to the sequential path because their feedback
+        # dynamics depend on the full sequential scan over data points.
+        _n_ph = cfg.n_modes * (cfg.n_modes - 1)
+        _no_mem = (
+            len(normalize_memristive_phase_idx(cfg.memristive_phase_idx, cfg.n_modes, _n_ph)) == 0
+        )
+        _use_psr_batch = cfg.backend == "numpy" and cfg.n_swipe == 0 and _no_mem
+
         # PSR gradients for photonic phases
         for gate_i, p_idx in enumerate(ctx.phase_idx):
             shifts, coeffs = photonic_psr_coeffs_torch(ctx.n_photons[gate_i])
-            df_dtheta = np.zeros_like(g_out_np)
-            for shift, coeff in zip(shifts.numpy(), coeffs.numpy()):
-                theta_shift = theta_np.copy()
-                theta_shift[p_idx] += shift
-                out = run_simulation_sequence_np(
-                    theta_shift,
-                    enc_np,
-                    cfg,
-                    return_class_probs=True,
-                )
-                if out.ndim == 1:
-                    out = out[:, None]
-                df_dtheta += coeff * out
+            shifts_np = shifts.numpy()
+            coeffs_np = coeffs.numpy()
+
+            if _use_psr_batch:
+                # One clements_unitary_batch call for all 2n shifts of this phase.
+                outs = run_psr_forward_batch(
+                    theta_np, p_idx, shifts_np, enc_np, cfg
+                )                                          # (n_shifts, n_data, n_features)
+                df_dtheta = np.einsum("s,sdf->df", coeffs_np, outs)
+            else:
+                df_dtheta = np.zeros_like(g_out_np)
+                for shift, coeff in zip(shifts_np, coeffs_np):
+                    theta_shift = theta_np.copy()
+                    theta_shift[p_idx] += shift
+                    out = run_simulation_sequence_np(
+                        theta_shift,
+                        enc_np,
+                        cfg,
+                        return_class_probs=True,
+                    )
+                    if out.ndim == 1:
+                        out = out[:, None]
+                    df_dtheta += coeff * out
+
             grads[p_idx] = np.real(np.sum(g_out_np * df_dtheta))
 
         # Finite-difference for memristor weight parameters

@@ -471,6 +471,79 @@ def run_vectorized_non_memristive(
     return preds
 
 
+def run_psr_forward_batch(
+    theta_np: np.ndarray,
+    p_idx: int,
+    shifts_np: np.ndarray,
+    enc_np: np.ndarray,
+    cfg: SimConfig,
+) -> np.ndarray:
+    """Evaluate all PSR shifts for one phase in a single ``clements_unitary_batch`` call.
+
+    Instead of running ``n_shifts`` independent forward passes sequentially, this
+    function builds a ``(n_shifts × n_data, n_phases)`` phase matrix and dispatches
+    it to ``clements_unitary_batch`` once, reducing the number of unitary builds from
+    ``n_shifts`` to 1 per trainable phase.
+
+    Parameters
+    ----------
+    theta_np  : (n_params,)  Base parameter vector.
+    p_idx     : int          Index of the phase being PSR-shifted.  Must differ from
+                             ``cfg.encoding_phase_idx`` (the encoding slot is never
+                             in ``phase_idx``).
+    shifts_np : (n_shifts,)  PSR shift values for this phase.
+    enc_np    : (n_data,)    Encoded input phases.
+    cfg       : SimConfig    Feature config from ``MemristorLossPSR._feature_cfg``.
+                             Must satisfy ``backend="numpy"``, ``n_swipe=0``, no
+                             memristive phases.
+
+    Returns
+    -------
+    np.ndarray, shape ``(n_shifts, n_data, n_features)``.
+    """
+    n_shifts = len(shifts_np)
+    n_data = len(enc_np)
+    n_phases = cfg.n_modes * (cfg.n_modes - 1)
+    enc_idx = int(cfg.encoding_phase_idx)
+
+    phases_base = np.asarray(theta_np[:n_phases], dtype=np.float64)
+
+    # (n_shifts, n_phases): apply the PSR shift only at column p_idx
+    theta_batch = np.tile(phases_base, (n_shifts, 1))
+    theta_batch[:, p_idx] = theta_batch[:, p_idx] + shifts_np
+
+    # (n_shifts * n_data, n_phases): tile each shifted-theta for every data point
+    phases_flat = np.repeat(theta_batch, n_data, axis=0)
+
+    # Add the input encoding at enc_idx, cycling through enc_np for each shift block
+    enc_tile = np.tile(np.asarray(enc_np, dtype=np.float64), n_shifts)
+    phases_flat[:, enc_idx] = (phases_flat[:, enc_idx] + enc_tile) % (2.0 * np.pi)
+
+    # One unitary build for all (shift, data-point) combinations
+    u_flat = clements_unitary_batch(phases_flat, cfg.n_modes)  # (n_shifts*n_data, n, n)
+
+    if cfg.output_mode == "singles":
+        input_col = cfg.singles_input_mode
+        probs_flat = np.abs(u_flat[:, :, input_col]) ** 2     # (n_shifts*n_data, n_modes)
+        return probs_flat.reshape(n_shifts, n_data, cfg.n_modes)
+
+    # Coincidence: compute raw pair probabilities then postselect-normalise
+    assert cfg.working_detectors is not None
+    input_occ = tuple(int(x) for x in cfg.input_state)
+    wd = tuple(int(x) for x in cfg.working_detectors)
+
+    coinc_flat = _coincidence_nfold_raw_batch(
+        u_flat, input_occ, wd, cfg.n_modes
+    )                                                          # (n_shifts*n_data, n_ch)
+
+    n_ch = coinc_flat.shape[1]
+    totals = coinc_flat.sum(axis=1, keepdims=True)
+    safe_totals = np.where(totals > 0, totals, 1.0)
+    normalized = np.where(totals > 0, coinc_flat / safe_totals, 1.0 / n_ch)
+
+    return normalized.reshape(n_shifts, n_data, n_ch)
+
+
 def run_fast_memristive_singles(
     params: np.ndarray,
     encoded_phases: np.ndarray,
