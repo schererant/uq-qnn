@@ -125,8 +125,10 @@ def _reference_memristive_singles(
 def _cfg(**overrides: object) -> SimConfig:
     base = dict(
         n_modes=6,
+        n_layers=1,
         input_state=tuple(1 if i == 0 else 0 for i in range(6)),
         encoding_phase_idx=0,
+        n_enc_features=None,
         photon_distinguishability=None,
         target_mode=(5,),
         memristive_phase_idx=(6,),

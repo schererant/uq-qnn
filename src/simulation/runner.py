@@ -84,9 +84,10 @@ def run_simulation_sequence(
 
     validate_sim_config(cfg)
 
-    n_phases = cfg.n_modes * (cfg.n_modes - 1)
+    n_phases_per_layer = cfg.n_phases_per_layer
+    n_phases = cfg.total_mesh_phases
     memristive_indices = normalize_memristive_phase_idx(
-        cfg.memristive_phase_idx, cfg.n_modes, n_phases
+        cfg.memristive_phase_idx, cfg.n_modes, n_phases_per_layer
     )
     n_memristive = len(memristive_indices)
     if n_memristive > 0:
@@ -229,7 +230,7 @@ def run_simulation_sequence(
             mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
             if mode == "discrete":
-                enc_phi = float(encoded_phases[i])
+                enc_row = np.asarray(encoded_phases[i], dtype=np.float64).reshape(-1)
                 if mem_state:
                     assert mem_phis is not None
                     phases_loc = params[:-n_memristive].copy()
@@ -241,9 +242,10 @@ def run_simulation_sequence(
                 t0 = time.perf_counter()
                 u = unitary_for_point(
                     phases_loc,
-                    enc_phi,
+                    enc_row,
                     cfg.n_modes,
                     cfg.encoding_phase_idx,
+                    n_layers=cfg.n_layers,
                 )
                 if cfg.output_mode == "coincidence":
                     input_modes = tuple(
@@ -444,7 +446,7 @@ def run_simulation_sequence(
         mem_phis = mem_state.current_phases(weights, i) if mem_state else None
 
         if mode == "discrete":
-            enc_phi = encoded_phases[i]
+            enc_row = np.asarray(encoded_phases[i], dtype=np.float64).reshape(-1)
             if mem_state:
                 assert mem_phis is not None
                 phases = params[:-n_memristive].copy()
@@ -455,9 +457,10 @@ def run_simulation_sequence(
 
             circ = build_circuit(
                 phases,
-                enc_phi,
+                enc_row,
                 n_modes=cfg.n_modes,
                 encoding_phase_idx=cfg.encoding_phase_idx,
+                n_layers=cfg.n_layers,
             )
             proc = pcvl.Processor("SLOS", circ)
             proc.with_input(input_state)
@@ -537,12 +540,13 @@ def run_simulation_sequence(
                 phases_sw[idx] = mem_phis[j]
 
             for k, off in enumerate(offsets):
-                enc_phi = enc_base[i] + off
+                enc_row = np.asarray(enc_base[i], dtype=np.float64).reshape(-1) + off
                 circ = build_circuit(
                     phases_sw,
-                    enc_phi,
+                    enc_row,
                     n_modes=cfg.n_modes,
                     encoding_phase_idx=cfg.encoding_phase_idx,
+                    n_layers=cfg.n_layers,
                 )
                 proc = pcvl.Processor("SLOS", circ)
                 proc.with_input(input_state)

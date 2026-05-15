@@ -15,6 +15,8 @@ from src.simulation import run_simulation_sequence_np
 
 def _base_cfg(**kwargs) -> SimConfig:
     common: dict = dict(
+        n_layers=1,
+        n_enc_features=None,
         memristive_phase_idx=None,
         memristive_output_modes=None,
         memory_depth=2,

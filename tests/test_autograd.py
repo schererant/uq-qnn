@@ -18,8 +18,10 @@ def test_multi_memristive_weight_gradients_match_finite_difference():
     phase_idx = tuple(i for i in range(n_phases) if i not in mem and i != enc_slot)
     cfg = SimConfig(
         n_modes=n_modes,
+        n_layers=1,
         input_state=(1, 0, 0),
         encoding_phase_idx=enc_slot,
+        n_enc_features=None,
         photon_distinguishability=None,
         target_mode=(2,),
         memristive_phase_idx=memristive_phase_idx,

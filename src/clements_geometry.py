@@ -62,6 +62,45 @@ def get_mzi_modes_for_phase(phase_idx: int, n_modes: int) -> Tuple[int, int]:
     return pairs[mzi_idx]
 
 
+def normalize_encoding_phase_idx(
+    encoding_phase_idx: Union[int, Sequence[int]],
+    n_layers: int,
+    n_modes: int,
+) -> Tuple[int, ...]:
+    """Normalize data-encoding phase slot indices (flat over L stacked meshes)."""
+
+    if n_layers < 1:
+        raise ValueError(f"n_layers must be >= 1, got {n_layers}")
+    n_phases_per_layer = n_modes * (n_modes - 1)
+    total_phases = n_layers * n_phases_per_layer
+    if isinstance(encoding_phase_idx, int):
+        idx = int(encoding_phase_idx)
+        if n_layers != 1:
+            raise ValueError(
+                f"single int encoding_phase_idx requires n_layers=1, got n_layers={n_layers}"
+            )
+        if idx < 0 or idx >= n_phases_per_layer:
+            raise ValueError(
+                f"encoding_phase_idx must be in [0, {n_phases_per_layer - 1}] "
+                f"for {n_modes} modes, got {idx}"
+            )
+        return (idx,)
+    indices = tuple(int(x) for x in encoding_phase_idx)
+    if not indices:
+        raise ValueError("encoding_phase_idx must not be empty")
+    for idx in indices:
+        if idx < 0 or idx >= total_phases:
+            raise ValueError(
+                f"each encoding_phase_idx must be in [0, {total_phases - 1}] "
+                f"for n_layers={n_layers}, n_modes={n_modes}, got {idx}"
+            )
+    if len(indices) != len(set(indices)):
+        raise ValueError(
+            f"encoding_phase_idx must not contain duplicates, got {encoding_phase_idx}"
+        )
+    return indices
+
+
 def normalize_memristive_phase_idx(
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
     n_modes: int,
