@@ -11,8 +11,10 @@ def _cfg(output_mode: str) -> SimConfig:
     if output_mode == "singles":
         return SimConfig(
             n_modes=6,
+            n_layers=1,
             input_state=tuple(1 if i == 0 else 0 for i in range(6)),
             encoding_phase_idx=0,
+            n_enc_features=None,
             photon_distinguishability=None,
             target_mode=(5,),
             memristive_phase_idx=None,
@@ -33,8 +35,10 @@ def _cfg(output_mode: str) -> SimConfig:
         )
     return SimConfig(
         n_modes=6,
+        n_layers=1,
         input_state=tuple(1 if i in (1, 4) else 0 for i in range(6)),
         encoding_phase_idx=5,
+        n_enc_features=None,
         photon_distinguishability="indistinguishable",
         target_mode=(2, 4),
         memristive_phase_idx=None,
@@ -71,13 +75,17 @@ def test_trainable_phase_indices_exclude_encoding_slot():
     from src.circuits import normalize_memristive_phase_idx
 
     sim_cfg = _cfg("singles")
-    expected_phases = sim_cfg.n_modes * (sim_cfg.n_modes - 1)
+    expected_phases = sim_cfg.total_mesh_phases
     mem = normalize_memristive_phase_idx(
-        sim_cfg.memristive_phase_idx, sim_cfg.n_modes, expected_phases
+        sim_cfg.memristive_phase_idx,
+        sim_cfg.n_modes,
+        sim_cfg.n_phases_per_layer,
     )
-    enc_pi = int(sim_cfg.encoding_phase_idx)
-    phase_idx = tuple(i for i in range(expected_phases) if i not in mem and i != enc_pi)
-    assert enc_pi not in phase_idx
+    enc_set = set(sim_cfg.encoding_slots)
+    phase_idx = tuple(
+        i for i in range(expected_phases) if i not in mem and i not in enc_set
+    )
+    assert not enc_set.intersection(phase_idx)
 
 
 def test_frozen_encoding_slot_is_not_clamped_like_a_weight():
@@ -88,9 +96,10 @@ def test_frozen_encoding_slot_is_not_clamped_like_a_weight():
     init_theta = _init_theta(
         np.random.default_rng(42),
         sim_cfg.n_modes,
+        sim_cfg.n_layers,
         sim_cfg.memristive_phase_idx,
     )
-    enc_idx = int(sim_cfg.encoding_phase_idx)
+    enc_idx = sim_cfg.encoding_slots[0]
     assert init_theta[enc_idx] > 1.0
 
     trained_state, _, _ = train_pytorch_generic(
@@ -109,8 +118,10 @@ def test_coincidence_cross_entropy_leaves_target_mode_none():
     """Coincidence CE uses C(W,N) channels; train_pytorch_generic must not fabricate target_mode."""
     cfg = SimConfig(
         n_modes=4,
+        n_layers=1,
         input_state=(1, 1, 0, 0),
         encoding_phase_idx=0,
+        n_enc_features=None,
         photon_distinguishability="indistinguishable",
         target_mode=None,
         memristive_phase_idx=None,

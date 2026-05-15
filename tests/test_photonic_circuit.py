@@ -100,8 +100,10 @@ def test_consistency_with_run_simulation_sequence_np():
     encoded = np.linspace(0.2, 1.3, 8)
     cfg = SimConfig(
         n_modes=n_modes,
+        n_layers=1,
         input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
         encoding_phase_idx=0,
+        n_enc_features=None,
         photon_distinguishability=None,
         target_mode=(n_modes - 1,),
         memristive_phase_idx=None,

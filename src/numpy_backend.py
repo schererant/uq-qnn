@@ -14,7 +14,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from .clements_geometry import clements_mzi_pairs
+from .clements_geometry import clements_mzi_pairs, normalize_encoding_phase_idx
 from .coincidence import (
     apply_noise_to_outcomes,
     detector_tuple_to_binary_occupation,
@@ -199,25 +199,83 @@ def _propagate_state_vector(
     return out
 
 
+def _coerce_encoded_phases(enc_phases: np.ndarray) -> np.ndarray:
+    """Return ``(n_data, n_enc_slots)``; 1D input is treated as a single slot."""
+
+    enc = np.asarray(enc_phases, dtype=np.float64)
+    if enc.ndim == 0:
+        return enc.reshape(1, 1)
+    if enc.ndim == 1:
+        return enc.reshape(-1, 1)
+    if enc.ndim != 2:
+        raise ValueError(f"encoded_phases must be 1D or 2D, got shape {enc.shape}")
+    return enc
+
+
+def clements_stack_unitary_batch(
+    phases: np.ndarray,
+    enc: np.ndarray,
+    encoding_slots: Tuple[int, ...],
+    n_modes: int,
+    n_layers: int,
+) -> np.ndarray:
+    """Stacked Clements meshes with multi-slot internal encoding.
+
+    Returns unitary ``U`` of shape ``(n_data, n_modes, n_modes)`` with
+    ``U = U_{L-1} @ ... @ U_0`` (layer 0 applied first to the input state).
+    """
+    phases = np.asarray(phases, dtype=np.float64).reshape(-1)
+    enc = _coerce_encoded_phases(enc)
+    n_data, n_enc = enc.shape
+    n_ph = n_modes * (n_modes - 1)
+    expected_phases = n_layers * n_ph
+    if len(phases) != expected_phases:
+        raise ValueError(
+            f"Expected {expected_phases} phases for n_layers={n_layers}, "
+            f"n_modes={n_modes}, got {len(phases)}"
+        )
+    if len(encoding_slots) != n_enc:
+        raise ValueError(
+            f"encoding_slots length ({len(encoding_slots)}) must match "
+            f"encoded columns ({n_enc})"
+        )
+
+    phases_tile = np.broadcast_to(phases, (n_data, expected_phases)).copy()
+    for j, slot in enumerate(encoding_slots):
+        phases_tile[:, int(slot)] = (
+            phases_tile[:, int(slot)] + enc[:, j]
+        ) % (2 * np.pi)
+
+    if n_layers == 1:
+        return clements_unitary_batch(phases_tile, n_modes)
+
+    u_out = np.broadcast_to(
+        np.eye(n_modes, dtype=np.complex128), (n_data, n_modes, n_modes)
+    ).copy()
+    for layer in range(n_layers):
+        start = layer * n_ph
+        end = start + n_ph
+        u_layer = clements_unitary_batch(phases_tile[:, start:end], n_modes)
+        u_out = np.matmul(u_layer, u_out)
+    return u_out
+
+
 def _unitary_batch_internal_encoding(
     phases: np.ndarray,
     enc_phases: np.ndarray,
     n_modes: int,
-    encoding_phase_idx: int,
+    encoding_phase_idx: Union[int, Tuple[int, ...]],
+    n_layers: int = 1,
 ) -> np.ndarray:
-    """Unitary per data point with enc added at encoding_phase_idx. Shape (n_data, n, n).
+    """Unitary per data point with data phases added at encoding slots.
 
-    Uses one batched Clements pass (``clements_unitary_batch``) instead of rebuilding the
-    mesh in a Python loop per data point — the latter was ~O(n_data) full factorizations
-    and dominated coincidence training cost after internal-encoding migration.
+    Shape ``(n_data, n_modes, n_modes)``.  Dispatches to
+    :func:`clements_stack_unitary_batch` for multi-layer / multi-slot encoding.
     """
-    enc = np.asarray(enc_phases, dtype=np.float64).reshape(-1)
-    num_pts = len(enc)
-    idx = int(encoding_phase_idx)
+    enc = _coerce_encoded_phases(enc_phases)
+    slots = normalize_encoding_phase_idx(encoding_phase_idx, n_layers, n_modes)
     phases = np.asarray(phases, dtype=np.float64).reshape(-1)
-    phases_tile = np.broadcast_to(phases, (num_pts, phases.shape[0])).copy()
-    phases_tile[:, idx] = (phases_tile[:, idx] + enc) % (2 * np.pi)
-    return clements_unitary_batch(phases_tile, n_modes)
+    return clements_stack_unitary_batch(phases, enc, slots, n_modes, n_layers)
 
 
 def _singles_probabilities_batch(
@@ -410,10 +468,10 @@ def run_vectorized_non_memristive(
     target_mode: Tuple[int, ...] = (
         cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
     )
-    n_phases = cfg.n_modes * (cfg.n_modes - 1)
+    n_phases = cfg.total_mesh_phases
     phases = np.asarray(params[:n_phases], dtype=np.float64)
-    enc = np.asarray(encoded_phases, dtype=np.float64).reshape(-1)
-    num_pts = len(enc)
+    enc = _coerce_encoded_phases(encoded_phases)
+    num_pts = enc.shape[0]
 
     if cfg.output_mode == "coincidence":
         input_occ = tuple(int(x) for x in cfg.input_state)
@@ -438,7 +496,11 @@ def run_vectorized_non_memristive(
         preds = np.zeros(num_pts, dtype=float)
 
     u_batch = _unitary_batch_internal_encoding(
-        phases, enc, cfg.n_modes, cfg.encoding_phase_idx
+        phases,
+        enc,
+        cfg.n_modes,
+        cfg.encoding_phase_idx,
+        n_layers=cfg.n_layers,
     )
 
     if cfg.output_mode == "coincidence":
@@ -502,9 +564,10 @@ def run_psr_forward_batch(
     np.ndarray, shape ``(n_shifts, n_data, n_features)``.
     """
     n_shifts = len(shifts_np)
-    n_data = len(enc_np)
-    n_phases = cfg.n_modes * (cfg.n_modes - 1)
-    enc_idx = int(cfg.encoding_phase_idx)
+    enc_2d = _coerce_encoded_phases(enc_np)
+    n_data = enc_2d.shape[0]
+    n_phases = cfg.total_mesh_phases
+    encoding_slots = cfg.encoding_slots
 
     phases_base = np.asarray(theta_np[:n_phases], dtype=np.float64)
 
@@ -515,12 +578,26 @@ def run_psr_forward_batch(
     # (n_shifts * n_data, n_phases): tile each shifted-theta for every data point
     phases_flat = np.repeat(theta_batch, n_data, axis=0)
 
-    # Add the input encoding at enc_idx, cycling through enc_np for each shift block
-    enc_tile = np.tile(np.asarray(enc_np, dtype=np.float64), n_shifts)
-    phases_flat[:, enc_idx] = (phases_flat[:, enc_idx] + enc_tile) % (2.0 * np.pi)
+    # Add data encoding at every slot (enc columns tiled per shift block)
+    enc_flat = np.tile(enc_2d, (n_shifts, 1))
+    for j, slot in enumerate(encoding_slots):
+        phases_flat[:, int(slot)] = (
+            phases_flat[:, int(slot)] + enc_flat[:, j]
+        ) % (2.0 * np.pi)
 
     # One unitary build for all (shift, data-point) combinations
-    u_flat = clements_unitary_batch(phases_flat, cfg.n_modes)  # (n_shifts*n_data, n, n)
+    if cfg.n_layers == 1:
+        u_flat = clements_unitary_batch(phases_flat, cfg.n_modes)
+    else:
+        u_flat = np.zeros(
+            (n_shifts * n_data, cfg.n_modes, cfg.n_modes), dtype=np.complex128
+        )
+        n_ph = cfg.n_phases_per_layer
+        for layer in range(cfg.n_layers):
+            start = layer * n_ph
+            end = start + n_ph
+            u_layer = clements_unitary_batch(phases_flat[:, start:end], cfg.n_modes)
+            u_flat = np.matmul(u_layer, u_flat)
 
     if cfg.output_mode == "singles":
         input_col = cfg.singles_input_mode
@@ -563,14 +640,19 @@ def run_fast_memristive_singles(
 
     if cfg.output_mode != "singles":
         raise ValueError("run_fast_memristive_singles only supports singles mode")
-    n_phases = cfg.n_modes * (cfg.n_modes - 1)
+    n_phases = cfg.total_mesh_phases
     n_memristive = len(memristive_indices)
     if n_memristive == 0:
         raise ValueError("run_fast_memristive_singles requires memristive phases")
 
     phases_base = np.asarray(params[:n_phases], dtype=np.float64)
     weights = np.asarray(params[n_phases:], dtype=np.float64)
-    enc = np.asarray(encoded_phases, dtype=np.float64).reshape(-1)
+    enc = _coerce_encoded_phases(encoded_phases)
+    if enc.shape[1] != 1:
+        raise ValueError(
+            "run_fast_memristive_singles requires single-slot encoding (1D enc)"
+        )
+    enc = enc[:, 0]
     target_mode: Tuple[int, ...] = (
         cfg.target_mode if cfg.target_mode is not None else (cfg.n_modes - 1,)
     )
@@ -616,7 +698,12 @@ def run_fast_memristive_singles(
             phases_work[list(memristive_indices)] = mem_phis
 
             state_in = _basis_input_state(cfg.singles_input_mode, cfg.n_modes)
-            idx = int(cfg.encoding_phase_idx)
+            enc_slots = cfg.encoding_slots
+            if len(enc_slots) != 1:
+                raise ValueError(
+                    "memristive fast path supports only single-slot encoding"
+                )
+            idx = int(enc_slots[0])
             phases_work[idx] = (phases_work[idx] + enc_phi) % (2 * np.pi)
 
             state_out = _propagate_state_vector(phases_work, state_in, cfg.n_modes)
@@ -686,14 +773,13 @@ def all_coincidences_from_unitary(
 
 def unitary_for_point(
     phases: np.ndarray,
-    enc_phi: float,
+    enc_phi: Union[float, np.ndarray],
     n_modes: int,
-    encoding_phase_idx: int,
+    encoding_phase_idx: Union[int, Tuple[int, ...]],
+    n_layers: int = 1,
 ) -> np.ndarray:
     """Full unitary for one data point (internal mesh encoding only)."""
+    enc = _coerce_encoded_phases(np.asarray(enc_phi, dtype=np.float64))
+    slots = normalize_encoding_phase_idx(encoding_phase_idx, n_layers, n_modes)
     phases = np.asarray(phases, dtype=np.float64).reshape(-1)
-    enc_phi = float(enc_phi) % (2 * np.pi)
-    mp = phases.copy()
-    idx = int(encoding_phase_idx)
-    mp[idx] = (mp[idx] + enc_phi) % (2 * np.pi)
-    return clements_unitary(mp, n_modes)
+    return clements_stack_unitary_batch(phases, enc, slots, n_modes, n_layers)[0]

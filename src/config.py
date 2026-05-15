@@ -15,6 +15,8 @@ from dataclasses import asdict, dataclass, fields
 from dataclasses import replace as _dc_replace
 from typing import Any, Literal, Optional, Tuple, Union
 
+from .clements_geometry import normalize_encoding_phase_idx, normalize_memristive_phase_idx
+
 PhotonDistinguishability = Literal["indistinguishable", "distinguishable"]
 
 # N-fold coincidence guardrails (exact simulation supported, but not always practical).
@@ -28,13 +30,42 @@ def validate_sim_config(cfg: "SimConfig") -> None:
     if cfg.n_modes < 2:
         raise ValueError(f"n_modes must be >= 2, got {cfg.n_modes}")
 
-    n_phases = cfg.n_modes * (cfg.n_modes - 1)
-    enc_idx = int(cfg.encoding_phase_idx)
-    if enc_idx < 0 or enc_idx >= n_phases:
+    if cfg.n_layers < 1:
+        raise ValueError(f"n_layers must be >= 1, got {cfg.n_layers}")
+
+    n_phases_per_layer = cfg.n_modes * (cfg.n_modes - 1)
+    enc_slots = normalize_encoding_phase_idx(
+        cfg.encoding_phase_idx, cfg.n_layers, cfg.n_modes
+    )
+    n_enc = len(enc_slots)
+
+    memristive_indices = normalize_memristive_phase_idx(
+        cfg.memristive_phase_idx, cfg.n_modes, n_phases_per_layer
+    )
+    if memristive_indices and cfg.n_layers > 1:
         raise ValueError(
-            f"encoding_phase_idx must be in [0, {n_phases - 1}] for {cfg.n_modes} modes, "
-            f"got {enc_idx}"
+            "multi-layer re-uploading (n_layers > 1) is not supported with memristive phases; "
+            "use n_layers=1"
         )
+    overlap = set(enc_slots) & set(memristive_indices)
+    if overlap:
+        raise ValueError(
+            f"encoding_phase_idx must not overlap memristive_phase_idx, got {overlap}"
+        )
+
+    if cfg.n_layers > 1:
+        if cfg.n_enc_features is not None:
+            expected_enc = cfg.n_enc_features * cfg.n_layers
+            if n_enc != expected_enc:
+                raise ValueError(
+                    f"encoding_phase_idx length ({n_enc}) must equal "
+                    f"n_enc_features * n_layers ({expected_enc})"
+                )
+        elif n_enc % cfg.n_layers != 0:
+            raise ValueError(
+                f"encoding_phase_idx length ({n_enc}) must be divisible by n_layers "
+                f"({cfg.n_layers})"
+            )
 
     if cfg.output_mode not in ("singles", "coincidence"):
         raise ValueError(
@@ -219,14 +250,14 @@ class CircuitConfig:
 
     n_modes: int
     input_state: Tuple[int, ...]
-    encoding_phase_idx: int
+    encoding_phase_idx: Union[int, Tuple[int, ...]]
     photon_distinguishability: Optional[str]
     output_mode: str
     working_detectors: Optional[Tuple[int, ...]]
 
     @property
     def n_phases(self) -> int:
-        """Total number of Clements mesh phases for ``n_modes``."""
+        """Total Clements mesh phases per layer for ``n_modes``."""
 
         return self.n_modes * (self.n_modes - 1)
 
@@ -261,12 +292,9 @@ class CircuitConfig:
 
         if self.n_modes < 2:
             raise ValueError(f"n_modes must be >= 2, got {self.n_modes}")
-        n_phases = self.n_phases
-        idx = int(self.encoding_phase_idx)
-        if idx < 0 or idx >= n_phases:
-            raise ValueError(
-                f"encoding_phase_idx must be in [0, {n_phases - 1}], got {idx}"
-            )
+        normalize_encoding_phase_idx(
+            self.encoding_phase_idx, 1, self.n_modes
+        )
         if self.output_mode not in ("singles", "coincidence"):
             raise ValueError(
                 "output_mode must be either 'singles' or 'coincidence', "
@@ -359,8 +387,10 @@ class SimConfig:
 
     # ── circuit geometry ───────────────────────────────────────
     n_modes: int
+    n_layers: int
     input_state: Tuple[int, ...]
-    encoding_phase_idx: int
+    encoding_phase_idx: Union[int, Tuple[int, ...]]
+    n_enc_features: Optional[int]
     photon_distinguishability: Optional[str]
     target_mode: Optional[Tuple[int, ...]]
     memristive_phase_idx: Optional[Union[int, Tuple[int, ...]]]
@@ -421,6 +451,8 @@ class SimConfig:
         filtered.setdefault("feedback_mode", "internal_arm")
         filtered.setdefault("feedback_modes", None)
         filtered.setdefault("computation_modes", None)
+        filtered.setdefault("n_layers", 1)
+        filtered.setdefault("n_enc_features", None)
         return cls(**filtered)
 
     @classmethod
@@ -485,10 +517,24 @@ class SimConfig:
         else:
             cm = (int(cm_raw[0]), int(cm_raw[1]))
 
+        enc_raw = cfg["encoding_phase_idx"]
+        if isinstance(enc_raw, int):
+            enc_idx: Union[int, Tuple[int, ...]] = int(enc_raw)
+        elif isinstance(enc_raw, (list, tuple)):
+            enc_idx = tuple(int(x) for x in enc_raw)
+        else:
+            enc_idx = int(enc_raw)
+
+        n_enc_feat = cfg.get("n_enc_features")
+        if n_enc_feat is not None:
+            n_enc_feat = int(n_enc_feat)
+
         return cls(
             n_modes=int(cfg["n_modes"]),
+            n_layers=int(cfg.get("n_layers", 1)),
             input_state=as_int_tuple("input_state"),
-            encoding_phase_idx=int(cfg["encoding_phase_idx"]),
+            encoding_phase_idx=enc_idx,
+            n_enc_features=n_enc_feat,
             photon_distinguishability=dist,
             target_mode=tm,
             memristive_phase_idx=cfg.get("memristive_phase_idx"),
@@ -528,6 +574,26 @@ class SimConfig:
             photon_distinguishability=self.photon_distinguishability,
             output_mode=self.output_mode,
             working_detectors=self.working_detectors,
+        )
+
+    @property
+    def n_phases_per_layer(self) -> int:
+        """Clements mesh phase count for one layer."""
+
+        return self.n_modes * (self.n_modes - 1)
+
+    @property
+    def total_mesh_phases(self) -> int:
+        """Total trainable mesh phase slots across all re-uploading layers."""
+
+        return self.n_layers * self.n_phases_per_layer
+
+    @property
+    def encoding_slots(self) -> Tuple[int, ...]:
+        """Flat indices into the stacked phase vector that receive data."""
+
+        return normalize_encoding_phase_idx(
+            self.encoding_phase_idx, self.n_layers, self.n_modes
         )
 
     @property

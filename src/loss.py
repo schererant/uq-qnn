@@ -173,7 +173,10 @@ class PhotonicModel(torch.nn.Module):
     ) -> None:
         super().__init__()
         self.theta = torch.nn.Parameter(torch.tensor(init_theta, dtype=torch.float64))
-        self.register_buffer("enc", torch.from_numpy(enc_np).double())
+        enc_arr = np.asarray(enc_np, dtype=np.float64)
+        if enc_arr.ndim == 1:
+            enc_arr = enc_arr.reshape(-1, 1)
+        self.register_buffer("enc", torch.from_numpy(enc_arr).double())
         self.phase_idx = phase_idx
         self.sim_cfg = sim_cfg
 

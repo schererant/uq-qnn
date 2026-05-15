@@ -3,8 +3,8 @@
 """
 Two Moons (Half-Moons) Classification Example using the UQ-QNN framework.
 
-Demonstrates 2D classification with custom phase encoding,
-decision-boundary visualisation, and uncertainty estimation.
+Demonstrates 2D classification with Mauser-style multi-slot phase encoding
+and L=2 re-uploading layers, decision-boundary visualisation, and uncertainty.
 """
 
 import sys
@@ -15,41 +15,43 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.data import get_two_moons_data, encode_2d_to_phase
+from src.data import get_two_moons_data, encode_2d_to_phases_multi
 from src.experiment import Experiment
 
 # ===================== EXPERIMENT CONFIG =====================
+N_LAYERS = 2
 CONFIG = {
-    # Circuit
+    # Circuit — Mauser-style: x₁→slot 0, x₂→slot 1 per layer; same x re-uploaded L times
     "n_modes": 3,
+    "n_layers": N_LAYERS,
     "input_state": (1, 0, 0),
-    "encoding_phase_idx": 0,
+    "encoding_phase_idx": (0, 1, 6, 7),
+    "n_enc_features": 2,
     "photon_distinguishability": None,
     "target_mode": (1, 2),
-    "memristive_phase_idx": [2],
+    "memristive_phase_idx": None,
     "memristive_output_modes": None,
     # Task — binary classification
     "output_mode": "singles",
     "working_detectors": None,
     "loss_type": "cross_entropy",
     "n_classes": 2,
-    # Training
-    "lr": 0.01,
-    "epochs": 100,
-    "n_samples": 1000,
+    # Training (more epochs helps PSR + cross-entropy on two moons converge)
+    "lr": 0.02,
+    "epochs": 600,
+    "n_samples": 2000,
     "memory_depth": 3,
     "n_swipe": 0,
     "swipe_span": 0.0,
     "noise_std": None,
-    "seed": 42,
+    "seed": 17,
     # Backend
     "sim_backend": "numpy",
     # Data
     "data_n_samples": 1000,
     "data_noise": 0.05,
-    "encoding_method": "radial",
     # Uncertainty
-    "unc_n_passes": 10,
+    "unc_n_passes": 5,
     "unc_noise_std": 0.05,
 }
 # =============================================================
@@ -70,9 +72,8 @@ def main():
         print(f"Training set: {X_train.shape[0]} samples")
         print(f"Test set:     {X_test.shape[0]} samples")
 
-        enc_method = CONFIG["encoding_method"]
-        enc_train = encode_2d_to_phase(X_train, method=enc_method)
-        enc_test = encode_2d_to_phase(X_test, method=enc_method)
+        enc_train = encode_2d_to_phases_multi(X_train, n_layers=N_LAYERS)
+        enc_test = encode_2d_to_phases_multi(X_test, n_layers=N_LAYERS)
 
         trained_state, history, model = exp.train(enc_train, y_train, encoded=True)
         exp.save_metrics({"final_loss": history[-1]})
@@ -104,7 +105,7 @@ def main():
             np.linspace(y_min, y_max, 100),
         )
         grid_points = np.c_[xx.ravel(), yy.ravel()]
-        enc_grid = encode_2d_to_phase(grid_points, method=enc_method)
+        enc_grid = encode_2d_to_phases_multi(grid_points, n_layers=N_LAYERS)
         grid_probs = model.predict(enc_grid)
         grid_preds = np.argmax(grid_probs, axis=1).reshape(xx.shape)
         grid_entropy = (-np.sum(grid_probs * np.log(grid_probs + eps), axis=1)).reshape(

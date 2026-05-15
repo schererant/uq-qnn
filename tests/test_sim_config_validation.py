@@ -8,8 +8,10 @@ from src.config import SimConfig, validate_sim_config
 def _minimal_singles(**kwargs: object) -> SimConfig:
     base = dict(
         n_modes=4,
+        n_layers=1,
         input_state=(1, 0, 0, 0),
         encoding_phase_idx=0,
+        n_enc_features=None,
         photon_distinguishability=None,
         target_mode=(3,),
         memristive_phase_idx=None,
@@ -35,8 +37,10 @@ def _minimal_singles(**kwargs: object) -> SimConfig:
 def _minimal_coincidence(**kwargs: object) -> SimConfig:
     base = dict(
         n_modes=4,
+        n_layers=1,
         input_state=(1, 1, 0, 0),
         encoding_phase_idx=0,
+        n_enc_features=None,
         photon_distinguishability="indistinguishable",
         target_mode=(0, 2),
         memristive_phase_idx=None,

@@ -17,16 +17,18 @@ logger = get_logger(__name__)
 def _init_theta(
     rng: np.random.Generator,
     n_modes: int,
+    n_layers: int,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]],
 ) -> np.ndarray:
     """
     Initializes model parameters. Architecture is always Clements.
     params = [phase_0, ..., phase_{n-1}] or [phases..., w_0, ..., w_{k-1}] if memristive.
     """
-    expected_phases = n_modes * (n_modes - 1)
+    n_phases_per_layer = n_modes * (n_modes - 1)
+    expected_phases = n_layers * n_phases_per_layer
     phases = rng.uniform(0.0, 2 * np.pi, size=expected_phases)
     memristive_indices = normalize_memristive_phase_idx(
-        memristive_phase_idx, n_modes, expected_phases
+        memristive_phase_idx, n_modes, n_phases_per_layer
     )
     if len(memristive_indices) == 0:
         return phases
@@ -93,16 +95,23 @@ def train_pytorch_generic(
 
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(
-        rng, sim_cfg_work.n_modes, sim_cfg_work.memristive_phase_idx
+        rng,
+        sim_cfg_work.n_modes,
+        sim_cfg_work.n_layers,
+        sim_cfg_work.memristive_phase_idx,
     )
 
-    expected_phases = sim_cfg_work.n_modes * (sim_cfg_work.n_modes - 1)
+    expected_phases = sim_cfg_work.total_mesh_phases
     memristive_indices = normalize_memristive_phase_idx(
-        sim_cfg_work.memristive_phase_idx, sim_cfg_work.n_modes, expected_phases
+        sim_cfg_work.memristive_phase_idx,
+        sim_cfg_work.n_modes,
+        sim_cfg_work.n_phases_per_layer,
     )
-    enc_pi = int(sim_cfg_work.encoding_phase_idx)
+    enc_set = set(sim_cfg_work.encoding_slots)
     phase_idx = tuple(
-        i for i in range(expected_phases) if i not in memristive_indices and i != enc_pi
+        i
+        for i in range(expected_phases)
+        if i not in memristive_indices and i not in enc_set
     )
 
     model = PhotonicModel(
@@ -208,8 +217,10 @@ def gradient_check(
 
     cfg = SimConfig(
         n_modes=n_modes,
+        n_layers=1,
         input_state=tuple(1 if i == 0 else 0 for i in range(n_modes)),
         encoding_phase_idx=enc_slot,
+        n_enc_features=None,
         photon_distinguishability=None,
         target_mode=(n_modes - 1,) if n_modes else None,
         memristive_phase_idx=(

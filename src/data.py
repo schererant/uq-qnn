@@ -463,6 +463,38 @@ def encode_2d_to_phase(X_2d: np.ndarray, method: str = "weighted_sum") -> np.nda
     return encoded_phases
 
 
+def encode_2d_to_phases_multi(
+    X_2d: np.ndarray,
+    n_layers: int,
+    method: str = "arccos",
+) -> np.ndarray:
+    """
+    Encode 2D features into multiple phase slots for Mauser-style re-uploading.
+
+    Each coordinate maps to its own phase via ``2 * arccos(x)`` (repo convention).
+    The same ``(phi_x0, phi_x1)`` pair is repeated for each of ``n_layers`` blocks.
+
+    Args:
+        X_2d: Shape ``(n_samples, 2)``, values in ``[0, 1]``.
+        n_layers: Number of re-uploading layers (repeats the 2-slot block).
+        method: Only ``'arccos'`` is supported.
+
+    Returns:
+        Encoded phases of shape ``(n_samples, 2 * n_layers)``.
+    """
+    if X_2d.ndim != 2 or X_2d.shape[1] != 2:
+        raise ValueError(
+            f"Expected 2D array with shape (n_samples, 2), got {X_2d.shape}"
+        )
+    if n_layers < 1:
+        raise ValueError(f"n_layers must be >= 1, got {n_layers}")
+    if method != "arccos":
+        raise ValueError(f"Unknown encoding method: {method}")
+
+    phi_xy = 2 * np.arccos(np.clip(X_2d, 0.0, 1.0))
+    return np.tile(phi_xy, (1, n_layers))
+
+
 def get_classification_data(
     n_data: int = 100,
     n_classes: int = 2,
