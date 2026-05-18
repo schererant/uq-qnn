@@ -7,7 +7,8 @@ Provides a context manager that handles:
 - Full-fidelity run.log via the package logging configuration (no stdout tee)
 - Config validation and serialization
 - Training, prediction, and uncertainty analysis via config
-- Artifact tracking and run_summary.json
+- Artifact tracking, ``trained_state.json`` / ``loss_history.json`` after training,
+  and run_summary.json
 
 No default config values — every parameter must be set explicitly
 in the experiment script's CONFIG dict.
@@ -33,6 +34,9 @@ from src.logging_config import add_file_handler, get_logger, remove_file_handler
 from src.simulation import sim_logger
 
 logger = get_logger(__name__)
+
+_TRAINED_STATE_FILENAME = "trained_state.json"
+_LOSS_HISTORY_FILENAME = "loss_history.json"
 
 _REQUIRED_CONFIG_KEYS = frozenset(
     {
@@ -180,7 +184,46 @@ class Experiment:
         if not encoded:
             X = 2 * np.arccos(X)
 
-        return train_pytorch_generic(X, y, **self._training_kwargs())
+        trained_state, history, model = train_pytorch_generic(
+            X, y, **self._training_kwargs()
+        )
+        self._save_training_artifacts(trained_state, history)
+        return trained_state, history, model
+
+    def _save_training_artifacts(
+        self,
+        trained_state: TrainedPhotonicState,
+        history: list[float],
+    ) -> dict[str, str]:
+        """Persist trained weights and loss curve under ``run_dir``."""
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+
+        state_path = self.run_dir / _TRAINED_STATE_FILENAME
+        history_path = self.run_dir / _LOSS_HISTORY_FILENAME
+
+        trained_state.save_json(state_path)
+        history_path.write_text(
+            json.dumps(history, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        refs = {
+            "trained_state": _TRAINED_STATE_FILENAME,
+            "loss_history": _LOSS_HISTORY_FILENAME,
+        }
+        self.metrics.update(refs)
+
+        for path in (state_path, history_path):
+            resolved = str(path.resolve())
+            if resolved not in self.artifacts:
+                self.artifacts.append(resolved)
+
+        logger.info(
+            "Saved training artifacts: %s, %s",
+            state_path.name,
+            history_path.name,
+        )
+        return refs
 
     def _training_kwargs(self) -> dict[str, Any]:
         c = self.config

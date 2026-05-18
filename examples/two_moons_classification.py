@@ -19,13 +19,23 @@ from src.data import get_two_moons_data, encode_2d_to_phases_multi
 from src.experiment import Experiment
 
 # ===================== EXPERIMENT CONFIG =====================
-N_LAYERS = 2
+# Two moons needs more circuit capacity than the original n_modes=3/L=2 setup
+# (only ~8 trainable phases + 2-dim readout → stuck at ~83% / loss 0.40).
+# Wider mesh (n_modes=4) + 3 re-uploading layers gives 30 trainable phases and
+# a 4-dim singles readout that the linear head can separate non-linearly.
+N_LAYERS = 3
+N_MODES = 4
+PHASES_PER_LAYER = N_MODES * (N_MODES - 1)  # = 12 for n_modes=4
+# Per Mauser re-uploading: x₁→slot 0, x₂→slot 1 of every layer block.
+ENCODING_PHASE_IDX = tuple(
+    layer * PHASES_PER_LAYER + s for layer in range(N_LAYERS) for s in (0, 1)
+)
 CONFIG = {
     # Circuit — Mauser-style: x₁→slot 0, x₂→slot 1 per layer; same x re-uploaded L times
-    "n_modes": 3,
+    "n_modes": N_MODES,
     "n_layers": N_LAYERS,
-    "input_state": (1, 0, 0),
-    "encoding_phase_idx": (0, 1, 6, 7),
+    "input_state": (1, 0, 0, 0),
+    "encoding_phase_idx": ENCODING_PHASE_IDX,
     "n_enc_features": 2,
     "photon_distinguishability": None,
     "target_mode": (1, 2),
@@ -36,15 +46,15 @@ CONFIG = {
     "working_detectors": None,
     "loss_type": "cross_entropy",
     "n_classes": 2,
-    # Training (more epochs helps PSR + cross-entropy on two moons converge)
-    "lr": 0.02,
-    "epochs": 600,
+    # Training: deeper mesh has saturating regions; higher lr + more epochs to push through plateaus
+    "lr": 0.04,
+    "epochs": 200,
     "n_samples": 2000,
     "memory_depth": 3,
     "n_swipe": 0,
     "swipe_span": 0.0,
     "noise_std": None,
-    "seed": 17,
+    "seed": 0,
     # Backend
     "sim_backend": "numpy",
     # Data

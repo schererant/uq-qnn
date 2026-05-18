@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import warnings
 from typing import cast
 
@@ -61,6 +62,41 @@ def test_predict_deprecated_wrapper_matches_serialized_state():
 
     np.testing.assert_allclose(preds, expected, atol=1e-12)
     assert any(issubclass(w.category, DeprecationWarning) for w in caught)
+
+
+def test_train_saves_artifacts_and_run_summary_refs(tmp_path):
+    config = base_config()
+    X_train = np.array([0.2, 0.4, 0.8], dtype=np.float64)
+    y_train = np.array([0.3, 0.6, 0.9], dtype=np.float64)
+
+    exp = Experiment("artifact_save", config=config)
+    exp.project_root = tmp_path
+    exp.run_dir = tmp_path / "reports" / "artifact_save" / exp.timestamp
+
+    with exp:
+        trained_state, history, _ = exp.train(X_train, y_train)
+
+    state_path = exp.run_dir / "trained_state.json"
+    history_path = exp.run_dir / "loss_history.json"
+    summary_path = exp.run_dir / "run_summary.json"
+
+    assert state_path.is_file()
+    assert history_path.is_file()
+    assert summary_path.is_file()
+
+    restored = TrainedPhotonicState.load_json(state_path)
+    np.testing.assert_allclose(
+        restored.theta_array(),
+        trained_state.theta_array(),
+        atol=1e-12,
+    )
+    assert json.loads(history_path.read_text(encoding="utf-8")) == history
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["metrics"]["trained_state"] == "trained_state.json"
+    assert summary["metrics"]["loss_history"] == "loss_history.json"
+    assert str(state_path.resolve()) in summary["artifacts"]
+    assert str(history_path.resolve()) in summary["artifacts"]
 
 
 def test_trained_state_roundtrip_preserves_predictions():
