@@ -26,10 +26,13 @@ training_loss.png       Log-scale convergence curve
 #   2. Use `with Experiment(...) as exp:` context manager for lifecycle.
 #   3. Use exp.train() to get `trained_state`, then call
 #      `trained_state.predict(...)` / `exp.run_uncertainty_analysis(...)`.
+#      Training auto-writes trained_state.json and loss_history.json to run_dir.
 #   4. Use exp.savefig() to save plots (auto-tracks artifacts).
 #   5. Use exp.save_metrics() to record numeric results.
 #   6. Use matplotlib "Agg" backend for headless environments.
-#   7. Reports go to reports/<experiment_slug>/<timestamp>/.
+#   7. Reports go to reports/<experiment_slug>/<timestamp>/ (run.log,
+#      run_summary.json, trained_state.json, loss_history.json, figures).
+#   8. Reload later: TrainedPhotonicState.load_json(run_dir / "trained_state.json")
 #
 # Available data functions (src/data.py):
 #   Regression (1D → 1D, values in [0,1]):

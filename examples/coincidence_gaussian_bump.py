@@ -251,10 +251,6 @@ def main() -> None:
             )
             metrics = _compute_metrics(y_test, unc["mean"], unc["std"])
 
-            state_path = exp.run_dir / "trained_state.json"
-            trained_state.save_json(state_path)
-            exp.artifacts.append(str(state_path))
-
             exp.save_metrics(
                 {
                     "variant": variant_name,
