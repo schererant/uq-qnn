@@ -118,6 +118,7 @@ Training and experiment code should use **occupation-vector** `input_state` and 
 - Writes a structured `run.log` via the package logger
 - Validates that all required config keys are present (no hidden defaults)
 - Writes a `run_summary.json` (config, metrics, artifacts, git SHA) on exit
+- After `train()`, saves `trained_state.json` (mesh + linear head + `sim_cfg`) and `loss_history.json` under the run directory
 - Exposes `train`, `run_uncertainty_analysis`, and `savefig` helpers, plus a deprecated `predict` wrapper
 - Builds a frozen `SimConfig` from your config dict automatically
 
@@ -126,11 +127,22 @@ Training and experiment code should use **occupation-vector** `input_state` and 
 1. **Define a CONFIG dict** with all required keys (see [Config reference](#config-reference) below).
 2. **Prepare your data** using the built-in generators or your own arrays.
 3. **Open an `Experiment` context** -- this creates the run directory and starts logging.
-4. **Train** with `exp.train(X, y)` -- phase encoding is applied automatically and you get back a serializable `trained_state`.
+4. **Train** with `exp.train(X, y)` -- phase encoding is applied automatically; you get back a `trained_state` and the run directory also receives `trained_state.json` and `loss_history.json`.
 5. **Predict** with `trained_state.predict(encoded_phases)` on test data.
 6. **Run UQ** with `exp.run_uncertainty_analysis(trained_state, ...)` for uncertainty estimates.
 7. **Save figures** with `exp.savefig(fig, "name.png")`.
-8. **Exit the context** -- `run_summary.json` is written automatically.
+8. **Exit the context** -- `run_summary.json` is written automatically (includes artifact paths and metric keys `trained_state` / `loss_history`).
+
+To **reload a completed run** without retraining:
+
+```python
+from pathlib import Path
+from src.loss import TrainedPhotonicState
+
+run_dir = Path("reports/simple_regression/2026-05-18_120000")
+state = TrainedPhotonicState.load_json(run_dir / "trained_state.json")
+preds = state.predict(encoded_test)  # same encoding as training
+```
 
 ### Full regression example
 

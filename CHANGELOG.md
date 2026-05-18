@@ -1,5 +1,41 @@
 # Changelog
 
+## 2026-05-18 — Auto-save training artifacts in experiment runs
+
+### Why
+
+Runs under `reports/` recorded metrics and figures but not the trained weights, so reproducing inference, UQ, or loss curves required retraining (~minutes per two-moons run). A single JSON checkpoint per run is enough to reload the full model (mesh phases + linear head).
+
+### Added
+
+- **`Experiment.train()`** — After training, writes **`trained_state.json`** (`TrainedPhotonicState`: `theta`, head weights/bias, embedded `sim_cfg`) and **`loss_history.json`** (per-epoch losses) under **`run_dir`**. Both paths are appended to **`artifacts`** and referenced in **`run_summary.json` → `metrics`** as **`trained_state`** and **`loss_history`** (filenames only).
+- **`tests/test_experiment.py`** — **`test_train_saves_artifacts_and_run_summary_refs`** checks file contents and summary linkage.
+
+### Changed
+
+- **`src/experiment.py`** — Module docstring lists the new artifacts.
+- **`examples/coincidence_gaussian_bump.py`**, **`examples/coincidence_hard_function_search.py`** — Removed redundant manual **`trained_state.save_json()`** (now handled by **`Experiment`**).
+- **`README.md`**, **`LLM_INDEX.md`**, **`CLAUDE.md`**, **`examples/TEMPLATE.py`** — Document run-directory layout and reloading via **`TrainedPhotonicState.load_json()`**.
+
+### Usage
+
+```python
+from pathlib import Path
+from src.loss import TrainedPhotonicState
+
+run_dir = Path("reports/two_moons_classification/2026-05-18_133552")
+state = TrainedPhotonicState.load_json(run_dir / "trained_state.json")
+probs = state.predict(encoded_test_phases)
+```
+
+Existing runs without these files are unchanged; re-run training or copy weights manually if you need checkpoints for older timestamps.
+
+### Fixed (same release)
+
+- **`train_pytorch_generic`** — **`seed`** now also seeds **PyTorch** (linear readout init) via **`_seed_training_rngs()`**, so identical **`CONFIG["seed"]`** yields identical training trajectories on the same code version (previously only mesh phases and data were fixed; head weights differed run-to-run).
+
+---
+
 ## 2026-04-13 — Serializable trained state, deprecated `Experiment.predict()`, head-aware UQ
 
 ### Why
@@ -424,7 +460,7 @@ A follow-on issue appeared after switching the NumPy path to **internal** encodi
 
 ### Example run reports
 
-- **Figures and summaries** — Example scripts save outputs under **`reports/<slug>/<YYYY-mm-dd_HHMMSS>/`** via **`Experiment`** (`run_summary.json` schema **`uq-qnn.experiment_run.v1`**). Repo **`.gitignore`** ignores generated run folders; **`reports/README.md`** and **`reports/.gitkeep`** stay tracked.
+- **Figures and summaries** — Example scripts save outputs under **`reports/<slug>/<YYYY-mm-dd_HHMMSS>/`** via **`Experiment`** (`run_summary.json` schema **`uq-qnn.experiment_run.v1`**, plus **`trained_state.json`** / **`loss_history.json`** after training since 2026-05-18). Repo **`.gitignore`** ignores generated run folders; **`reports/README.md`** and **`reports/.gitkeep`** stay tracked.
 
 ## 2026-03-24 — Fix broken PSR gradients for coincidence (2-photon) mode
 

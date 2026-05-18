@@ -14,6 +14,14 @@ from .loss import PhotonicModel, TrainedPhotonicState
 logger = get_logger(__name__)
 
 
+def _seed_training_rngs(seed: int) -> None:
+    """Seed PyTorch (and legacy NumPy) RNGs so mesh + linear head init match across runs."""
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
 def _init_theta(
     rng: np.random.Generator,
     n_modes: int,
@@ -54,7 +62,7 @@ def train_pytorch_generic(
         sim_cfg (SimConfig): Circuit and simulation parameters.
         lr (float): Learning rate.
         epochs (int): Number of training epochs.
-        seed (int): Random seed for reproducibility.
+        seed (int): Random seed for mesh init (NumPy) and linear head init (PyTorch).
         verbose (bool): If True, print per-epoch loss and final parameters.
     Returns:
         Serialized trained state, loss history, and trained :class:`PhotonicModel`.
@@ -93,6 +101,7 @@ def train_pytorch_generic(
         }
         log_params(logger, params)
 
+    _seed_training_rngs(seed)
     rng = np.random.default_rng(seed)
     init_theta = _init_theta(
         rng,

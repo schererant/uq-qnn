@@ -114,6 +114,49 @@ def test_frozen_encoding_slot_is_not_clamped_like_a_weight():
     assert np.isclose(trained_state.theta[enc_idx], init_theta[enc_idx])
 
 
+def test_train_pytorch_generic_is_reproducible_with_seed():
+    cfg = SimConfig(
+        n_modes=4,
+        n_layers=1,
+        input_state=(1, 0, 0, 0),
+        encoding_phase_idx=(0, 1),
+        n_enc_features=2,
+        photon_distinguishability=None,
+        target_mode=(1, 2),
+        memristive_phase_idx=None,
+        memristive_output_modes=None,
+        output_mode="singles",
+        working_detectors=None,
+        noise_std=None,
+        n_samples=80,
+        memory_depth=1,
+        n_swipe=0,
+        swipe_span=0.0,
+        backend="numpy",
+        loss_type="cross_entropy",
+        n_classes=2,
+        feedback_mode="internal_arm",
+        feedback_modes=None,
+        computation_modes=None,
+    )
+    enc = np.array([[0.3, 1.0], [0.9, 0.5]], dtype=np.float64)
+    y = np.array([0, 1], dtype=np.int64)
+
+    def run_once():
+        state, hist, model = train_pytorch_generic(
+            enc, y, sim_cfg=cfg, lr=0.04, epochs=2, seed=17
+        )
+        head_w = model.head.weight.detach().cpu().numpy()
+        return state.theta, head_w, hist
+
+    theta_a, head_a, hist_a = run_once()
+    theta_b, head_b, hist_b = run_once()
+
+    np.testing.assert_allclose(theta_a, theta_b, rtol=0, atol=0)
+    np.testing.assert_allclose(head_a, head_b, rtol=0, atol=0)
+    assert hist_a == hist_b
+
+
 def test_coincidence_cross_entropy_leaves_target_mode_none():
     """Coincidence CE uses C(W,N) channels; train_pytorch_generic must not fabricate target_mode."""
     cfg = SimConfig(
