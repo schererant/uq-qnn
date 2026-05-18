@@ -10,7 +10,8 @@ failure mode in ``examples/function_comparison.py``. Each preset runs as its
 own ``Experiment`` and stores:
 
 - ``summary.png``           prediction fit + uncertainty + loss curve
-- ``trained_state.json``    serialized photonic parameters + linear head
+- ``trained_state.json``    serialized photonic parameters + linear head (auto-saved by ``Experiment.train()``)
+- ``loss_history.json``     per-epoch training loss
 - ``run_summary.json``      config and metrics
 
 Edit ``PRESET_NAMES`` below to run a subset.
@@ -301,10 +302,6 @@ def _run_preset(name: str, spec: dict[str, Any]) -> dict[str, float]:
             noise_std=float(config["unc_noise_std"]),
         )
         metrics = _compute_metrics(y_test, unc["mean"], unc["std"])
-
-        state_path = exp.run_dir / "trained_state.json"
-        trained_state.save_json(state_path)
-        exp.artifacts.append(str(state_path))
 
         exp.save_metrics(
             {
