@@ -12,6 +12,8 @@ from __future__ import annotations
 from math import factorial
 from typing import Optional, Sequence, Tuple, Union
 
+import time
+
 import numpy as np
 
 from .clements_geometry import clements_mzi_pairs, normalize_encoding_phase_idx
@@ -569,6 +571,7 @@ def run_psr_forward_batch(
     n_phases = cfg.total_mesh_phases
     encoding_slots = cfg.encoding_slots
 
+    t0 = time.perf_counter()
     phases_base = np.asarray(theta_np[:n_phases], dtype=np.float64)
 
     # (n_shifts, n_phases): apply the PSR shift only at column p_idx
@@ -602,23 +605,28 @@ def run_psr_forward_batch(
     if cfg.output_mode == "singles":
         input_col = cfg.singles_input_mode
         probs_flat = np.abs(u_flat[:, :, input_col]) ** 2     # (n_shifts*n_data, n_modes)
-        return probs_flat.reshape(n_shifts, n_data, cfg.n_modes)
+        out = probs_flat.reshape(n_shifts, n_data, cfg.n_modes)
+    else:
+        # Coincidence: compute raw pair probabilities then postselect-normalise
+        assert cfg.working_detectors is not None
+        input_occ = tuple(int(x) for x in cfg.input_state)
+        wd = tuple(int(x) for x in cfg.working_detectors)
 
-    # Coincidence: compute raw pair probabilities then postselect-normalise
-    assert cfg.working_detectors is not None
-    input_occ = tuple(int(x) for x in cfg.input_state)
-    wd = tuple(int(x) for x in cfg.working_detectors)
+        coinc_flat = _coincidence_nfold_raw_batch(
+            u_flat, input_occ, wd, cfg.n_modes
+        )                                                          # (n_shifts*n_data, n_ch)
 
-    coinc_flat = _coincidence_nfold_raw_batch(
-        u_flat, input_occ, wd, cfg.n_modes
-    )                                                          # (n_shifts*n_data, n_ch)
+        n_ch = coinc_flat.shape[1]
+        totals = coinc_flat.sum(axis=1, keepdims=True)
+        safe_totals = np.where(totals > 0, totals, 1.0)
+        normalized = np.where(totals > 0, coinc_flat / safe_totals, 1.0 / n_ch)
 
-    n_ch = coinc_flat.shape[1]
-    totals = coinc_flat.sum(axis=1, keepdims=True)
-    safe_totals = np.where(totals > 0, totals, 1.0)
-    normalized = np.where(totals > 0, coinc_flat / safe_totals, 1.0 / n_ch)
+        out = normalized.reshape(n_shifts, n_data, n_ch)
 
-    return normalized.reshape(n_shifts, n_data, n_ch)
+    from .simulation.logger import sim_logger
+
+    sim_logger.log_circuits(time.perf_counter() - t0, n_shifts * n_data)
+    return out
 
 
 def run_fast_memristive_singles(

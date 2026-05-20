@@ -3,8 +3,9 @@
 """
 Two Moons (Half-Moons) Classification Example using the UQ-QNN framework.
 
-Demonstrates 2D classification with Mauser-style multi-slot phase encoding
-and L=2 re-uploading layers, decision-boundary visualisation, and uncertainty.
+Demonstrates 2D classification with Mauser-style multi-slot phase encoding,
+L=3 re-uploading layers, decision-boundary visualisation, and optional
+parameter-perturbation uncertainty (set unc_n_passes > 0).
 """
 
 import sys
@@ -48,7 +49,7 @@ CONFIG = {
     "n_classes": 2,
     # Training: deeper mesh has saturating regions; higher lr + more epochs to push through plateaus
     "lr": 0.04,
-    "epochs": 200,
+    "epochs": 1000,
     "n_samples": 2000,
     "memory_depth": 3,
     "n_swipe": 0,
@@ -58,17 +59,33 @@ CONFIG = {
     # Backend
     "sim_backend": "numpy",
     # Data
-    "data_n_samples": 1000,
-    "data_noise": 0.05,
-    # Uncertainty
-    "unc_n_passes": 5,
+    "data_n_samples": 2000,
+    "data_noise": 0.08,
+    # Uncertainty — 0 skips UQ; e.g. 5–20 enables parameter-perturbation analysis
+    "unc_n_passes": 0,
     "unc_noise_std": 0.05,
 }
 # =============================================================
 
 
+def _scatter_test(ax, X_test, y_test, n_classes, colors, *, s=15):
+    for c in range(n_classes):
+        mask = y_test == c
+        ax.scatter(
+            X_test[mask, 0],
+            X_test[mask, 1],
+            c=colors[c],
+            alpha=0.6,
+            s=s,
+            edgecolors="black",
+            linewidths=0.5,
+        )
+
+
 def main():
     n_classes = CONFIG["n_classes"]
+    uq_enabled = CONFIG["unc_n_passes"] > 0
+    eps = 1e-15
 
     with Experiment("Two Moons Classification", config=CONFIG) as exp:
         np.random.seed(CONFIG["seed"])
@@ -86,7 +103,7 @@ def main():
         enc_test = encode_2d_to_phases_multi(X_test, n_layers=N_LAYERS)
 
         trained_state, history, model = exp.train(enc_train, y_train, encoded=True)
-        exp.save_metrics({"final_loss": history[-1]})
+        exp.save_metrics({"final_loss": history[-1], "uq_enabled": uq_enabled})
 
         preds_probs = model.predict(enc_test)
         preds_discrete = np.argmax(preds_probs, axis=1)
@@ -96,16 +113,19 @@ def main():
         print("\nClassification Report:")
         print(classification_report(y_test, preds_discrete))
 
-        unc = exp.run_uncertainty_analysis(
-            trained_state,
-            enc_test,
-            n_passes=CONFIG["unc_n_passes"],
-            noise_std=CONFIG["unc_noise_std"],
-        )
-        mean_probs = unc["mean"]
-        mean_preds = np.argmax(mean_probs, axis=1)
+        metrics: dict[str, float | bool] = {"test_accuracy": float(accuracy)}
 
-        eps = 1e-15
+        if uq_enabled:
+            test_unc = exp.run_uncertainty_analysis(
+                trained_state,
+                enc_test,
+                n_passes=CONFIG["unc_n_passes"],
+                noise_std=CONFIG["unc_noise_std"],
+            )
+            if test_unc is not None:
+                metrics["uq_mean_test_std"] = float(
+                    test_unc["std"].max(axis=1).mean()
+                )
 
         # Decision-boundary grid
         x_min, x_max = X_test[:, 0].min() - 0.1, X_test[:, 0].max() + 0.1
@@ -123,7 +143,19 @@ def main():
         )
         grid_p1 = grid_probs[:, 1].reshape(xx.shape)
 
-        exp.save_metrics({"test_accuracy": float(accuracy)})
+        grid_std_p1 = None
+        if uq_enabled:
+            grid_unc = exp.run_uncertainty_analysis(
+                trained_state,
+                enc_grid,
+                n_passes=CONFIG["unc_n_passes"],
+                noise_std=CONFIG["unc_noise_std"],
+            )
+            if grid_unc is not None:
+                grid_std_p1 = grid_unc["std"][:, 1].reshape(xx.shape)
+                metrics["uq_mean_grid_std_p1"] = float(grid_std_p1.mean())
+
+        exp.save_metrics(metrics)
 
         # ── plots ──
         fig = plt.figure(figsize=(18, 12))
@@ -152,58 +184,32 @@ def main():
 
         ax3 = fig.add_subplot(2, 3, 3)
         ax3.contourf(xx, yy, grid_preds, alpha=0.3, levels=[0, 0.5, 1], colors=colors)
-        for c in range(n_classes):
-            mask = y_test == c
-            ax3.scatter(
-                X_test[mask, 0],
-                X_test[mask, 1],
-                c=colors[c],
-                label=f"Class {c}",
-                alpha=0.6,
-                s=20,
-                edgecolors="black",
-                linewidths=0.5,
-            )
+        _scatter_test(ax3, X_test, y_test, n_classes, colors, s=20)
         ax3.set(xlabel="x₁", ylabel="x₂", title="Decision Boundary")
-        ax3.legend()
         ax3.grid(True)
 
         ax4 = fig.add_subplot(2, 3, 4)
         cnt = ax4.contourf(xx, yy, grid_p1, levels=20, cmap="RdYlBu")
         fig.colorbar(cnt, ax=ax4, label="P(Class 1)")
-        for c in range(n_classes):
-            mask = y_test == c
-            ax4.scatter(
-                X_test[mask, 0],
-                X_test[mask, 1],
-                c=colors[c],
-                alpha=0.6,
-                s=15,
-                edgecolors="black",
-                linewidths=0.5,
-            )
+        _scatter_test(ax4, X_test, y_test, n_classes, colors)
         ax4.set(xlabel="x₁", ylabel="x₂", title="Class 1 Probability")
         ax4.grid(True)
 
         ax5 = fig.add_subplot(2, 3, 5)
-        cnt = ax5.contourf(xx, yy, grid_entropy, levels=20, cmap="viridis")
-        fig.colorbar(cnt, ax=ax5, label="Entropy")
-        for c in range(n_classes):
-            mask = y_test == c
-            ax5.scatter(
-                X_test[mask, 0],
-                X_test[mask, 1],
-                c=colors[c],
-                alpha=0.6,
-                s=15,
-                edgecolors="black",
-                linewidths=0.5,
-            )
-        ax5.set(xlabel="x₁", ylabel="x₂", title="Prediction Uncertainty (Entropy)")
+        if uq_enabled and grid_std_p1 is not None:
+            cnt = ax5.contourf(xx, yy, grid_std_p1, levels=20, cmap="magma")
+            fig.colorbar(cnt, ax=ax5, label="σ P(Class 1)")
+            _scatter_test(ax5, X_test, y_test, n_classes, colors)
+            ax5.set(xlabel="x₁", ylabel="x₂", title="Parameter Uncertainty (σ, grid)")
+        else:
+            cnt = ax5.contourf(xx, yy, grid_entropy, levels=20, cmap="viridis")
+            fig.colorbar(cnt, ax=ax5, label="Entropy")
+            _scatter_test(ax5, X_test, y_test, n_classes, colors)
+            ax5.set(xlabel="x₁", ylabel="x₂", title="Model Confidence (Entropy)")
         ax5.grid(True)
 
         ax6 = fig.add_subplot(2, 3, 6)
-        cm = confusion_matrix(y_test, mean_preds)
+        cm = confusion_matrix(y_test, preds_discrete)
         ax6.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
         ax6.set(title="Confusion Matrix")
         ax6.set_xticks(range(n_classes), [f"Class {i}" for i in range(n_classes)])

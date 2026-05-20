@@ -94,7 +94,7 @@ CONFIG = {
     "working_detectors": None,  # For coincidence: non-empty tuple of detector indices; None for singles
     "noise_std": None,  # Simulation-level noise std (None = no noise)
     # ── Simulation ────────────────────────────────────────────────
-    "n_samples": 300,  # Number of simulation samples
+    "n_samples": 300,  # Perceval shot count; ignored by NumPy discrete (exact Born rule)
     "memory_depth": 1,  # Memristive memory depth
     "n_swipe": 0,  # Number of discrete phase swipes (0 = off)
     "swipe_span": 0.0,  # Continuous swipe range
@@ -110,7 +110,7 @@ CONFIG = {
     "n_data": 80,  # Number of training data points
     "sigma_noise": 0.02,  # Noise added to training targets
     # ── Uncertainty quantification ────────────────────────────────
-    "unc_n_passes": 15,  # Number of noisy forward passes for UQ
+    "unc_n_passes": 15,  # Noisy forward passes for UQ; 0 = skip
     "unc_noise_std": 0.05,  # Std-dev of parameter perturbation per UQ pass
 }
 
@@ -145,8 +145,12 @@ def main() -> None:
             n_passes=CONFIG["unc_n_passes"],
             noise_std=CONFIG["unc_noise_std"],
         )
-        mean_preds = unc["mean"]
-        std_preds = unc["std"]
+        if unc is None:
+            mean_preds = trained_state.predict(enc_test)
+            std_preds = np.zeros_like(mean_preds)
+        else:
+            mean_preds = unc["mean"]
+            std_preds = unc["std"]
 
         # ── 4. Compute & save metrics ─────────────────────────────
         mse = float(np.mean((mean_preds - y_test) ** 2))

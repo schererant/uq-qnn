@@ -5,6 +5,7 @@ import warnings
 from typing import cast
 
 import numpy as np
+import pytest
 
 from src.experiment import Experiment
 from src.hardware import GaussianNoise, HardwareProfile
@@ -144,3 +145,46 @@ def test_uncertainty_analysis_accepts_int_memristive_phase_idx():
     assert result["mean"].shape == encoded.shape
     assert result["std"].shape == encoded.shape
     assert result["all_preds"].shape == (len(encoded), 1)
+
+
+def test_uncertainty_analysis_skipped_when_n_passes_zero():
+    config = base_config()
+    exp = Experiment("uq_skip", config=config)
+    encoded = np.array([0.2, 0.7])
+
+    trained_state = TrainedPhotonicState(
+        theta=tuple(0.5 for _ in range(6)),
+        head_weight=((1.0, 0.0, 0.0),),
+        head_bias=(0.0,),
+        sim_cfg=exp.sim_cfg.to_dict(),
+    )
+
+    assert exp.run_uncertainty_analysis(
+        trained_state, encoded, n_passes=0, noise_std=0.05
+    ) is None
+
+
+def test_train_rejects_mismatched_encoded_width():
+    config = base_config()
+    config["n_layers"] = 2
+    config["encoding_phase_idx"] = (0, 1, 6, 7)
+    config["n_enc_features"] = 2
+
+    exp = Experiment("enc_width", config=config)
+    X_train = np.array([0.2, 0.4, 0.8], dtype=np.float64)
+    y_train = np.array([0.3, 0.6, 0.9], dtype=np.float64)
+    # Only one layer of encoding columns (need 4 for L=2, 2 features).
+    bad_enc = np.tile(2 * np.arccos(X_train).reshape(-1, 1), (1, 2))
+
+    with pytest.raises(ValueError, match="phase column"):
+        exp.train(bad_enc, y_train, encoded=True)
+
+
+def test_missing_n_layers_raises_for_multi_layer_encoding():
+    config = base_config()
+    config["encoding_phase_idx"] = (0, 1, 6, 7)
+    config["n_enc_features"] = 2
+    config.pop("n_layers", None)
+
+    with pytest.raises(ValueError, match="n_layers"):
+        Experiment("n_layers_required", config=config)

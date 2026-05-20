@@ -114,6 +114,8 @@ class Experiment:
         if missing:
             raise ValueError(f"Missing required config keys: {sorted(missing)}")
 
+        self._check_config_consistency()
+
         self.sim_cfg = SimConfig.from_experiment_config(self.config)
         validate_sim_config(self.sim_cfg)
 
@@ -183,6 +185,8 @@ class Experiment:
 
         if not encoded:
             X = 2 * np.arccos(X)
+        else:
+            self._validate_encoded_input(X)
 
         trained_state, history, model = train_pytorch_generic(
             X, y, **self._training_kwargs()
@@ -233,6 +237,48 @@ class Experiment:
             "epochs": c["epochs"],
             "seed": c["seed"],
         }
+
+    def _check_config_consistency(self) -> None:
+        """Catch common config footguns before SimConfig construction."""
+        if "n_layers" not in self.config:
+            n_modes = int(self.config["n_modes"])
+            n_ppl = n_modes * (n_modes - 1)
+            raw_enc = self.config["encoding_phase_idx"]
+            if isinstance(raw_enc, int):
+                enc_indices = (int(raw_enc),)
+            else:
+                enc_indices = tuple(int(x) for x in raw_enc)
+            if any(idx >= n_ppl for idx in enc_indices):
+                raise ValueError(
+                    "config omits 'n_layers' (defaults to 1) but encoding_phase_idx "
+                    f"contains index >= {n_ppl} (per-layer mesh size for n_modes="
+                    f"{n_modes}). Set n_layers explicitly."
+                )
+
+        if (
+            self.config.get("sim_backend") == "numpy"
+            and self.config.get("n_swipe", 0) == 0
+            and self.config.get("n_samples", 0) > 0
+        ):
+            logger.info(
+                "NumPy discrete backend uses exact Born-rule probabilities; "
+                "n_samples=%s does not add shot noise during training.",
+                self.config["n_samples"],
+            )
+
+    def _validate_encoded_input(self, enc: np.ndarray) -> None:
+        """Ensure pre-encoded phase columns match the circuit encoding slots."""
+        enc_arr = np.asarray(enc, dtype=np.float64)
+        if enc_arr.ndim == 1:
+            enc_arr = enc_arr.reshape(-1, 1)
+        expected_cols = len(self.sim_cfg.encoding_slots)
+        if enc_arr.shape[1] != expected_cols:
+            raise ValueError(
+                f"encoded input has {enc_arr.shape[1]} phase column(s) but "
+                f"encoding_slots expects {expected_cols} "
+                f"(n_enc_features={self.sim_cfg.n_enc_features}, "
+                f"n_layers={self.sim_cfg.n_layers})"
+            )
 
     # ── prediction ─────────────────────────────────────────────
 
@@ -331,13 +377,14 @@ class Experiment:
         noise_std: float,
         return_class_probs: bool = False,
         model: Optional[Union[PhotonicModel, TrainedPhotonicState]] = None,
-    ) -> dict[str, np.ndarray]:
+    ) -> Optional[dict[str, np.ndarray]]:
         """Multi-pass uncertainty estimation via parameter perturbation.
 
         Args:
             trained: Optimized parameter vector or serialized trained state.
             encoded_phases: Phase-encoded test inputs.
-            n_passes: Number of noisy forward passes.
+            n_passes: Number of noisy forward passes. ``0`` skips analysis and
+                returns ``None``.
             noise_std: Std-dev of Gaussian noise added to phase parameters
                 on each pass.
             return_class_probs: If True, collect per-class probabilities
@@ -349,8 +396,15 @@ class Experiment:
                 legacy raw simulation path (no linear head).
 
         Returns:
-            Dict with ``'mean'``, ``'std'``, and ``'all_preds'`` arrays.
+            Dict with ``'mean'``, ``'std'``, and ``'all_preds'`` arrays, or
+            ``None`` when ``n_passes == 0``.
         """
+        if n_passes == 0:
+            logger.info("Uncertainty analysis skipped (n_passes=0)")
+            return None
+        if n_passes < 0:
+            raise ValueError("n_passes must be a non-negative integer")
+
         from concurrent.futures import ProcessPoolExecutor
 
         from tqdm import tqdm
@@ -361,9 +415,6 @@ class Experiment:
         n_classes = c["n_classes"]
 
         is_classification = c["loss_type"] == "cross_entropy" or return_class_probs
-
-        if n_passes <= 0:
-            raise ValueError("n_passes must be a positive integer")
 
         logger.info("Estimating uncertainty with %d forward passes…", n_passes)
 
