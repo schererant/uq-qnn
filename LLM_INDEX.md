@@ -30,6 +30,7 @@ Input x  →  phase encoding (typically 2·arccos(x))  →  photonic circuit  �
 | Use `TrainedPhotonicState` for inference after training | Call `Experiment.predict()` with bare `theta` (deprecated) |
 | Check `CHANGELOG.md` for recent breaking API changes | Trust `CLAUDE.md` alone if it disagrees with code (e.g. `simulation.py` → `src/simulation/`) |
 | Run tests with `uv run pytest tests/` to validate understanding | Edit `reports/`, `misc/`, `playground/`, or notebooks unless asked |
+| For theory / literature / thesis context, read the knowledge vault at `/Users/anani/Vaults/UQ-QNN` (`wiki/index.md`) | Treat vault notes as authoritative over code for runtime behavior |
 
 **Suggested first reads (15–30 min):**
 
@@ -324,6 +325,7 @@ uv run ruff check .
 
 | Goal | Read first |
 |------|------------|
+| Theory, literature, PSR derivations, thesis context | `/Users/anani/Vaults/UQ-QNN/wiki/index.md` (Obsidian vault; `wiki/concepts/`, `wiki/claims/`, `wiki/sources/`) |
 | Add a new experiment script | `examples/TEMPLATE.py`, `src/experiment.py` |
 | Understand config errors | `src/config.py` (`validate_sim_config`), `tests/test_sim_config_validation.py` |
 | Debug wrong gradients | `src/autograd.py`, `psr_photon_counts_for_phases`, `CHANGELOG` PSR notes |
@@ -365,6 +367,7 @@ uv run ruff check .
 
 | Document | Role |
 |----------|------|
+| **`/Users/anani/Vaults/UQ-QNN`** (`wiki/index.md`) | Author's Obsidian knowledge vault — theory, literature, claims, thesis notes (outside repo) |
 | **`LLM_INDEX.md`** (this file) | Cold-start map for agents |
 | **`README.md`** | Authoritative user API + config tables |
 | **`CHANGELOG.md`** | Time-ordered breaking changes and rationale |
