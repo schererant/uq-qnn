@@ -140,7 +140,7 @@ flowchart LR
 
 ### `src/config.py`
 
-- **`SimConfig`** — frozen dataclass; single object through simulation, autograd, training. Built via `SimConfig.from_experiment_config(dict)` or `from_dict`. Use `.replace(...)` for UQ passes.
+- **`SimConfig`** — frozen dataclass; single object through simulation, autograd, training. Built via `SimConfig.from_experiment_config(dict)` or `from_dict`. Use `.replace(...)` for UQ passes. Fields **`n_layers`** (default 1), **`n_enc_features`**, **`total_mesh_phases`**, **`encoding_slots`** support Mauser-style re-uploading.
 - **`CircuitConfig`** — geometry + measurement only (used by `PhotonicCircuit`).
 - **`validate_sim_config(cfg)`** — raises on inconsistent occupation / coincidence / class counts.
 - **`psr_photon_counts_for_phases(sim_cfg, n_phase_params)`** — PSR uses **`sum(input_state)`** per phase (not `output_mode` alone).
@@ -153,7 +153,7 @@ Config key **`sim_backend`** maps to field **`SimConfig.backend`**.
 - **`exp.train(X, y)`** → `(TrainedPhotonicState, loss_history, PhotonicModel)`; applies `2 * np.arccos(X)` for 1D regression/classification inputs. **Auto-saves** `trained_state.json` and `loss_history.json` under `run_dir` (also listed in `run_summary.json` → `metrics` / `artifacts`).
 - **`trained_state.predict(enc_phases)`** — head-aware inference.
 - **`TrainedPhotonicState.load_json(run_dir / "trained_state.json")`** — reload a past run without retraining (must match saved `sim_cfg`).
-- **`exp.run_uncertainty_analysis(trained_state, enc, n_passes, noise_std)`** → `{"mean", "std", "all_preds"}`; parallel `ProcessPoolExecutor`.
+- **`exp.run_uncertainty_analysis(trained_state, enc, n_passes, noise_std)`** → `{"mean", "std", "all_preds"}` or **`None`** when `n_passes=0`; parallel `ProcessPoolExecutor`.
 - **`exp.savefig(fig, name)`**, **`exp.save_metrics(dict)`** — additional artifacts under `reports/<slug>/<timestamp>/`.
 - **`_REQUIRED_CONFIG_KEYS`** — every key must appear in `CONFIG` (see §7).
 
@@ -178,7 +178,7 @@ Training optimizes **features → head → loss**. Evaluation must use the head 
 
 ### `src/numpy_backend.py`
 
-- **`clements_unitary`**, **`run_vectorized_non_memristive`**, **`run_fast_memristive_singles`**, **`slos_2photon_numpy`**, batch PSR helpers.
+- **`clements_unitary`**, **`run_vectorized_non_memristive`**, **`run_fast_memristive_singles`**, **`slos_2photon_numpy`**, **`run_psr_forward_batch`**, batch PSR helpers.
 - Analytic Clements mesh; 2×2 permanents / Ryser for multi-photon paths.
 
 ### `src/circuits.py`
@@ -220,7 +220,8 @@ Lazy exports: `from src import Experiment, PhotonicModel, run_simulation_sequenc
 
 ### Clements mesh (default)
 
-- Phase count: **`n_modes * (n_modes - 1)`**.
+- Per-layer phase count: **`n_modes * (n_modes - 1)`**; total trainable phases = **`n_layers * n_modes * (n_modes - 1)`** (`SimConfig.total_mesh_phases`).
+- Optional **`n_layers > 1`**: Mauser-style data re-uploading (stacked blocks, same encoding each layer). Incompatible with memristive phases.
 - Set `memristive_phase_idx=None`.
 - Singles: `sum(input_state) == 1`.
 - Coincidence: `sum(input_state) >= 2`, non-empty **`working_detectors`**.
@@ -241,7 +242,7 @@ Lazy exports: `from src import Experiment, PhotonicModel, run_simulation_sequenc
 
 | Group | Keys |
 |-------|------|
-| Circuit | `n_modes`, `input_state`, `encoding_phase_idx`, `photon_distinguishability`, `target_mode`, `memristive_phase_idx`, `memristive_output_modes` |
+| Circuit | `n_modes`, `n_layers` (optional, default 1), `n_enc_features` (optional), `input_state`, `encoding_phase_idx`, `photon_distinguishability`, `target_mode`, `memristive_phase_idx`, `memristive_output_modes` |
 | Measurement | `output_mode` (`"singles"` \| `"coincidence"`), `working_detectors`, `noise_std` |
 | Simulation | `n_samples`, `memory_depth`, `n_swipe`, `swipe_span`, `sim_backend`, `seed` |
 | Task | `loss_type` (`"mse"` \| `"cross_entropy"`), `n_classes` |
@@ -256,6 +257,7 @@ Full semantics: **`README.md` § Config reference**.
 3. **Coincidence classification** — `n_classes` = **C(W, N)** with `W = len(working_detectors)`, `N = sum(input_state)`; channel order = lexicographic `combinations(sorted(working_detectors), N)`.
 4. **Encoding** — `Experiment.train` uses **`2 * arccos(x)`** for 1D inputs in `[0, 1]`; test/UQ paths must encode consistently.
 5. **Linear head** — feature dimension = all singles modes or full coincidence channel vector; `target_mode` alone does not define training readout for coincidence CE.
+6. **Multi-layer re-uploading** — `n_layers > 1` stacks identical Clements blocks; same encoded features are injected into `encoding_phase_idx` slots each layer. Requires **`encoded=True`** in `Experiment.train` with one phase column per `encoding_slot` (see `encode_2d_to_phases_multi` or tile `2·arccos(x)` per layer). **`n_layers > 1`** is incompatible with memristive phases.
 
 ---
 
@@ -264,7 +266,7 @@ Full semantics: **`README.md` § Config reference**.
 `Experiment.run_uncertainty_analysis(trained_state, encoded_test, n_passes=..., noise_std=...)`:
 
 - Adds Gaussian noise to phase parameters each pass.
-- Returns mean/std over passes (regression: per-point std; classification: per-class probabilities).
+- Returns mean/std over passes (regression: per-point std; classification: per-class probabilities), or **`None`** when **`n_passes=0`** (set **`unc_n_passes=0`** in CONFIG to skip).
 - Uses **`trained_state`** so the **learned head** is applied on every pass.
 - Parallelism: up to `os.cpu_count()` workers.
 
@@ -279,7 +281,10 @@ Copy pattern: **`examples/TEMPLATE.py`**.
 | `simple_regression.py` | Quartic regression + UQ |
 | `simple_classification.py` | Binary classification + UQ |
 | `multi_class_classification.py` | 3-class Clements |
-| `two_moons_classification.py` | 2D moons + phase encoding |
+| `two_moons_classification.py` | 2D moons + L=3 Mauser re-uploading |
+| `simple_regression_reuploading.py` | Quartic regression with L-layer re-uploading |
+| `two_moons_config_sweep.py` | Sweep mesh width / layers for two moons |
+| `two_moons_seed_sweep.py` | Rank training seeds for two moons |
 | `coincidence_regression.py` | Two-photon coincidence regression |
 | `coincidence_regression_memristor.py` | Memristor + coincidence + NumPy |
 | `coincidence_gaussian_bump.py` | Static vs memristive coincidence |

@@ -39,7 +39,10 @@ This installs all dependencies (PyTorch, Perceval, NumPy, scikit-learn, matplotl
 | `examples/simple_regression.py` | Regression + UQ on a quartic function |
 | `examples/simple_classification.py` | Binary classification + UQ |
 | `examples/multi_class_classification.py` | 3-class Clements circuit |
-| `examples/two_moons_classification.py` | 2D half-moons dataset |
+| `examples/two_moons_classification.py` | 2D half-moons dataset (L=3 Mauser re-uploading) |
+| `examples/simple_regression_reuploading.py` | Quartic regression with L-layer data re-uploading |
+| `examples/two_moons_config_sweep.py` | Sweep mesh width / layer count for two moons |
+| `examples/two_moons_seed_sweep.py` | Rank training seeds for two moons convergence |
 | `examples/circuit_comparison.py` | Memristor vs. Clements on the same data |
 | `examples/circuit_comparison_quartic.py` | Architecture comparison on quartic |
 | `examples/quartic_regression_comparison.py` | Quartic regression ablation |
@@ -300,9 +303,11 @@ Every key listed below is **required** by `Experiment`. There are no hidden defa
 
 | Key | Type | Description |
 |---|---|---|
-| `n_modes` | `int` | Number of waveguide modes in the Clements mesh. Determines circuit depth: `n_modes * (n_modes - 1)` phase parameters total. |
+| `n_modes` | `int` | Number of waveguide modes in the Clements mesh. Per-layer depth: `n_modes * (n_modes - 1)` trainable phases. |
+| `n_layers` | `int` | Number of stacked re-uploading Clements blocks (default `1`). Total mesh phases = `n_layers * n_modes * (n_modes - 1)`. Not compatible with memristive phases when `> 1`. |
+| `n_enc_features` | `int` or `None` | Features encoded per layer (e.g. `2` for two-moons x₁/x₂). When set, `len(encoding_phase_idx)` must equal `n_enc_features * n_layers`. |
 | `input_state` | `tuple[int, ...]` | **Fock occupation vector** of length `n_modes`: non-negative integers, `sum(input_state)` = total photon number. Singles: sum `1`. Coincidence: sum `≥ 2` (including bunching, e.g. `(2, 0, 0, …)`). |
-| `encoding_phase_idx` | `int` | Mesh phase index where the data-encoded phase is added (internal encoding). |
+| `encoding_phase_idx` | `int` or `tuple[int, ...]` | Global mesh phase index/indices where data-encoded phases are added (internal encoding). For multi-layer runs, indices span all stacked blocks — set `n_layers` explicitly. |
 | `photon_distinguishability` | `str` or `None` | `None` when `sum(input_state)==1`. Required when `sum(input_state)≥2` (training stack: `"indistinguishable"` supported on NumPy). |
 | `target_mode` | `tuple[int, ...]` or `None` | **Singles:** output mode(s) for Born-rule readout; regression often `(m,)`. **Singles CE:** one mode index per class. **Coincidence regression:** `N` distinct detector indices in `working_detectors` (`N = sum(input_state)`). **Coincidence CE:** class layout is `C(W, N)` N-fold channels — use `target_mode=None` or any placeholder; `n_classes` must match. |
 | `memristive_phase_idx` | `int`, `tuple[int, ...]`, or `None` | Phase index/indices with memristive feedback. `None` = pure Clements mesh. |
@@ -356,7 +361,7 @@ These keys are consumed by the experiment script and are **not** forwarded to `S
 
 | Key | Type | Description |
 |---|---|---|
-| `unc_n_passes` | `int` | Number of noisy forward passes for uncertainty estimation. More passes = smoother uncertainty estimates. |
+| `unc_n_passes` | `int` | Number of noisy forward passes for uncertainty estimation. `0` skips UQ (`run_uncertainty_analysis` returns `None`). |
 | `unc_noise_std` | `float` | Standard deviation of Gaussian noise added to phase parameters on each UQ pass. Models parameter uncertainty / shot-noise variability. |
 
 ---

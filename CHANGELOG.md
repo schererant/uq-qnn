@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-05-27 — Multi-layer re-uploading, batched PSR, UQ/config hardening (Linear-Layer merge)
+
+### Why
+
+Single-layer Clements meshes have limited expressivity for hard classification (two moons) and nonlinear regression without widening `n_modes`. **Mauser-style data re-uploading** stacks `L` identical mesh blocks with the same encoded features injected each layer, scaling trainable depth at fixed photon number. PSR training also benefits from batched NumPy forwards across shift angles. Early multi-layer runs hit config footguns (global `encoding_phase_idx` past one mesh without setting `n_layers`) and redundant finite-difference passes on re-uploaded mesh phases.
+
+### Added
+
+- **`SimConfig.n_layers`**, **`SimConfig.n_enc_features`**, **`SimConfig.total_mesh_phases`**, **`SimConfig.encoding_slots`** — stacked re-uploading blocks (`n_layers` defaults to `1` in `from_experiment_config`; set explicitly when using global phase indices past one mesh).
+- **`src/clements_geometry.py`** — **`normalize_encoding_phase_idx`** and per-layer encoding slot helpers.
+- **`src/data.py`** — **`encode_2d_to_phases_multi`** for Mauser-style multi-slot 2D encoding.
+- **`src/numpy_backend.py`** — **`run_psr_forward_batch`** — multiple PSR-shifted forwards in one vectorized call.
+- **`tests/test_mauser_encoding.py`** — multi-layer encoding and forward-path coverage.
+- **`examples/simple_regression_reuploading.py`** — L-layer scalar re-uploading regression (`encoded=True`, one phase column per layer).
+- **`examples/two_moons_config_sweep.py`** — architecture / hyperparameter sweep for two moons.
+- **`examples/two_moons_seed_sweep.py`** — rank training seeds by final loss and convergence speed.
+
+### Changed
+
+- **`src/circuits.py`**, **`src/numpy_backend.py`**, **`src/simulation/runner.py`**, **`src/training.py`** — stacked `n_layers` Clements meshes; batched internal encoding across layers.
+- **`src/autograd.py`** — batched PSR forward path via **`run_psr_forward_batch`**; memristor FD indices start at **`total_mesh_phases`** (not `n_modes * (n_modes - 1)`).
+- **`src/config.py`** — validates **`n_layers`**, encoding slot counts vs **`n_enc_features`**, and rejects **`n_layers > 1`** with memristive phases.
+- **`src/experiment.py`** — **`_check_config_consistency()`** raises when **`encoding_phase_idx`** exceeds one mesh but **`n_layers`** is omitted; **`_validate_encoded_input()`** checks pre-encoded column count vs **`encoding_slots`**; **`run_uncertainty_analysis(n_passes=0)`** returns **`None`** (skip UQ without a separate code path); PSR batch circuit-eval logging for profiling.
+- **`examples/two_moons_classification.py`** — L=3 re-uploading with **`encode_2d_to_phases_multi`**; UQ wired when **`unc_n_passes > 0`**.
+- **`examples/coincidence_regression.py`** — default data function **`sinusoid_data`**.
+
+### Fixed
+
+- **`src/autograd.py`** — multi-layer memristor finite-difference gradient range no longer re-runs redundant mesh-phase simulations for layers 2+ (`weight_idxs` uses **`total_mesh_phases`**).
+
+### Behaviour / limitations
+
+- **`n_layers > 1`** requires non-memristive Clements meshes only.
+- Multi-layer runs need pre-encoded inputs with one column per **`encoding_slot`** (use **`encode_2d_to_phases_multi`** for 2D, or tile **`2·arccos(x)`** per layer for 1D — see **`examples/simple_regression_reuploading.py`**).
+- Set **`unc_n_passes=0`** in experiment **`CONFIG`** to skip uncertainty analysis during sweeps.
+
+---
+
 ## 2026-05-18 — Auto-save training artifacts in experiment runs
 
 ### Why
