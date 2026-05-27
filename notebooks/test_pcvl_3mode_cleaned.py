@@ -1,19 +1,19 @@
 import perceval as pcvl
-from perceval import Circuit, BasicState, NoiseModel, Processor, PostSelect, pdisplay, Detector
 from perceval.algorithm import Sampler
-from perceval import catalog
-from tqdm import tqdm  # For Jupyter notebook progress bars
 import numpy as np
 from typing import Callable
 
-#set the random seed for reproducibility
+# set the random seed for reproducibility
 np.random.seed(42)
 
 
 def quartic_data(x):
     return np.power(x, 4)
 
-def get_data(n_data: int = 100, sigma_noise_1: float = 0.0, datafunction: Callable = quartic_data):
+
+def get_data(
+    n_data: int = 100, sigma_noise_1: float = 0.0, datafunction: Callable = quartic_data
+):
     """Define a function based toy regression dataset using NumPy.
 
     Args:
@@ -27,7 +27,7 @@ def get_data(n_data: int = 100, sigma_noise_1: float = 0.0, datafunction: Callab
     x_min = 0
     x_max = 1
     X_train = np.linspace(x_min, x_max, n_data)
-    
+
     # split training set
     gap_start = x_min + 0.35 * (x_max - x_min)
     gap_end = x_min + 0.6 * (x_max - x_min)
@@ -68,6 +68,7 @@ def encoding_circuit(encoded_phase):
     circuit.add((0, 1), pcvl.BS())
     return circuit
 
+
 def memristor_circuit(phase1, memristor_phase, phase3):
     memristor_circuit = pcvl.Circuit(3, name="Memristor Circuit")
     # First MZI (modes 0, 1)
@@ -82,7 +83,7 @@ def memristor_circuit(phase1, memristor_phase, phase3):
     memristor_circuit.add((0, 1), pcvl.BS())
     memristor_circuit.add((1,), pcvl.PS(phi=phase3))
     memristor_circuit.add((0, 1), pcvl.BS())
-    
+
     return memristor_circuit
 
 
@@ -93,11 +94,13 @@ def build_circuit(phase1, memristor_phase, phase3, encoded_phase):
     # Encoding circuit
     circuit.add(0, encoding_circuit(encoded_phase))
     circuit.add(0, memristor_circuit(phase1, memristor_phase, phase3))
-    
-    return circuit
-    
 
-def run_simulation_sequence(params, encoded_phases_all, memory_depth, plot_circuit=False):
+    return circuit
+
+
+def run_simulation_sequence(
+    params, encoded_phases_all, memory_depth, plot_circuit=False
+):
     """Runs the simulation over the sequence, updating memory."""
     phase1, phase3, memristor_weight = params
     num_samples = len(encoded_phases_all)
@@ -113,13 +116,12 @@ def run_simulation_sequence(params, encoded_phases_all, memory_depth, plot_circu
     state_001 = pcvl.BasicState([0, 0, 1])
     state_010 = pcvl.BasicState([0, 1, 0])
 
-
     # for i in tqdm(range(num_samples), desc='Running circuit simulation'):
     for i in range(num_samples):
         time_step = i % memory_depth
 
         if i == 0:
-            memristor_phase = np.pi / 4.0 # acos(sqrt(0.5))
+            memristor_phase = np.pi / 4.0  # acos(sqrt(0.5))
         else:
             # Calculate memristor phase based on memory
             mem_term1 = np.sum(memory_p1) / memory_depth
@@ -129,20 +131,22 @@ def run_simulation_sequence(params, encoded_phases_all, memory_depth, plot_circu
             memristor_phase = np.arccos(np.sqrt(sqrt_arg))
 
         circuit = build_circuit(phase1, memristor_phase, phase3, encoded_phases_all[i])
-        
+
         if plot_circuit:
-            pcvl.pdisplay(circuit, show=True, output_format=pcvl.Format.TEXT, recursive=True)
-            
+            pcvl.pdisplay(
+                circuit, show=True, output_format=pcvl.Format.TEXT, recursive=True
+            )
+
         # Create a processor
         proc = pcvl.Processor(backend, circuit)
         proc.with_input(input_state)
-        
+
         sampler = Sampler(proc)
         counts = sampler.sample_count(1000)
         probs = sampler.probs(1000)
 
-        prob_state_001 = probs['results'].get(state_001, 0.0)
-        prob_state_010 = probs['results'].get(state_010, 0.0)
+        prob_state_001 = probs["results"].get(state_001, 0.0)
+        prob_state_010 = probs["results"].get(state_010, 0.0)
 
         predictions_001[i] = prob_state_001
         # predictions_010[i] = prob_state_010 # Store if needed outside
@@ -159,7 +163,12 @@ def mse_loss(y_true, y_pred):
     """Computes Mean Squared Error loss."""
     return np.mean(np.square(np.asarray(y_true) - np.asarray(y_pred)))
 
-def objective_function(params, encoded_phases_all, y_train, memory_depth, plot_circuit=False):
+
+def objective_function(
+    params, encoded_phases_all, y_train, memory_depth, plot_circuit=False
+):
     """Calculates the loss for a given set of parameters."""
-    predictions_001 = run_simulation_sequence(params, encoded_phases_all, memory_depth, plot_circuit=plot_circuit)
+    predictions_001 = run_simulation_sequence(
+        params, encoded_phases_all, memory_depth, plot_circuit=plot_circuit
+    )
     return mse_loss(y_train, predictions_001)

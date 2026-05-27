@@ -1,195 +1,128 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Simple regression example using the UQ-QNN framework."""
 
-"""
-Simple regression example using the UQ-QNN framework.
-
-This example demonstrates how to:
-1. Generate synthetic data
-2. Train a photonic neural network
-3. Evaluate predictions and uncertainty
-"""
-
-import sys
 import os
-import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm
+import sys
 
-# Add the parent directory to the path so we can import the library
+import matplotlib.pyplot as plt
+import numpy as np
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import get_data
-from src.training import train_pytorch
-from src.simulation import run_simulation_sequence_np, sim_logger
-from src.utils import config
+from src.experiment import Experiment
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+# ===================== EXPERIMENT CONFIG =====================
+CONFIG = {
+    # Circuit
+    "n_modes": 12,  # waveguide modes; 12*11 mesh phases
+    # Length n_modes occupation vector; exactly one photon in mode 4.
+    "input_state": tuple(1 if i == 4 else 0 for i in range(12)),
+    "encoding_phase_idx": 10,  # mesh phase index that receives the data-encoded contribution
+    "photon_distinguishability": None,  # None for single-photon; required for two-photon runs
+    "target_mode": (4,),  # output mode(s) whose Born-rule probability is the prediction
+    "memristive_phase_idx": None,  # phase index(es) with history-dependent feedback; None = pure Clements
+    "memristive_output_modes": None,  # output mode pairs feeding back into memristive phases
+    # Task
+    "output_mode": "singles",  # "singles" = 1-photon probabilities; "coincidence" = 2-photon
+    "working_detectors": None,  # coincidence only: functioning detector indices; None for singles
+    "loss_type": "mse",  # "mse" for regression, "cross_entropy" for classification
+    "n_classes": 1,  # 1 for regression; must equal len(target_mode) for classification
+    # Training
+    "lr": 0.05,  # Adam learning rate
+    "epochs": 100,  # full passes over the training set
+    "n_samples": 20,  # photon samples per data point (higher = less shot noise, slower)
+    "memory_depth": 2,  # memristor buffer length (past time steps); irrelevant here
+    "n_swipe": 0,  # phase points swept per sample in continuous-swipe mode; 0 = discrete
+    "swipe_span": 0.0,  # total phase range (rad) swept around each encoded phase
+    "noise_std": None,  # Gaussian noise on coincidence counts; None = noiseless
+    "seed": 42,  # RNG seed for parameter initialisation and UQ pass noise
+    # Backend
+    "sim_backend": "numpy",  # "numpy" = fast vectorised path; "perceval" = full SLOS (required for memristor)
+    # Data
+    "n_data": 20,  # number of synthetic training + test samples to generate
+    "sigma_noise": 0.005,  # label noise std on the synthetic quartic targets
+    # Uncertainty
+    "unc_n_passes": 100,  # number of noisy forward passes for uncertainty estimation
+    "unc_noise_std": 0.05,  # std of Gaussian noise added to phases on each UQ pass
+}
+# =============================================================
 
 
 def main():
-    """Run a simple regression example."""
-    print("=== UQ-QNN: Simple Regression Example ===")
-    
-    # Set random seed for reproducibility
-    np.random.seed(42)
-    
-    # Configure parameters
-    config['n_data'] = 80
-    config['sigma_noise'] = 0.005
-    config['lr'] = 0.05
-    config['epochs'] = 100
-    config['memory_depth'] = 2
-    n_modes = 6
-    n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
-    config['phase_idx'] = tuple(range(n_phases))
-    n_photons = tuple([2] * n_phases)
-    n_samples = 20
-    target_mode=(n_modes - 2,)
-    memristive_output_modes = None
-    memristive_phase_idx=None
-    encoding_phase_idx=None
-    
-    # Generate synthetic data
-    print("Generating synthetic data...")
-    X_train, y_train, X_test, y_test = get_data(
-        config['n_data'],
-        config['sigma_noise'],
-        'neg_qubic_data'
-    )
-    
-    # Train the model with discrete phases
-    print("Training model with discrete phases...")
-    theta_discrete, history_discrete = train_pytorch(
-        X_train, y_train,
-        memory_depth=config['memory_depth'],
-        lr=config['lr'],
-        epochs=config['epochs'],
-        n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_modes=n_modes,
-        encoding_mode=0,
-        n_photons=n_photons,
-        target_mode=target_mode,
-        memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes,
-        encoding_phase_idx=encoding_phase_idx 
-    )
-    
-    # Generate predictions
-    print("Generating predictions...")
-    enc_test = 2 * np.arccos(X_test)
-    preds_discrete = run_simulation_sequence_np(
-        theta_discrete,
-        config['memory_depth'],
-        n_samples,
-        encoded_phases=enc_test,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_modes=n_modes,
-        encoding_mode=0,
-        target_mode=target_mode,
-        memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes,
-        encoding_phase_idx=encoding_phase_idx 
-    )
-    
-    # Compute MSE
-    mse_discrete = np.mean((preds_discrete - y_test) ** 2)
-    print(f"Discrete mode MSE: {mse_discrete:.6f}")
-    
-    # Add uncertainty estimation through multiple forward passes
-    print("Estimating uncertainty through multiple forward passes...")
-    n_forward_passes = 10
-    all_preds = np.zeros((len(X_test), n_forward_passes))
-    
-    for i in tqdm(range(n_forward_passes), desc="Forward passes"):
-        # Each forward pass with a different sample count introduces some randomness
-        sample_count = n_samples + np.random.randint(-100, 100)
-        sample_count = max(100, sample_count)  # Ensure at least 100 samples
-        
-        # Small random perturbation to parameters to simulate quantum noise
-        perturbed_theta = theta_discrete.copy()
-        # Only perturb phases slightly, not the weight
-        perturbed_theta[:-1] += np.random.normal(0, 0.05, size=len(perturbed_theta)-1)
-        
-        preds = run_simulation_sequence_np(
-            perturbed_theta,
-            config['memory_depth'],
-            sample_count,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=0,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx 
+    with Experiment("Simple Regression", config=CONFIG) as exp:
+        np.random.seed(int(CONFIG["seed"]))  # type: ignore[arg-type]
+
+        X_train, y_train, X_test, y_test = get_data(
+            CONFIG["n_data"], CONFIG["sigma_noise"], "quartic_data"
         )
-        all_preds[:, i] = preds
-    
-    # Compute mean and standard deviation of predictions
-    mean_preds = np.mean(all_preds, axis=1)
-    std_preds = np.std(all_preds, axis=1)
-    
-    # Plot results
-    plt.figure(figsize=(12, 8))
-    
-    # Plot 1: Training loss
-    plt.subplot(2, 2, 1)
-    plt.plot(history_discrete)
-    plt.yscale('log')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training Loss')
-    plt.grid(True)
-    
-    # Plot 2: Data and predictions
-    plt.subplot(2, 2, 2)
-    plt.scatter(X_train, y_train, s=20, label='Training data', alpha=0.7)
-    plt.plot(X_test, y_test, 'k--', label='Ground truth')
-    plt.plot(X_test, mean_preds, 'r-', label='Mean prediction')
-    
-    # Uncertainty bounds (mean ± 2*std)
-    plt.fill_between(
-        X_test, 
-        mean_preds - 2*std_preds, 
-        mean_preds + 2*std_preds, 
-        color='r', alpha=0.3, label='95% confidence interval'
-    )
-    
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title('Regression with Uncertainty')
-    plt.legend()
-    plt.grid(True)
-    
-    # Plot 3: Uncertainty visualization
-    plt.subplot(2, 2, 3)
-    scatter = plt.scatter(X_test, std_preds, c=np.abs(mean_preds - y_test), cmap='viridis')
-    plt.colorbar(scatter, label='Absolute error')
-    plt.xlabel('x')
-    plt.ylabel('Standard deviation')
-    plt.title('Uncertainty vs. Input')
-    plt.grid(True)
-    
-    # Plot 4: Calibration plot (prediction error vs. uncertainty)
-    plt.subplot(2, 2, 4)
-    plt.scatter(std_preds, np.abs(mean_preds - y_test), alpha=0.7)
-    plt.plot([0, np.max(std_preds)], [0, 2*np.max(std_preds)], 'k--', 
-             label='y=2x (well calibrated)')
-    plt.xlabel('Uncertainty (std)')
-    plt.ylabel('Absolute error')
-    plt.title('Calibration: Error vs. Uncertainty')
-    plt.legend()
-    plt.grid(True)
-    
-    plt.tight_layout()
-    plt.savefig('regression_with_uncertainty.png', dpi=300)
-    plt.show()
-    
-    # Print simulation statistics
-    sim_logger.report()
+
+        trained_state, history, _ = exp.train(X_train, y_train)
+        exp.save_metrics({"final_loss": history[-1]})
+
+        enc_test = 2 * np.arccos(X_test)
+        unc = exp.run_uncertainty_analysis(
+            trained_state,
+            enc_test,
+            n_passes=CONFIG["unc_n_passes"],
+            noise_std=CONFIG["unc_noise_std"],
+        )
+        mean_preds = unc["mean"]
+        std_preds = unc["std"]
+
+        mse = np.mean((mean_preds - y_test) ** 2)
+        logger.info("Test MSE: %.6f", mse)
+        exp.save_metrics({"test_mse": mse})
+
+        # ── plots ──
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+
+        axes[0, 0].plot(history)
+        axes[0, 0].set_yscale("log")
+        axes[0, 0].set(xlabel="Epoch", ylabel="Loss", title="Training Loss")
+        axes[0, 0].grid(True)
+
+        axes[0, 1].scatter(X_train, y_train, s=20, label="Training data", alpha=0.7)
+        axes[0, 1].plot(X_test, y_test, "k--", label="Ground truth")
+        axes[0, 1].plot(X_test, mean_preds, "r-", label="Mean prediction")
+        axes[0, 1].fill_between(
+            X_test,
+            mean_preds - 2 * std_preds,
+            mean_preds + 2 * std_preds,
+            color="r",
+            alpha=0.3,
+            label="95% CI",
+        )
+        axes[0, 1].set(xlabel="x", ylabel="y", title="Regression with Uncertainty")
+        axes[0, 1].legend()
+        axes[0, 1].grid(True)
+
+        sc = axes[1, 0].scatter(
+            X_test, std_preds, c=np.abs(mean_preds - y_test), cmap="viridis"
+        )
+        fig.colorbar(sc, ax=axes[1, 0], label="Absolute error")
+        axes[1, 0].set(xlabel="x", ylabel="Std dev", title="Uncertainty vs. Input")
+        axes[1, 0].grid(True)
+
+        axes[1, 1].scatter(std_preds, np.abs(mean_preds - y_test), alpha=0.7)
+        axes[1, 1].plot(
+            [0, np.max(std_preds)], [0, 2 * np.max(std_preds)], "k--", label="y=2x"
+        )
+        axes[1, 1].set(
+            xlabel="Uncertainty (std)",
+            ylabel="Absolute error",
+            title="Calibration: Error vs. Uncertainty",
+        )
+        axes[1, 1].legend()
+        axes[1, 1].grid(True)
+
+        fig.tight_layout()
+        exp.savefig(fig, "regression_with_uncertainty.png")
+        # plt.show()
 
 
 if __name__ == "__main__":

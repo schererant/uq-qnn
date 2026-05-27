@@ -1,319 +1,684 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 """
-Function comparison example using the UQ-QNN framework.
+Function and Measurement Mode Comparison Experiment.
 
-This example demonstrates training and evaluating the photonic neural network
-on different synthetic functions to compare performance and uncertainty.
+Trains a photonic QNN on multiple synthetic regression functions and
+evaluates each under two quantum measurement strategies:
+
+  • singles   — single-photon output probabilities (Born rule on |ψ|²)
+  • coincidence — two-photon correlations (post-selected coincidence counts)
+
+Coincidence measurements are fundamentally different: they are inherently
+two-photon events and, in physical hardware, naturally reject single-photon
+noise and dark counts.  Comparing them reveals how the measurement basis
+affects the circuit's expressivity and uncertainty calibration.
+
+Produced artefacts
+------------------
+predictions_grid.png        Fit + 95 % CI for every (function, mode) pair
+training_loss.png           Log-scale convergence curves, singles vs coincidence
+calibration.png             σ vs |error| scatter — ideal calibration if σ ≈ |error|
+metrics_comparison.png      Grouped bar charts: RMSE, R², coverage, NLL
+r2_heatmap.png              R² heatmap (functions × modes) — quick overview
+uncertainty_distribution.png Violin plots of per-point σ, one violin per mode
+metrics_table.png           Full numeric summary table
 """
 
-import sys
 import os
-import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-from typing import List, Optional, Sequence, Tuple, Union
+import sys
+from typing import Dict, Tuple
 
-# Add the parent directory to the path
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from src.config import SimConfig
 from src.data import get_data
-from src.training import train_pytorch
-from src.simulation import run_simulation_sequence_np, sim_logger
-from src.utils import config
+from src.experiment import Experiment
+from src.logging_config import get_logger
+from src.loss import PhotonicModel
+from src.training import train_pytorch_generic
+
+logger = get_logger(__name__)
+
+SINGLES_ENCODING_PHASE_IDX = 26
+COINCIDENCE_ENCODING_PHASE_IDX = 7
+SINGLES_INPUT_STATE = (1, 0, 0, 0, 0, 0)
+COINCIDENCE_INPUT_STATE = (1, 1, 0, 0, 0, 0)
+SINGLES_TARGET_MODE = (2,)
+COINCIDENCE_TARGET_MODE = (0, 1)
+
+# Single source of truth (cf. examples/coincidence_regression.py).  Experiment and
+# SimConfig use the singles branch fields; coincidence training swaps in
+# _COINCIDENCE_OVERRIDES inside _sim_cfg().
+CONFIG: Dict = {
+    "n_modes": 6,
+    "memristive_phase_idx": None,
+    "memristive_output_modes": None,
+    "memory_depth": 1,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "n_samples": 300,
+    "noise_std": None,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.05,
+    "epochs": 150,
+    "n_data": 500,
+    "sigma_noise": 0.02,
+    "unc_n_passes": 15,
+    "unc_noise_std": 0.05,
+    "data_functions": [
+        "quartic_data",
+        "sinusoid_data",
+        "multi_modal_data",
+        "step_function_data",
+    ],
+    "measurement_modes": ["singles", "coincidence"],
+    "mode_colors": {"singles": "#1f77b4", "coincidence": "#ff7f0e"},
+    "func_labels": {
+        "quartic_data": r"$x^4$",
+        "sinusoid_data": r"$\sin(0.7\pi x)$",
+        "multi_modal_data": "Multi-modal Gaussians",
+        "step_function_data": "Smooth step",
+    },
+    # Primary circuit (singles): logged by Experiment / validate_sim_config
+    "encoding_phase_idx": SINGLES_ENCODING_PHASE_IDX,
+    "input_state": SINGLES_INPUT_STATE,
+    "photon_distinguishability": None,
+    "output_mode": "singles",
+    "target_mode": SINGLES_TARGET_MODE,
+    "working_detectors": None,
+}
+
+_COINCIDENCE_OVERRIDES: Dict = {
+    "encoding_phase_idx": COINCIDENCE_ENCODING_PHASE_IDX,
+    "input_state": COINCIDENCE_INPUT_STATE,
+    "photon_distinguishability": "indistinguishable",
+    "output_mode": "coincidence",
+    "target_mode": COINCIDENCE_TARGET_MODE,
+    "working_detectors": tuple(range(6)),
+}
+
+FUNCTIONS = CONFIG["data_functions"]
+MEASUREMENT_MODES = CONFIG["measurement_modes"]
+FUNC_LABELS = CONFIG["func_labels"]
+MODE_COLORS = CONFIG["mode_colors"]
+
+# ════════════════════════════════════════════════════════════════════════════
+# HELPERS
+# ════════════════════════════════════════════════════════════════════════════
 
 
-def train_and_evaluate(
-    n_data: int,
-    sigma_noise: float,
-    datafunction: str,
-    memory_depth: int,
-    lr: float,
-    epochs: int,
-    n_samples: int,
-    n_swipe: int,
-    swipe_span: float,
-    n_modes: int,
-    encoding_mode: int,
-    n_photons: Sequence[int],
-    target_mode: Optional[Tuple[int, ...]],
-    memristive_phase_idx: Optional[Union[int, Sequence[int]]],
-    memristive_output_modes: Optional[Sequence[Tuple[int, int]]],
-    encoding_phase_idx: Optional[Union[int, Sequence[int]]]
-    ): 
-    """
-    Train and evaluate a model on the specified data function.
-
-    Args:
-        datafunction (str): Name of the data function to use
-        n_data (int): Number of data points to generate
-        sigma_noise (float): Noise level to add to data
-        n_samples (int): Number of samples for circuit simulation
-        epochs (int): Number of training epochs
-
-    Returns:
-        tuple: (X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history)
-    """
-    # Generate synthetic data
-    X_train, y_train, X_test, y_test = get_data(
-        n_data, sigma_noise, datafunction
-    )
-
-    # Train the model (3 modes for Clements 3x3)
-    n_modes = n_modes
-    theta_opt, history = train_pytorch(
-        X_train, y_train,
-        memory_depth=memory_depth,
-        lr=lr,
-        epochs=epochs,
-        n_samples=n_samples,
-        n_swipe=0,
-        swipe_span=0.0,
-        n_modes=n_modes,
-        encoding_mode=encoding_mode,
-        n_photons=n_photons,
-        target_mode=target_mode,
-        memristive_phase_idx=memristive_phase_idx,
-        memristive_output_modes=memristive_output_modes,
-        encoding_phase_idx=encoding_phase_idx 
-    )
-
-    # Uncertainty estimation through multiple forward passes
-    n_forward_passes = 10
-    all_preds = np.zeros((len(X_test), n_forward_passes))
-
-    for i in range(n_forward_passes):
-        # Each forward pass with a different sample count introduces some randomness
-        sample_count = n_samples + np.random.randint(-10, 10)
-        sample_count = max(10, sample_count)  # Ensure at least 10 samples
-        
-        # Small random perturbation to parameters to simulate quantum noise
-        perturbed_theta = theta_opt.copy()
-        # Only perturb phases slightly, not the weight
-        perturbed_theta[:-1] += np.random.normal(0, 0.03, size=len(perturbed_theta)-1)
-        
-        enc_test = 2 * np.arccos(X_test)
-        preds = run_simulation_sequence_np(
-            perturbed_theta,
-            memory_depth,
-            sample_count,
-            encoded_phases=enc_test,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=0,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx 
-            )
-        all_preds[:, i] = preds
-
-    # Compute mean and standard deviation of predictions
-    mean_preds = np.mean(all_preds, axis=1)
-    std_preds = np.std(all_preds, axis=1)
-
-    return X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history
+def _sim_cfg(mode: str) -> SimConfig:
+    d = dict(CONFIG)
+    if mode == "coincidence":
+        d.update(_COINCIDENCE_OVERRIDES)
+    return SimConfig.from_experiment_config(d)
 
 
-def compute_metrics(y_test, mean_preds, std_preds):
-    """Compute evaluation metrics."""
-    mse = np.mean((mean_preds - y_test) ** 2)
-    rmse = np.sqrt(mse)
-    mae = np.mean(np.abs(mean_preds - y_test))
+def _run_uncertainty(
+    model: PhotonicModel,
+    enc_test: np.ndarray,
+    *,
+    n_passes: int,
+    noise_std: float,
+    seed: int,
+) -> Dict[str, np.ndarray]:
+    """Monte-Carlo uncertainty: perturb phase parameters, aggregate predictions."""
+    rng = np.random.default_rng(seed)
+    n = len(enc_test)
+    all_preds = np.zeros((n, n_passes))
+    theta_base = model.theta.detach().cpu().numpy()
 
-    # Compute normalized uncertainty score (lower is better - well calibrated)
-    abs_error = np.abs(mean_preds - y_test)
-    uncertainty_score = np.mean(abs_error / (std_preds + 1e-6))
-
-    # Compute prediction interval coverage (should be close to 0.95 for well-calibrated model)
-    inside_interval = (y_test >= mean_preds - 2*std_preds) & (y_test <= mean_preds + 2*std_preds)
-    coverage = np.mean(inside_interval)
+    for i in range(n_passes):
+        sample_count = max(100, model.sim_cfg.n_samples + int(rng.integers(-50, 51)))
+        perturbed = theta_base + rng.normal(0, noise_std, size=len(theta_base))
+        all_preds[:, i] = model.predict(
+            enc_test, theta_np=perturbed, n_samples=sample_count
+        )
 
     return {
-        'mse': mse,
-        'rmse': rmse,
-        'mae': mae,
-        'uncertainty_score': uncertainty_score,
-        'coverage': coverage
+        "mean": np.mean(all_preds, axis=1),
+        "std": np.std(all_preds, axis=1),
+        "all_preds": all_preds,
     }
 
 
-def plot_function_comparison(results, functions):
-    """Plot comparison of model performance on different functions."""
-    n_functions = len(functions)
-    fig, axes = plt.subplots(n_functions, 3, figsize=(18, 4*n_functions))
+def compute_metrics(
+    y_test: np.ndarray,
+    mean_preds: np.ndarray,
+    std_preds: np.ndarray,
+) -> Dict[str, float]:
+    """
+    Compute regression and calibration metrics.
 
-    if n_functions == 1:
-        axes = axes.reshape(1, 3)
+    Returns
+    -------
+    rmse            Root-mean-square error
+    mae             Mean absolute error
+    r2              Coefficient of determination R² ∈ (-∞, 1]
+    coverage_95     Fraction of test points inside ŷ ± 1.96σ  (ideal ≈ 0.95)
+    mean_std        Average predictive uncertainty σ  (sharpness — lower = more confident)
+    nll             Gaussian NLL = ½·((y-ŷ)/σ)² + log σ  (lower = better joint accuracy+calibration)
+    calibration_rho Spearman ρ between σ and |error|  (> 0 = uncertainty tracks error)
+    """
+    residuals = mean_preds - y_test
+    mse = float(np.mean(residuals**2))
+    rmse = float(np.sqrt(mse))
+    mae = float(np.mean(np.abs(residuals)))
 
-    metrics_table = []
+    ss_res = float(np.sum(residuals**2))
+    ss_tot = float(np.sum((y_test - np.mean(y_test)) ** 2))
+    r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else float("nan")
 
-    for i, func_name in enumerate(functions):
-        result = results[func_name]
-        X_train, y_train, X_test, y_test = result['data']
-        mean_preds, std_preds = result['predictions']
-        history = result['history']
-        metrics = result['metrics']
+    lo = mean_preds - 1.96 * std_preds
+    hi = mean_preds + 1.96 * std_preds
+    coverage_95 = float(np.mean((y_test >= lo) & (y_test <= hi)))
 
-        # Plot training data and predictions
-        ax = axes[i, 0]
-        ax.scatter(X_train, y_train, s=20, label='Training data', alpha=0.7)
-        ax.plot(X_test, y_test, 'k--', label='Ground truth')
-        ax.plot(X_test, mean_preds, 'r-', label='Mean prediction')
-        ax.fill_between(
-            X_test,
-            mean_preds - 2*std_preds,
-            mean_preds + 2*std_preds,
-            color='r', alpha=0.3,
-            label='95% confidence interval'
-        )
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_title(f'{func_name} - Predictions')
-        ax.legend(loc='upper left')
-        ax.grid(True)
+    mean_std = float(np.mean(std_preds))
 
-        # Plot training loss
-        ax = axes[i, 1]
-        ax.plot(history)
-        ax.set_yscale('log')
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel('Loss')
-        ax.set_title(f'{func_name} - Training Loss')
-        ax.grid(True)
+    sigma = np.clip(std_preds, 1e-6, None)
+    nll = float(np.mean(0.5 * (residuals / sigma) ** 2 + np.log(sigma)))
 
-        # Plot uncertainty vs error
-        ax = axes[i, 2]
-        abs_error = np.abs(mean_preds - y_test)
-        scatter = ax.scatter(std_preds, abs_error, alpha=0.7, c=X_test, cmap='viridis')
-        plt.colorbar(scatter, ax=ax, label='x value')
-        max_val = max(np.max(std_preds), np.max(abs_error))
-        ax.plot([0, max_val], [0, max_val], 'k--', label='y=x (perfect calibration)')
-        ax.set_xlabel('Uncertainty (std)')
-        ax.set_ylabel('Absolute error')
-        ax.set_title(f'{func_name} - Calibration')
-        ax.grid(True)
-        ax.legend()
+    abs_residuals = np.abs(residuals)
+    if np.allclose(std_preds, std_preds[:1]) or np.allclose(
+        abs_residuals, abs_residuals[:1]
+    ):
+        cal_rho = float("nan")
+    else:
+        cal_rho, _ = stats.spearmanr(std_preds, abs_residuals)
 
-        # Collect metrics for table
-        metrics_table.append([
-            func_name,
-            f"{metrics['rmse']:.4f}",
-            f"{metrics['mae']:.4f}",
-            f"{metrics['uncertainty_score']:.4f}",
-            f"{metrics['coverage']:.4f}"
-        ])
+    return {
+        "rmse": rmse,
+        "mae": mae,
+        "r2": r2,
+        "coverage_95": coverage_95,
+        "mean_std": mean_std,
+        "nll": nll,
+        "calibration_rho": float(cal_rho),
+    }
 
-    plt.tight_layout()
 
-    # Create metrics table as a separate figure
-    fig_table, ax_table = plt.subplots(figsize=(10, n_functions*0.5 + 1))
-    ax_table.axis('off')
-    table = ax_table.table(
-        cellText=metrics_table,
-        colLabels=['Function', 'RMSE', 'MAE', 'Uncert. Score', 'Coverage'],
-        cellLoc='center',
-        loc='center'
+def train_and_evaluate(
+    func_name: str,
+    mode: str,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+) -> Dict:
+    """Train one (function, mode) pair; return predictions, history and metrics."""
+    logger.info("▶ Training  func=%-22s  mode=%s", func_name, mode)
+    sc = _sim_cfg(mode)
+    enc_train = 2 * np.arccos(np.clip(X_train, 0, 1))
+
+    trained_state, history, model = train_pytorch_generic(
+        enc_train,
+        y_train,
+        sim_cfg=sc,
+        lr=float(CONFIG["lr"]),
+        epochs=int(CONFIG["epochs"]),
+        seed=int(CONFIG["seed"]),
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1.2, 1.5)
-    ax_table.set_title('Performance Metrics Comparison')
+    logger.info("  final loss: %.6f", history[-1])
 
-    plt.tight_layout()
-
-    plt.figure(fig.number)  # Return to the main figure
-
-    return fig, fig_table
-
-
-def main():
-    """Main function to run the comparison."""
-    print("=== UQ-QNN: Function Comparison Example ===")
-
-    # Set random seed for reproducibility
-    np.random.seed(42)
-    
-    # Configure parameters
-    n_data = 100
-    sigma_noise = 0.002
-    lr = 0.04
-    epochs = 120
-    memory_depth = 2
-    n_modes = 6
-    n_phases = n_modes * (n_modes - 1)  # Clements: 3x3 = 6 phases
-    phase_idx = tuple(range(n_phases))
-    n_photons = tuple([2] * n_phases)
-    n_samples = 20
-    encoding_mode = 2
-    target_mode=(n_modes - 2,)
-    memristive_output_modes = None
-    memristive_phase_idx=None
-    encoding_phase_idx=None
+    enc_test = 2 * np.arccos(np.clip(X_test, 0, 1))
+    unc = _run_uncertainty(
+        model,
+        enc_test,
+        n_passes=int(CONFIG["unc_n_passes"]),
+        noise_std=float(CONFIG["unc_noise_std"]),
+        seed=int(CONFIG["seed"]),
+    )
+    metrics = compute_metrics(y_test, unc["mean"], unc["std"])
+    logger.info(
+        "  RMSE=%.4f  R²=%.4f  Coverage=%.2f  NLL=%.3f  Cal.ρ=%.3f",
+        metrics["rmse"],
+        metrics["r2"],
+        metrics["coverage_95"],
+        metrics["nll"],
+        metrics["calibration_rho"],
+    )
+    return {
+        "trained_state": trained_state,
+        "history": history,
+        "mean_preds": unc["mean"],
+        "std_preds": unc["std"],
+        "metrics": metrics,
+    }
 
 
-    # Functions to compare
-    functions = [
-        'quartic_data',  
-        'neg_qubic_data',
-        'sinusoid_data'
-    ]
-    
-    # Print parameter structure info
-    print(f"Using array-based circuit structure with {n_phases} phase parameters (+ memory phase)")
+# ════════════════════════════════════════════════════════════════════════════
+# PLOTS
+# ════════════════════════════════════════════════════════════════════════════
 
-    # Store results
-    results = {}
 
-    # Train and evaluate on each function
-    for func_name in functions:
-        print(f"\n=== Training on {func_name} ===")
-        X_train, y_train, X_test, y_test, mean_preds, std_preds, theta_opt, history = train_and_evaluate(
-            datafunction=func_name, 
-            n_data=n_data,
-            sigma_noise=sigma_noise,
-            memory_depth=memory_depth,
-            lr=lr,
-            epochs=epochs,
-            n_samples=n_samples,
-            n_swipe=0,
-            swipe_span=0.0,
-            n_modes=n_modes,
-            encoding_mode=encoding_mode,
-            n_photons=n_photons,
-            target_mode=target_mode,
-            memristive_phase_idx=memristive_phase_idx,
-            memristive_output_modes=memristive_output_modes,
-            encoding_phase_idx=encoding_phase_idx
+def plot_predictions_grid(
+    results: Dict,
+    data: Dict,
+    functions: list,
+    modes: list,
+) -> plt.Figure:
+    """Fit + 95 % CI for every (function, mode) pair."""
+    n_f, n_m = len(functions), len(modes)
+    fig, axes = plt.subplots(n_f, n_m, figsize=(6 * n_m, 4 * n_f))
+    axes = np.atleast_2d(axes)
+
+    for i, func in enumerate(functions):
+        X_train, y_train, X_test, y_test = data[func]
+        for j, mode in enumerate(modes):
+            ax = axes[i, j]
+            r = results[func][mode]
+            m = r["metrics"]
+
+            ax.scatter(
+                X_train, y_train, s=14, alpha=0.45, color="dimgray", label="Train"
+            )
+            ax.plot(X_test, y_test, "k--", lw=1.4, label="Ground truth")
+            ax.plot(
+                X_test,
+                r["mean_preds"],
+                color=MODE_COLORS[mode],
+                lw=2.0,
+                label="Prediction",
+            )
+            ax.fill_between(
+                X_test,
+                r["mean_preds"] - 1.96 * r["std_preds"],
+                r["mean_preds"] + 1.96 * r["std_preds"],
+                color=MODE_COLORS[mode],
+                alpha=0.22,
+                label="95 % CI",
+            )
+            ax.set_title(
+                f"{FUNC_LABELS[func]}  ·  {mode}\n"
+                f"RMSE={m['rmse']:.4f}   R²={m['r2']:.3f}   Cov={m['coverage_95']:.2f}",
+                fontsize=9,
+            )
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+            ax.grid(True, alpha=0.25)
+            if i == 0 and j == 0:
+                ax.legend(fontsize=8)
+
+    fig.suptitle(
+        "Photonic QNN Regression — Functions × Measurement Modes", fontsize=13, y=1.01
+    )
+    fig.tight_layout()
+    return fig
+
+
+def plot_training_loss(results: Dict, functions: list, modes: list) -> plt.Figure:
+    """Log-scale loss curves — visually reveals convergence speed and final loss."""
+    n_f = len(functions)
+    fig, axes = plt.subplots(1, n_f, figsize=(5 * n_f, 4))
+    axes = np.atleast_1d(axes)
+
+    for ax, func in zip(axes, functions):
+        for mode in modes:
+            ax.plot(
+                results[func][mode]["history"],
+                color=MODE_COLORS[mode],
+                lw=1.6,
+                alpha=0.85,
+                label=mode,
+            )
+        ax.set_yscale("log")
+        ax.set_title(FUNC_LABELS[func])
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("MSE Loss")
+        ax.legend(fontsize=9)
+        ax.grid(True, which="both", alpha=0.25)
+
+    fig.suptitle("Training Convergence: Singles vs Coincidence", fontsize=12)
+    fig.tight_layout()
+    return fig
+
+
+def plot_calibration(
+    results: Dict,
+    data: Dict,
+    functions: list,
+    modes: list,
+) -> plt.Figure:
+    """
+    Calibration scatter: predictive σ vs absolute error.
+
+    A well-calibrated model has points near the identity line (σ ≈ |error|).
+    Points below the line indicate under-confidence; above indicates overconfidence.
+    The 2σ band should contain ≈95 % of data.
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    for j, mode in enumerate(modes):
+        ax = axes[j]
+        all_stds: list = []
+        all_errs: list = []
+        for func in functions:
+            _, _, X_test, y_test = data[func]
+            r = results[func][mode]
+            stds = r["std_preds"]
+            errs = np.abs(r["mean_preds"] - y_test)
+            ax.scatter(stds, errs, alpha=0.45, s=9, label=FUNC_LABELS[func])
+            all_stds.extend(stds.tolist())
+            all_errs.extend(errs.tolist())
+
+        max_val = max(float(np.max(all_stds)), float(np.max(all_errs))) * 1.05
+        ax.plot(
+            [0, max_val],
+            [0, max_val],
+            "k-",
+            lw=1.0,
+            alpha=0.5,
+            label="σ = |err| (ideal)",
+        )
+        ax.plot(
+            [0, max_val],
+            [0, 1.96 * max_val],
+            "k--",
+            lw=0.8,
+            alpha=0.35,
+            label="1.96σ (95 % bound)",
         )
 
-        metrics = compute_metrics(y_test, mean_preds, std_preds)
-        print(f"  RMSE: {metrics['rmse']:.6f}")
-        print(f"  MAE: {metrics['mae']:.6f}")
-        print(f"  Uncertainty Score: {metrics['uncertainty_score']:.6f}")
-        print(f"  Coverage (95% interval): {metrics['coverage']:.6f}")
+        rho, _ = stats.spearmanr(all_stds, all_errs)
+        ax.set_title(
+            f"{mode.capitalize()} — Calibration\nSpearman ρ = {rho:.3f}  (↑ = σ tracks |error|)",
+            fontsize=10,
+        )
+        ax.set_xlabel("Predictive uncertainty σ")
+        ax.set_ylabel("Absolute error |y − ŷ|")
+        ax.legend(fontsize=8, markerscale=2)
+        ax.grid(True, alpha=0.25)
+        ax.set_xlim(left=0)
+        ax.set_ylim(bottom=0)
 
-        results[func_name] = {
-            'data': (X_train, y_train, X_test, y_test),
-            'predictions': (mean_preds, std_preds),
-            'theta': theta_opt,
-            'history': history,
-            'metrics': metrics
-        }
+    fig.suptitle("Uncertainty Calibration by Measurement Mode", fontsize=12)
+    fig.tight_layout()
+    return fig
 
-    # Plot comparison
-    fig, fig_table = plot_function_comparison(results, functions)
 
-    # Save figures
-    fig.savefig('function_comparison.png', dpi=300, bbox_inches='tight')
-    fig_table.savefig('function_metrics.png', dpi=300, bbox_inches='tight')
+def plot_metrics_comparison(results: Dict, functions: list, modes: list) -> plt.Figure:
+    """
+    Grouped bar chart for RMSE, R², coverage@95 %, NLL.
 
-    plt.show()
+    Placing singles and coincidence side-by-side per function highlights
+    whether coincidence's quantum correlations genuinely improve fit quality.
+    """
+    metrics_spec = [
+        ("rmse", "RMSE  (↓ better)"),
+        ("r2", "R²  (↑ better)"),
+        ("coverage_95", "Coverage @ 95 %  (→ 0.95)"),
+        ("nll", "NLL  (↓ better)"),
+    ]
+    n_m = len(metrics_spec)
+    fig, axes = plt.subplots(1, n_m, figsize=(5 * n_m, 5))
 
-    # Print simulation statistics
-    sim_logger.report()
+    x = np.arange(len(functions))
+    width = 0.35
+
+    for ax, (key, label) in zip(axes, metrics_spec):
+        for k, mode in enumerate(modes):
+            vals = [results[f][mode]["metrics"][key] for f in functions]
+            bars = ax.bar(
+                x + (k - 0.5) * width,
+                vals,
+                width,
+                label=mode,
+                color=MODE_COLORS[mode],
+                alpha=0.8,
+                edgecolor="white",
+                linewidth=0.5,
+            )
+            for bar, v in zip(bars, vals):
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2.0,
+                    bar.get_height() * 1.02,
+                    f"{v:.3f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=7,
+                    rotation=40,
+                )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            [FUNC_LABELS[f] for f in functions], rotation=20, ha="right", fontsize=9
+        )
+        ax.set_title(label, fontsize=10)
+        ax.legend(fontsize=9)
+        ax.grid(True, axis="y", alpha=0.25)
+
+    fig.suptitle("Performance Metrics: Singles vs Coincidence", fontsize=12)
+    fig.tight_layout()
+    return fig
+
+
+def plot_r2_heatmap(results: Dict, functions: list, modes: list) -> plt.Figure:
+    """
+    R² heatmap (functions × modes).
+
+    Provides an at-a-glance view of which (function, mode) combinations
+    succeed or fail.  R² < 0 means the model is worse than the mean baseline.
+    """
+    matrix = np.array(
+        [[results[f][m]["metrics"]["r2"] for m in modes] for f in functions]
+    )
+    fig, ax = plt.subplots(figsize=(4, 1 + len(functions)))
+    im = ax.imshow(matrix, vmin=-0.5, vmax=1.0, cmap="RdYlGn", aspect="auto")
+    fig.colorbar(im, ax=ax, label="R²", fraction=0.04, pad=0.04)
+
+    ax.set_xticks(range(len(modes)))
+    ax.set_xticklabels(modes, fontsize=11)
+    ax.set_yticks(range(len(functions)))
+    ax.set_yticklabels([FUNC_LABELS[f] for f in functions], fontsize=10)
+    ax.set_title("R² Score Heatmap\n(functions × measurement mode)", fontsize=11)
+
+    for i in range(len(functions)):
+        for j in range(len(modes)):
+            val = matrix[i, j]
+            txt_color = "white" if abs(val) > 0.65 else "black"
+            ax.text(
+                j,
+                i,
+                f"{val:.3f}",
+                ha="center",
+                va="center",
+                color=txt_color,
+                fontsize=11,
+                fontweight="bold",
+            )
+
+    fig.tight_layout()
+    return fig
+
+
+def plot_uncertainty_distribution(
+    results: Dict, functions: list, modes: list
+) -> plt.Figure:
+    """
+    Violin plots of per-point predictive σ.
+
+    Wider violins → more spread in σ across test points.
+    Coincidence measurements may show qualitatively different σ distributions
+    due to the normalisation of coincidence probabilities.
+    """
+    n_f = len(functions)
+    fig, axes = plt.subplots(1, n_f, figsize=(4 * n_f, 4))
+    axes = np.atleast_1d(axes)
+
+    for ax, func in zip(axes, functions):
+        plot_data = [results[func][m]["std_preds"] for m in modes]
+        parts = ax.violinplot(
+            plot_data,
+            positions=range(len(modes)),
+            showmedians=True,
+            showextrema=True,
+        )
+        for pc, mode in zip(parts["bodies"], modes):
+            pc.set_facecolor(MODE_COLORS[mode])
+            pc.set_alpha(0.72)
+        parts["cmedians"].set_color("black")
+        parts["cmedians"].set_linewidth(1.5)
+
+        ax.set_xticks(range(len(modes)))
+        ax.set_xticklabels(modes, fontsize=10)
+        ax.set_title(FUNC_LABELS[func], fontsize=10)
+        ax.set_ylabel("Prediction σ")
+        ax.grid(True, axis="y", alpha=0.25)
+
+    fig.suptitle("Uncertainty Distribution by Measurement Mode", fontsize=12)
+    fig.tight_layout()
+    return fig
+
+
+def plot_metrics_table(results: Dict, functions: list, modes: list) -> plt.Figure:
+    """Full numeric summary table for all (function, mode) pairs."""
+    columns = [
+        "Function",
+        "Mode",
+        "RMSE ↓",
+        "MAE ↓",
+        "R² ↑",
+        "Cov@95 %",
+        "Mean σ",
+        "NLL ↓",
+        "Cal. ρ ↑",
+    ]
+    rows = []
+    for func in functions:
+        for mode in modes:
+            m = results[func][mode]["metrics"]
+            rows.append(
+                [
+                    FUNC_LABELS[func],
+                    mode,
+                    f"{m['rmse']:.4f}",
+                    f"{m['mae']:.4f}",
+                    f"{m['r2']:.3f}",
+                    f"{m['coverage_95']:.3f}",
+                    f"{m['mean_std']:.4f}",
+                    f"{m['nll']:.3f}",
+                    f"{m['calibration_rho']:.3f}",
+                ]
+            )
+
+    fig, ax = plt.subplots(figsize=(15, 0.52 * len(rows) + 1.8))
+    ax.axis("off")
+    tbl = ax.table(
+        cellText=rows,
+        colLabels=columns,
+        cellLoc="center",
+        loc="center",
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1.0, 1.7)
+
+    for r_idx, row in enumerate(rows):
+        color = "#daeeff" if row[1] == "singles" else "#ffe5cc"
+        for c_idx in range(len(columns)):
+            tbl[(r_idx + 1, c_idx)].set_facecolor(color)
+
+    ax.set_title(
+        "Comprehensive Metrics Summary — Functions × Measurement Modes",
+        fontsize=11,
+        pad=18,
+    )
+    fig.tight_layout()
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def main() -> None:
+    with Experiment(
+        "Function and Measurement Comparison",
+        config=CONFIG,
+    ) as exp:
+        np.random.seed(int(CONFIG["seed"]))
+
+        # ── Load data ─────────────────────────────────────────────────────
+        data: Dict[str, Tuple] = {}
+        for func_name in FUNCTIONS:
+            data[func_name] = get_data(
+                int(CONFIG["n_data"]),
+                float(CONFIG["sigma_noise"]),
+                func_name,
+            )
+            logger.info(
+                "Data loaded: %-22s  train=%d  test=%d",
+                func_name,
+                len(data[func_name][0]),
+                len(data[func_name][2]),
+            )
+
+        # ── Train all (function, mode) combinations ────────────────────────
+        results: Dict = {}
+        all_metrics: Dict = {}
+
+        for func_name in FUNCTIONS:
+            results[func_name] = {}
+            all_metrics[func_name] = {}
+            X_train, y_train, X_test, y_test = data[func_name]
+            for mode in MEASUREMENT_MODES:
+                r = train_and_evaluate(
+                    func_name, mode, X_train, y_train, X_test, y_test
+                )
+                results[func_name][mode] = r
+                all_metrics[func_name][mode] = r["metrics"]
+
+        exp.save_metrics({"by_function_and_mode": all_metrics})
+
+        # ── Plots ──────────────────────────────────────────────────────────
+        logger.info("Generating figures…")
+
+        figs = [
+            (
+                "predictions_grid.png",
+                plot_predictions_grid(results, data, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "training_loss.png",
+                plot_training_loss(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "calibration.png",
+                plot_calibration(results, data, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "metrics_comparison.png",
+                plot_metrics_comparison(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            ("r2_heatmap.png", plot_r2_heatmap(results, FUNCTIONS, MEASUREMENT_MODES)),
+            (
+                "uncertainty_distribution.png",
+                plot_uncertainty_distribution(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+            (
+                "metrics_table.png",
+                plot_metrics_table(results, FUNCTIONS, MEASUREMENT_MODES),
+            ),
+        ]
+
+        for fname, fig in figs:
+            exp.savefig(fig, fname, bbox_inches="tight")
+            plt.close(fig)
+            logger.info("  saved %s", fname)
+
+        logger.info("Experiment complete. Report: %s", exp.run_dir)
 
 
 if __name__ == "__main__":

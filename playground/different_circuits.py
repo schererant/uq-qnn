@@ -1,7 +1,7 @@
 import strawberryfields as sf
 from strawberryfields.ops import *
 import numpy as np
-from abc import ABC, abstractmethod
+
 
 class MemristorCircuit:
     def __init__(self, phase1, memristor_weight, phase3, encoded_phases):
@@ -28,31 +28,31 @@ class MemristorCircuit:
         """
         circuit = sf.Program(3)
         with circuit.context as q:
-            Vac     | q[0]
+            Vac | q[0]
             Fock(1) | q[1]
-            Vac     | q[2]
+            Vac | q[2]
 
             # Input encoding MZI
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-            Rgate(self.encoded_phases)           | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
+            BSgate(np.pi / 4, np.pi / 2) | (q[0], q[1])
+            Rgate(self.encoded_phases) | q[1]
+            BSgate(np.pi / 4, np.pi / 2) | (q[0], q[1])
 
             # First MZI
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-            Rgate(self.phase1)             | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
+            BSgate(np.pi / 4, np.pi / 2) | (q[0], q[1])
+            Rgate(self.phase1) | q[1]
+            BSgate(np.pi / 4, np.pi / 2) | (q[0], q[1])
 
             # Memristor (Second MZI)
-            BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
-            Rgate(self.memristor_weight)             | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[1], q[2])
+            BSgate(np.pi / 4, np.pi / 2) | (q[1], q[2])
+            Rgate(self.memristor_weight) | q[1]
+            BSgate(np.pi / 4, np.pi / 2) | (q[1], q[2])
 
             # Third MZI
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
-            Rgate(self.phase3)             | q[1]
-            BSgate(np.pi/4, np.pi/2) | (q[0], q[1])
+            BSgate(np.pi / 4, np.pi / 2) | (q[0], q[1])
+            Rgate(self.phase3) | q[1]
+            BSgate(np.pi / 4, np.pi / 2) | (q[0], q[1])
         return circuit
-    
+
 
 class MemristorCircuitReviewed:
     """
@@ -70,6 +70,7 @@ class MemristorCircuitReviewed:
     phase3 : float
         Phase shift applied in the third MZI (radians).
     """
+
     def __init__(self, encoded_phase, phase1, memristor_phase, phase3):
         self.encoded_phase = encoded_phase
         self.phase1 = phase1
@@ -79,16 +80,16 @@ class MemristorCircuitReviewed:
     def _mzi(self, q, m1, m2, phase):
         """Applies an MZI with phase rotation to modes m1 and m2."""
         BSgate(np.pi / 4, np.pi / 2) | (q[m1], q[m2])
-        Rgate(phase)                 | q[m2]
+        Rgate(phase) | q[m2]
         BSgate(np.pi / 4, np.pi / 2) | (q[m1], q[m2])
 
     def build_circuit(self):
 
         circuit = sf.Program(3)
         with circuit.context as q:
-            Vac     | q[0]
+            Vac | q[0]
             Fock(1) | q[1]
-            Vac     | q[2]
+            Vac | q[2]
 
             self._mzi(q, 0, 1, self.encoded_phase)
             self._mzi(q, 0, 1, self.phase1)

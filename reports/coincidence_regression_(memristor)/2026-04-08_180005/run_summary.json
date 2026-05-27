@@ -1,0 +1,118 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Coincidence Regression (Memristor)",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/coincidence_regression_(memristor)/2026-04-08_180005",
+  "timestamp_utc": "2026-04-08T16:05:44.226475+00:00",
+  "python": "3.13.5",
+  "git_commit": "0ea16cb",
+  "config": {
+    "n_modes": 6,
+    "input_state": [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+    ],
+    "encoding_phase_idx": 7,
+    "photon_distinguishability": "indistinguishable",
+    "target_mode": [
+      0,
+      1
+    ],
+    "computation_modes": [
+      0,
+      1
+    ],
+    "memristive_phase_idx": [
+      9
+    ],
+    "memristive_output_modes": [
+      [
+        4,
+        5
+      ]
+    ],
+    "output_mode": "coincidence",
+    "working_detectors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "feedback_mode": "chip_output",
+    "feedback_modes": [
+      [
+        4,
+        5
+      ]
+    ],
+    "loss_type": "mse",
+    "n_classes": 1,
+    "lr": 0.05,
+    "epochs": 80,
+    "n_samples": 0,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "noise_std": null,
+    "seed": 42,
+    "sim_backend": "numpy",
+    "n_data": 200,
+    "sigma_noise": 0.005,
+    "data_function": "step_function_data",
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05
+  },
+  "hardware": null,
+  "metrics": {
+    "target_cc_pair": [
+      0,
+      1
+    ],
+    "feedback_pair": [
+      4,
+      5
+    ],
+    "input_state": [
+      0,
+      1,
+      0,
+      0,
+      1,
+      0
+    ],
+    "encoding_phase_idx": 7,
+    "memristive_phase_idx": [
+      9
+    ],
+    "final_loss": 0.007443048257937946,
+    "mse": 0.01469471452881252,
+    "rmse": 0.12122175765436054,
+    "mae": 0.1116133763024291,
+    "r2": 0.5372982447228853,
+    "coverage_95": 0.056,
+    "mean_std": 0.017964656553224375,
+    "nll": 19.053806117073947,
+    "calibration_rho": 0.5830587162348649,
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/coincidence_regression_(memristor)/2026-04-08_180005/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_regression_(memristor)/2026-04-08_180005/coincidence_regression_memristor_with_uncertainty.png"
+  ],
+  "simulation": {
+    "call_count": 9210,
+    "total_time": 336.3938135422504,
+    "samples_counter": {
+      "0": 9210
+    },
+    "circuit_call_count": 1753000,
+    "circuit_total_time": 318.19948031107197,
+    "avg_time_per_sequence": 0.03652484403281764,
+    "avg_time_per_circuit": 0.00018151710228811864
+  }
+}

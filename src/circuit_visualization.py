@@ -14,22 +14,27 @@ from pathlib import Path
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
-import perceval as pcvl
 from PIL import Image
 
-from .circuits import build_circuit, get_mzi_modes_for_phase
-from .simulation import _normalize_memristive_phase_idx
+from .circuits import (
+    build_circuit,
+    get_mzi_modes_for_phase,
+    normalize_memristive_phase_idx,
+)
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def display_circuit_annotated(
     n_modes: int,
-    encoding_mode: int = 0,
+    input_state: Tuple[int, ...],
+    encoding_phase_idx: int,
     target_mode: Optional[Tuple[int, ...]] = None,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
     phases: Optional[np.ndarray] = None,
     enc_phi: float = np.pi / 4,
-    encoding_phase_idx: Optional[int] = None,
     path: Optional[str] = None,
     show: bool = True,
     skin=None,
@@ -40,14 +45,13 @@ def display_circuit_annotated(
 
     Args:
         n_modes: Number of modes (3 for 3x3, 6 for 6x6, etc.).
-        encoding_mode: Mode where the input photon is injected (encoding).
+        input_state: Fock occupation vector of length ``n_modes`` (non-negative ints).
+        encoding_phase_idx: Mesh phase index that receives ``enc_phi`` (internal encoding).
         target_mode: Output mode(s) used for measurement. Default: (n_modes - 1,).
         memristive_phase_idx: Phase indices that are memristive (feedback-controlled).
         memristive_output_modes: For each memristive phase, (mode_p1, mode_p2) for feedback.
         phases: Phase values for the circuit. If None, uses π/4 for all.
-        enc_phi: Encoding phase value (radians).
-        encoding_phase_idx: If provided, enc_phi is embedded into this phase index
-            inside the Clements mesh instead of using a separate encoding_circuit.
+        enc_phi: Data encoding phase contribution (radians), added at encoding_phase_idx.
         path: If set, save the annotated figure to this file path.
         show: If True, display the figure (e.g. plt.show()).
         skin: Perceval skin (e.g. SymbSkin()). If None, uses default.
@@ -61,29 +65,35 @@ def display_circuit_annotated(
     if target_mode is None:
         target_mode = (n_modes - 1,)
 
-    memristive_indices = _normalize_memristive_phase_idx(
+    memristive_indices = normalize_memristive_phase_idx(
         memristive_phase_idx, n_modes, n_phases
     )
+
+    import perceval as pcvl
 
     # Build circuit and save to temp file
     circ = build_circuit(
         phases,
         enc_phi,
         n_modes=n_modes,
-        encoding_mode=encoding_mode,
-        encoding_phase_idx=encoding_phase_idx,
+        encoding_phase_idx=int(encoding_phase_idx),
     )
     proc = pcvl.Processor("SLOS", circ)
-    input_modes = [0] * n_modes
-    input_modes[encoding_mode] = 1
-    proc.with_input(pcvl.BasicState(input_modes))
+    if len(input_state) != n_modes:
+        raise ValueError(
+            f"input_state must have length n_modes={n_modes}, got {len(input_state)}"
+        )
+    occ = [int(x) for x in input_state]
+    proc.with_input(pcvl.BasicState(occ))
 
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         tmp_path = f.name
     try:
         if skin is None:
             from perceval.rendering.circuit import SymbSkin
+
             skin = SymbSkin(compact_display=False)
         pcvl.pdisplay_to_file(proc, tmp_path, skin=skin, recursive=True)
     except Exception:
@@ -93,7 +103,7 @@ def display_circuit_annotated(
     lines = [
         "Circuit configuration",
         "─" * 40,
-        f"Input (encoding): mode {encoding_mode}",
+        f"Input state (occupation): {tuple(input_state)}",
         f"Target output: modes {target_mode}",
         f"Encoding phase enc_φ: {enc_phi:.4f} rad ({np.degrees(enc_phi):.1f}°)",
         "",
@@ -109,7 +119,9 @@ def display_circuit_annotated(
         lines.append("Memristive phases:")
         for j, idx in enumerate(memristive_indices):
             m1, m2 = get_mzi_modes_for_phase(idx, n_modes)
-            modes_str = f"  phase[{idx}] = {phases[idx]:.4f} rad → MZI modes ({m1}, {m2})"
+            modes_str = (
+                f"  phase[{idx}] = {phases[idx]:.4f} rad → MZI modes ({m1}, {m2})"
+            )
             if memristive_output_modes and j < len(memristive_output_modes):
                 m1_out, m2_out = memristive_output_modes[j]
                 modes_str += f", feedback from ({m1_out}, {m2_out})"
@@ -122,8 +134,7 @@ def display_circuit_annotated(
     Path(tmp_path).unlink(missing_ok=True)
 
     fig, (ax_circ, ax_cfg) = plt.subplots(
-        2, 1, figsize=(14, 10),
-        gridspec_kw={"height_ratios": [1.2, 0.8], "hspace": 0.3}
+        2, 1, figsize=(14, 10), gridspec_kw={"height_ratios": [1.2, 0.8], "hspace": 0.3}
     )
 
     ax_circ.imshow(img)
@@ -133,19 +144,26 @@ def display_circuit_annotated(
     ax_cfg.axis("off")
     text = "\n".join(lines)
     ax_cfg.text(
-        0.02, 0.98, text,
+        0.02,
+        0.98,
+        text,
         transform=ax_cfg.transAxes,
         fontsize=11,
         family="monospace",
         verticalalignment="top",
-        bbox=dict(boxstyle="round,pad=0.8", facecolor="white", edgecolor="black", linewidth=1.5),
+        bbox=dict(
+            boxstyle="round,pad=0.8",
+            facecolor="white",
+            edgecolor="black",
+            linewidth=1.5,
+        ),
     )
 
     fig.subplots_adjust(left=0.02, right=0.98, top=0.96, bottom=0.02, hspace=0.3)
 
     if path:
         plt.savefig(path, dpi=dpi, bbox_inches="tight")
-        print(f"Saved circuit to {path}")
+        logger.info("Saved circuit to %s", path)
     if show:
         plt.show()
     else:
@@ -155,22 +173,24 @@ def display_circuit_annotated(
 def save_circuit_annotated(
     path: str,
     n_modes: int,
-    encoding_mode: int = 0,
+    input_state: Tuple[int, ...],
+    encoding_phase_idx: int,
     target_mode: Optional[Tuple[int, ...]] = None,
     memristive_phase_idx: Optional[Union[int, Sequence[int]]] = None,
     memristive_output_modes: Optional[Sequence[Tuple[int, int]]] = None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """
     Save the annotated circuit to a file. Convenience wrapper around display_circuit_annotated.
     """
     display_circuit_annotated(
         n_modes=n_modes,
-        encoding_mode=encoding_mode,
+        input_state=input_state,
+        encoding_phase_idx=encoding_phase_idx,
         target_mode=target_mode,
         memristive_phase_idx=memristive_phase_idx,
         memristive_output_modes=memristive_output_modes,
         path=path,
         show=False,
-        **kwargs
+        **kwargs,
     )

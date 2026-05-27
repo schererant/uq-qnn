@@ -1,0 +1,11 @@
+[src]
+exclude = [
+    "docs/**",
+    "examples/**",
+    "misc/**",
+    "notebooks/**",
+    "playground/**",
+    "reports/**",
+    "scripts/**",
+    "tmp/**",
+]

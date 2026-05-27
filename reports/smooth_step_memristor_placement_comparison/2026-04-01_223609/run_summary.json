@@ -1,0 +1,144 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Smooth Step Memristor Placement Comparison",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/smooth_step_memristor_placement_comparison/2026-04-01_223609",
+  "timestamp_utc": "2026-04-01T20:39:24.257716+00:00",
+  "python": "3.13.5",
+  "git_commit": "31d31c4",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": [
+      5
+    ],
+    "encoding_phase_idx": null,
+    "output_mode": "singles",
+    "input_modes": null,
+    "working_detectors": null,
+    "n_photons": null,
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.04,
+    "epochs": 180,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null
+  },
+  "hardware": null,
+  "metrics": {
+    "function": "step_function_data",
+    "placement_labels": {
+      "standard": "Standard",
+      "phase_0": "Phase 0 \u00b7 MZI(0, 1)",
+      "phase_2": "Phase 2 \u00b7 MZI(2, 3)",
+      "phase_4": "Phase 4 \u00b7 MZI(4, 5)",
+      "phase_6": "Phase 6 \u00b7 MZI(1, 2)",
+      "phase_8": "Phase 8 \u00b7 MZI(3, 4)"
+    },
+    "by_placement": {
+      "standard": {
+        "rmse": 0.07179823750559433,
+        "mae": 0.06150094059755603,
+        "r2": 0.8376816721069144,
+        "coverage_95": 0.368,
+        "mean_std": 0.018701759049093495,
+        "nll": 3.790278521895834,
+        "calibration_rho": -0.5603815055260221
+      },
+      "phase_0": {
+        "rmse": 0.40380687855950065,
+        "mae": 0.36720826570798765,
+        "r2": -4.134373031446979,
+        "coverage_95": 0.002,
+        "mean_std": 0.0009303154169043966,
+        "nll": 90936.42971238878,
+        "calibration_rho": 0.3880476641906567
+      },
+      "phase_2": {
+        "rmse": 0.07122468483670161,
+        "mae": 0.06183313210891881,
+        "r2": 0.840264639632693,
+        "coverage_95": 0.278,
+        "mean_std": 0.018135778070876542,
+        "nll": 3.765802168490608,
+        "calibration_rho": 0.11845295381181524
+      },
+      "phase_4": {
+        "rmse": 0.07122468483670161,
+        "mae": 0.06183313210891881,
+        "r2": 0.840264639632693,
+        "coverage_95": 0.278,
+        "mean_std": 0.018135778070876542,
+        "nll": 3.765802168490608,
+        "calibration_rho": 0.11845295381181524
+      },
+      "phase_6": {
+        "rmse": 0.07574471064622415,
+        "mae": 0.06494397694056732,
+        "r2": 0.8193472341161521,
+        "coverage_95": 0.048,
+        "mean_std": 0.01121478047696551,
+        "nll": 14.558655043464753,
+        "calibration_rho": 0.6223532094128377
+      },
+      "phase_8": {
+        "rmse": 0.07122468483670161,
+        "mae": 0.06183313210891881,
+        "r2": 0.840264639632693,
+        "coverage_95": 0.278,
+        "mean_std": 0.018135778070876542,
+        "nll": 3.765802168490608,
+        "calibration_rho": 0.11845295381181524
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_memristor_placement_comparison/2026-04-01_223609/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_memristor_placement_comparison/2026-04-01_223609/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_memristor_placement_comparison/2026-04-01_223609/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/smooth_step_memristor_placement_comparison/2026-04-01_223609/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 67770,
+    "total_time": 192.15144661976956,
+    "samples_counter": {
+      "300": 67680,
+      "259": 6,
+      "328": 6,
+      "257": 1,
+      "327": 1,
+      "329": 1,
+      "254": 1,
+      "291": 1,
+      "287": 1,
+      "303": 6,
+      "275": 1,
+      "268": 1,
+      "319": 1,
+      "267": 1,
+      "305": 11,
+      "302": 1,
+      "307": 5,
+      "318": 5,
+      "260": 5,
+      "253": 5,
+      "262": 5,
+      "269": 5,
+      "333": 5,
+      "298": 5,
+      "309": 5,
+      "338": 5
+    },
+    "circuit_call_count": 5188680,
+    "circuit_total_time": 191.46036024333443,
+    "avg_time_per_sequence": 0.002835346711225757,
+    "avg_time_per_circuit": 3.6899627697860425e-05
+  }
+}

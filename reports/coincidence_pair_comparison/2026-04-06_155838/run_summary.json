@@ -1,0 +1,244 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Coincidence Pair Comparison",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838",
+  "timestamp_utc": "2026-04-06T14:00:26.127695+00:00",
+  "python": "3.13.5",
+  "git_commit": "cc40b90",
+  "config": {
+    "n_modes": 6,
+    "encoding_mode": 0,
+    "target_mode": null,
+    "memristive_phase_idx": null,
+    "memristive_output_modes": null,
+    "encoding_phase_idx": null,
+    "output_mode": "coincidence",
+    "input_modes": [
+      1,
+      4
+    ],
+    "n_photons": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "n_samples": 300,
+    "noise_std": null,
+    "loss_type": "mse",
+    "n_classes": 1,
+    "memory_depth": 1,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "sim_backend": "numpy",
+    "seed": 42,
+    "lr": 0.05,
+    "epochs": 150,
+    "working_detectors": [
+      0,
+      1
+    ]
+  },
+  "hardware": null,
+  "metrics": {
+    "by_cc_pair": {
+      "CC01": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC02": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC03": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC04": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC05": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC12": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC13": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC14": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC15": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC23": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC24": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC25": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC34": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC35": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      },
+      "CC45": {
+        "rmse": 0.523334251319895,
+        "mae": 0.5099807284259671,
+        "r2": -18.848593540566842,
+        "coverage_95": 0.0,
+        "mean_std": 0.0,
+        "nll": 136939369288.46204,
+        "calibration_rho": NaN
+      }
+    },
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/predictions_grid.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/training_loss.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/calibration.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/metrics_comparison.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/r2_bar.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/uncertainty_distribution.png",
+    "/Users/anani/Code/uq-qnn/reports/coincidence_pair_comparison/2026-04-06_155838/metrics_table.png"
+  ],
+  "simulation": {
+    "call_count": 272475,
+    "total_time": 101.32419623215173,
+    "samples_counter": {
+      "300": 272250,
+      "259": 15,
+      "328": 15,
+      "257": 15,
+      "327": 15,
+      "329": 15,
+      "254": 15,
+      "291": 15,
+      "287": 15,
+      "303": 15,
+      "275": 15,
+      "268": 15,
+      "319": 15,
+      "267": 15,
+      "305": 15,
+      "302": 15
+    },
+    "circuit_call_count": 20803500,
+    "circuit_total_time": 98.7465980307461,
+    "avg_time_per_sequence": 0.0003718660289279814,
+    "avg_time_per_circuit": 4.746633885199418e-06
+  }
+}

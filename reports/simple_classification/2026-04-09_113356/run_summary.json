@@ -1,0 +1,63 @@
+{
+  "schema": "uq-qnn.experiment_run.v1",
+  "name": "Simple Classification",
+  "run_dir": "/Users/anani/Code/uq-qnn/reports/simple_classification/2026-04-09_113356",
+  "timestamp_utc": "2026-04-09T09:34:00.771869+00:00",
+  "python": "3.13.5",
+  "git_commit": "266c812",
+  "config": {
+    "n_modes": 3,
+    "input_state": [
+      1,
+      0,
+      0
+    ],
+    "encoding_phase_idx": 1,
+    "photon_distinguishability": null,
+    "target_mode": [
+      1,
+      2
+    ],
+    "memristive_phase_idx": [
+      2
+    ],
+    "memristive_output_modes": null,
+    "output_mode": "singles",
+    "working_detectors": null,
+    "loss_type": "cross_entropy",
+    "n_classes": 2,
+    "lr": 0.03,
+    "epochs": 10,
+    "n_samples": 500,
+    "memory_depth": 2,
+    "n_swipe": 0,
+    "swipe_span": 0.0,
+    "noise_std": null,
+    "seed": 42,
+    "sim_backend": "numpy",
+    "n_data": 80,
+    "data_noise": 0.05,
+    "unc_n_passes": 10,
+    "unc_noise_std": 0.05
+  },
+  "hardware": null,
+  "metrics": {
+    "final_loss": 0.6732750725922114,
+    "test_accuracy": 0.502,
+    "status": "completed"
+  },
+  "artifacts": [
+    "/Users/anani/Code/uq-qnn/reports/simple_classification/2026-04-09_113356/classification_with_uncertainty.png"
+  ],
+  "simulation": {
+    "call_count": 110,
+    "total_time": 0.13832770407316275,
+    "samples_counter": {
+      "500": 110
+    },
+    "circuit_call_count": 6600,
+    "circuit_total_time": 0.13711907793185674,
+    "avg_time_per_sequence": 0.0012575245824832978,
+    "avg_time_per_circuit": 2.0775617868463143e-05
+  }
+}
